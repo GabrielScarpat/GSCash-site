@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Painel · GSCASH</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/fonts.css">
+  <link rel="stylesheet" href="css/estilos.css">
+  <script src="js/vendor/supabase.js"></script>
+  <script src="js/supabase.js"></script>
+</head>
+<body>
+<script src="js/abertura.js"></script>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <a href="index.html" class="logo"><span class="logo-mark"></span>GSCASH</a>
+    <ul class="nav-links">
+      <li><a href="index.html" data-nav="painel">Painel</a></li>
+      <li><a href="transacoes.html" data-nav="transacoes">Transações</a></li>
+      <li><a href="carteiras.html" data-nav="carteiras">Carteiras</a></li>
+      <li><a href="faturas.html" data-nav="faturas">Faturas</a></li>
+      <li><a href="categorias.html" data-nav="categorias">Categorias</a></li>
+    </ul>
+    <div class="topbar-acoes">
+      <button type="button" class="btn btn-outline" data-acao="transferir" title="Transferir entre contas"><span data-icon="transfer"></span><span class="rotulo">Transferir</span></button>
+      <button type="button" class="btn btn-primary" data-acao="novo-gasto"><span data-icon="plus"></span>Novo gasto</button>
+    </div>
+  </div>
+</header>
+
+<main class="page">
+  <div class="container stack">
+
+    <div class="page-head">
+      <div class="titulo-linha">
+        <h1 class="page-title">Painel</h1>
+        <button type="button" class="olho" id="olho" aria-pressed="false" title="Ocultar valores"></button>
+      </div>
+
+      <div class="period">
+        <div class="segmented" id="periodoModos" role="group" aria-label="Período">
+          <button type="button" data-modo="hoje">Hoje</button>
+          <button type="button" data-modo="7d">7 dias</button>
+          <button type="button" data-modo="30d">30 dias</button>
+          <button type="button" data-modo="mes">Mês</button>
+          <button type="button" data-modo="ano">Ano</button>
+          <button type="button" data-modo="custom"><span data-icon="calendar"></span>Personalizado</button>
+        </div>
+        <div class="period-nav">
+          <button type="button" class="nav-arrow" id="periodoAnterior" aria-label="Período anterior"><span data-icon="chevron-left"></span></button>
+          <span class="period-label" id="periodoRotulo" aria-live="polite"></span>
+          <button type="button" class="nav-arrow" id="periodoProximo" aria-label="Próximo período"><span data-icon="chevron-right"></span></button>
+        </div>
+        <button type="button" class="btn btn-outline" id="relatorio"><span data-icon="file"></span>Relatório</button>
+      </div>
+    </div>
+
+    <!-- primeiros passos de quem acabou de criar a conta (js/boas-vindas.js) -->
+    <section class="card primeiros-passos hidden" id="primeirosPassos" aria-label="Seus primeiros passos"></section>
+
+    <div class="grid linha1">
+      <section class="card saldo-card">
+        <p class="label">Saldo atual</p>
+        <p class="big-value num" id="saldoTotal">—</p>
+        <p class="muted saldo-sub" id="saldoSub"></p>
+        <div class="previsto">
+          <span class="tile"><span data-icon="trending"></span></span>
+          <div><small id="previstoRotulo"></small><strong class="num" id="previsto">—</strong></div>
+          <div class="dif"><b class="num" id="previstoDif"></b><span id="previstoSub"></span></div>
+        </div>
+      </section>
+
+      <section class="card resultado">
+        <div class="card-head">
+          <h2 class="card-title" id="resultadoTitulo">Resultado do mês</h2>
+          <span class="card-sub" id="resultadoSub"></span>
+        </div>
+        <div class="res-linhas">
+          <div class="res-item"><small><span class="sq sq-entrou"></span>Entrou</small><strong class="num" id="entrou">—</strong></div>
+          <div class="res-item"><small><span class="sq sq-saiu"></span>Saiu</small><strong class="num" id="saiu">—</strong></div>
+        </div>
+        <div class="sobrou"><span id="sobrouRotulo">Sobrou</span><strong class="num" id="sobrou">—</strong></div>
+        <div class="uso">
+          <div class="bar"><span id="usoBarra"></span></div>
+          <p><span id="usoTexto"></span><span class="num" id="mediaDia"></span></p>
+        </div>
+      </section>
+    </div>
+
+    <section class="card">
+      <div class="evo-head">
+        <h2 class="card-title">Evolução mensal</h2>
+        <div class="legenda-evo"><span><i class="sq sq-entrou"></i>Entrou</span><span><i class="sq sq-saiu"></i>Saiu</span></div>
+        <div class="segmented mini" id="evoMeses" role="group" aria-label="Meses no gráfico">
+          <button type="button" data-n="6">6 meses</button>
+          <button type="button" data-n="12">12 meses</button>
+        </div>
+      </div>
+      <div class="grafico" id="grafico"></div>
+    </section>
+
+    <div class="grid dash-mid">
+      <section class="card">
+        <div class="card-head">
+          <h2 class="card-title">Por categoria</h2>
+          <span class="card-sub">valor e % do período</span>
+        </div>
+        <ul class="cat-bars" id="porCategoria"></ul>
+      </section>
+
+      <div class="stack">
+        <section class="card">
+          <div class="card-head">
+            <h2 class="card-title">Distribuição por categoria</h2>
+          </div>
+          <div id="distribuicao"></div>
+          <p class="compare" id="comparacao"></p>
+        </section>
+
+        <section class="card">
+          <div class="card-head">
+            <h2 class="card-title">Por carteira</h2>
+            <span class="card-sub">de onde saiu o dinheiro</span>
+          </div>
+          <div id="porCarteira"></div>
+        </section>
+      </div>
+    </div>
+
+    <section class="card">
+      <div class="card-head">
+        <h2 class="card-title">Últimas transações</h2>
+        <a class="link-btn" href="transacoes.html">Ver todos<span data-icon="chevron-right"></span></a>
+      </div>
+      <ul class="tx-list" id="ultimos"></ul>
+    </section>
+
+  </div>
+</main>
+
+<script src="js/data.js"></script>
+<script src="js/core.js"></script>
+<script src="js/components.js"></script>
+<script src="js/widgets.js"></script>
+<script src="js/carteira-form.js"></script>
+<script src="js/boas-vindas.js"></script>
+<script src="js/transacao-form.js"></script>
+<script src="js/transferencia-form.js"></script>
+<script src="js/licenca.js"></script>
+<script src="js/atualizacao.js"></script>
+<script src="js/relatorio.js"></script>
+<script src="js/painel.js"></script>
+</body>
+</html>

@@ -1,0 +1,90 @@
+/* GSCASH — tela Carteiras
+   (parte do estilos.css; a ordem dos @import importa) */
+
+/* =========================================================
+   Carteiras
+   ========================================================= */
+
+.total-wallets { margin: 0 0 26px; }
+
+.inline-legend {
+  list-style: none;
+  margin: 20px 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 28px;
+  font-size: 16px;
+}
+.inline-legend li { display: flex; align-items: center; gap: 8px; }
+.inline-legend .muted { margin-left: 2px; }
+
+/* carteiras ocultas */
+.chave-ocultas { display: inline-flex; align-items: center; gap: 12px; height: 44px; padding: 0 6px 0 14px; color: var(--text-2); font-weight: 500; cursor: pointer; }
+
+.fora-total {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 15px;
+}
+.fora-total svg { width: 17px; height: 17px; }
+.fora-total b { color: var(--text-2); font-weight: 600; }
+
+.wallet.oculta { background: var(--surface-2); }
+.wallet.oculta .tile, .wallet.oculta .wallet-value { opacity: .55; }
+
+.chave-linha { display: flex; align-items: center; gap: 16px; padding: 16px 18px; border-radius: 14px; background: var(--surface-2); }
+.chave-texto { flex: 1; }
+.chave-texto b { display: block; font-weight: 500; }
+.chave-texto small { display: block; margin-top: 2px; color: var(--text-2); font-size: 14px; }
+
+.wallet-grid { grid-template-columns: repeat(3, 1fr); }
+
+.wallet { display: flex; flex-direction: column; padding: 28px; }
+
+.wallet-head { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; }
+.wallet-id { flex: 1; min-width: 0; }
+.wallet-name { font-size: 17.5px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wallet-type { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; color: var(--text-2); font-size: 15.5px; margin-top: 2px; }
+.wallet-head .kebab { align-self: flex-start; }
+
+.wallet-label { font-size: 14.5px; }
+.wallet-value { font-size: 28px; font-weight: 700; letter-spacing: -.02em; margin: 4px 0 24px; }
+.wallet-value.negative { color: var(--danger); }
+
+.wallet-initial {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  margin: -16px 0 22px;
+  color: var(--muted);
+  font-size: 14px;
+}
+.wallet-initial .link-btn { font-size: 14px; }
+
+.field-hint { color: var(--muted); font-size: 13.5px; }
+.modal-body p.field-hint { color: var(--muted); }
+
+.invoice { margin: -2px 0 24px; display: flex; flex-direction: column; gap: 10px; }
+.invoice-line { display: flex; justify-content: space-between; gap: 12px; color: var(--text-2); font-size: 14.5px; }
+.invoice .bar span.danger { background: var(--danger); }
+
+.wallet-btn { margin-top: auto; }
+.wallet-btn svg { width: 16px; height: 16px; }
+
+@media (max-width: 1200px) {
+  .wallet-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 680px) {
+  .wallet-grid { grid-template-columns: 1fr; }
+  .wallet { padding: 20px; }
+  .chave-ocultas { order: 1; width: 100%; justify-content: space-between; padding: 0; }
+}

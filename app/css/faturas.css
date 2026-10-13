@@ -1,0 +1,181 @@
+/* GSCASH — crédito, faturas e configuração do cartão
+   (parte do estilos.css; a ordem dos @import importa) */
+
+/* =========================================================
+   Crédito e faturas
+   ========================================================= */
+
+.modal.md { max-width: 560px; }
+
+/* modal de transação */
+.toggle button.active.credit { background: var(--primary); color: #fff; }
+.row-2.single { grid-template-columns: 1fr; }
+
+.info-fatura {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+.info-fatura svg { width: 22px; height: 22px; }
+.info-fatura strong { display: block; font-size: 15.5px; }
+.info-fatura span { font-size: 14px; opacity: .85; }
+
+.aviso-credito {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: #F6E6CF;
+  color: #7A4A10;
+  font-size: 15px;
+}
+.aviso-credito svg { width: 20px; height: 20px; }
+.aviso-credito .link-btn { color: inherit; font-weight: 600; text-decoration: underline; }
+
+.tx-badge.credito { color: var(--primary); font-weight: 500; }
+.tx-pagamento .tx-value { color: var(--text-2); font-weight: 500; }
+
+.parcela {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 6px;
+  background: var(--chip);
+  color: var(--text-2);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+/* selos de status */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 99px;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.badge.aberta { background: var(--primary-soft); color: var(--primary); }
+.badge.fechada { background: #F6E6CF; color: #9A5B12; }
+.badge.paga { background: #DCEBDC; color: var(--success); }
+.badge.vencida { background: #F4DCD6; color: var(--danger); }
+.badge.futura { background: var(--chip); color: var(--text-2); }
+
+/* seletor de cartões */
+.card-pills { display: flex; gap: 8px; flex-wrap: wrap; }
+.card-pills:empty { display: none; }
+.card-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 46px;
+  padding: 0 18px;
+  border-radius: 14px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  font-size: 15.5px;
+}
+.card-pill small { color: var(--muted); font-size: 13.5px; }
+.card-pill:hover { background: var(--surface-2); }
+.card-pill.on { border: 2px solid var(--primary); background: var(--primary-soft); color: var(--primary); font-weight: 600; }
+.card-pill.on small { color: var(--primary); }
+
+/* página de faturas */
+.fat-grid { display: grid; grid-template-columns: 1.7fr 1fr; gap: 22px; align-items: stretch; }
+.fat-hero { display: flex; flex-direction: column; gap: 6px; }
+.fat-hero-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.fat-hero-top h2 { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; font-size: 21px; font-weight: 600; }
+.fat-setas { gap: 8px; }
+.fat-pago { color: var(--text-2); font-size: 15px; margin-top: -4px; }
+.fat-pago strong { color: var(--text); }
+.fat-datas { display: flex; gap: 28px; flex-wrap: wrap; margin: 6px 0 22px; }
+.fat-datas > div { display: flex; align-items: center; gap: 10px; }
+.fat-datas .tile { width: 40px; height: 40px; }
+.fat-datas small { display: block; color: var(--muted); font-size: 13.5px; }
+.fat-datas strong { font-size: 16px; font-weight: 600; }
+.fat-limite { display: flex; flex-direction: column; gap: 10px; padding-top: 20px; border-top: 1px solid var(--border); }
+.fat-limite-line { display: flex; justify-content: space-between; gap: 12px; color: var(--text-2); font-size: 15px; }
+.fat-limite-line strong { color: var(--text); }
+.fat-limite .bar span.danger { background: var(--danger); }
+.fat-acoes { display: flex; flex-wrap: wrap; gap: 12px; margin-top: auto; padding-top: 24px; }
+.fat-acoes .btn-pagar { min-width: 200px; }
+
+.fat-lista { list-style: none; margin: 0; padding: 0; }
+.fat-lista li + li { border-top: 1px solid var(--border); }
+.fat-lista li.on, .fat-lista li.on + li { border-color: transparent; }
+.fat-lista button {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: calc(100% + 20px);
+  margin: 0 -10px;
+  padding: 14px 10px;
+  border-radius: 12px;
+  text-align: left;
+}
+.fat-lista button:hover { background: var(--surface-2); }
+.fat-lista li.on button { background: var(--primary-soft); }
+.fat-lista .mes { flex: 1; font-weight: 500; font-size: 16px; }
+.fat-lista .mes small { display: block; color: var(--muted); font-weight: 400; font-size: 13.5px; }
+.fat-lista .v { min-width: 96px; text-align: right; font-weight: 600; font-size: 16px; }
+
+/* bloco de crédito no cartão da carteira */
+a.invoice { padding: 14px 16px; border-radius: 14px; background: var(--surface-2); transition: background .15s; }
+a.invoice:hover { background: var(--chip); }
+.invoice-title { display: inline-flex; align-items: center; gap: 8px; color: var(--text); font-weight: 500; }
+.invoice-title svg { width: 17px; height: 17px; color: var(--primary); }
+.invoice-line strong { color: var(--text); }
+
+/* configuração do crédito */
+.switch {
+  position: relative;
+  width: 48px;
+  height: 28px;
+  border-radius: 99px;
+  background: var(--border-strong);
+  flex-shrink: 0;
+  transition: background .15s;
+}
+.switch::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .2);
+  transition: transform .15s;
+}
+.switch.on { background: var(--primary); }
+.switch.on::after { transform: translateX(20px); }
+.switch:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+.cfg-lista { list-style: none; margin: 0; padding: 0; }
+.cfg-lista li { display: flex; align-items: center; gap: 16px; padding: 18px 0; border-top: 1px solid var(--border); }
+.cfg-lista small { display: block; margin-top: 2px; color: var(--text-2); font-size: 14.5px; }
+.cfg-lista .off .row-title, .cfg-lista .off small { color: var(--muted); }
+
+.ciclo-bar { height: 10px; border-radius: 99px; background: var(--chip); overflow: hidden; }
+.ciclo-bar span { display: block; height: 100%; border-radius: 99px; background: var(--primary); }
+.ciclo-leg { display: flex; justify-content: space-between; margin-top: 2px; color: var(--text-2); font-size: 13.5px; }
+
+@media (max-width: 1100px) {
+  .fat-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 760px) {
+  .fat-hero-top h2 { font-size: 18px; }
+  .fat-datas { gap: 16px; }
+  .fat-acoes .btn { flex: 1; }
+  .card-pill { height: 42px; padding: 0 14px; }
+}

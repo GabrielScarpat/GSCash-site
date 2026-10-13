@@ -1,0 +1,100 @@
+/* GSCASH — transferências e botões do topo
+   (parte do estilos.css; a ordem dos @import importa) */
+
+/* =========================================================
+   Transferências
+   ========================================================= */
+
+.topbar-acoes { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+.topbar .topbar-acoes .btn-primary { margin-left: 0; }
+
+/* valor grande no centro da janela */
+.valor-transf {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 8px;
+  padding: 4px 0 6px;
+  cursor: text;
+}
+.valor-transf .prefixo { color: var(--muted); font-size: 24px; font-weight: 600; }
+.valor-transf input {
+  min-width: 4ch;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: 52px;
+  font-weight: 700;
+  letter-spacing: -.03em;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+.valor-transf input.zerado,
+.valor-transf input::placeholder { color: #B9B3A5; }
+
+/* De → Para */
+.contas-transf {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+}
+.conta-transf {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--border-strong);
+  border-radius: 16px;
+  background: #fff;
+}
+.conta-transf > small { color: var(--muted); font-size: 13px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+.conta-transf .cab { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.conta-transf .cab > div { flex: 1; min-width: 0; }
+.conta-transf .select-btn {
+  height: 40px;
+  padding: 0 10px;
+  border-color: transparent;
+  background: transparent;
+  font-weight: 600;
+}
+.conta-transf .select-btn:hover { background: var(--surface-2); }
+.conta-transf .select-btn .dot { display: none; }
+.saldo-transf { color: var(--text-2); font-size: 14px; }
+.saldo-transf strong { color: var(--text); font-weight: 600; }
+.saldo-transf strong.negativo { color: var(--danger); }
+
+.seta-transf {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  transition: transform .2s ease, background .15s;
+}
+.seta-transf svg { width: 20px; height: 20px; }
+.seta-transf:hover { background: var(--primary-hover); transform: rotate(180deg); }
+
+/* linha de transferência nas listas */
+.tx-transfer .tile { background: var(--primary-soft); color: var(--primary); }
+.tx-transfer .tx-value { color: var(--text-2); font-weight: 500; }
+.rota { display: inline-flex; align-items: center; gap: 6px; }
+.rota svg { width: 14px; height: 14px; color: var(--muted); }
+
+@media (max-width: 760px) {
+  .topbar-acoes .btn-outline .rotulo { display: none; }
+  .topbar-acoes .btn-outline { width: 40px; height: 40px; padding: 0; }
+  .contas-transf { grid-template-columns: 1fr; }
+  .seta-transf { justify-self: center; transform: rotate(90deg); }
+  .seta-transf:hover { transform: rotate(270deg); }
+  .valor-transf input { font-size: 42px; }
+}
+
+.modal.lg.transf { min-height: 0; max-width: 640px; }
+
+/* erro do valor, centralizado embaixo do número */
+.erro-valor-transf { display: block; text-align: center; margin: -2px 0 6px; }

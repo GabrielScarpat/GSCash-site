@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Categorias · GSCASH</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/fonts.css">
+  <link rel="stylesheet" href="css/estilos.css">
+  <script src="js/vendor/supabase.js"></script>
+  <script src="js/supabase.js"></script>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <a href="index.html" class="logo"><span class="logo-mark"></span>GSCASH</a>
+    <ul class="nav-links">
+      <li><a href="index.html" data-nav="painel">Painel</a></li>
+      <li><a href="transacoes.html" data-nav="transacoes">Transações</a></li>
+      <li><a href="carteiras.html" data-nav="carteiras">Carteiras</a></li>
+      <li><a href="faturas.html" data-nav="faturas">Faturas</a></li>
+      <li><a href="categorias.html" data-nav="categorias">Categorias</a></li>
+    </ul>
+    <div class="topbar-acoes">
+      <button type="button" class="btn btn-outline" data-acao="transferir" title="Transferir entre contas"><span data-icon="transfer"></span><span class="rotulo">Transferir</span></button>
+      <button type="button" class="btn btn-primary" data-acao="novo-gasto"><span data-icon="plus"></span>Novo gasto</button>
+    </div>
+  </div>
+</header>
+
+<main class="page">
+  <div class="container stack">
+
+    <div class="page-head">
+      <h1 class="page-title">Categorias</h1>
+      <div class="head-acoes">
+        <div class="period-nav">
+          <button type="button" class="nav-arrow" id="mesAnterior" aria-label="Mês anterior"><span data-icon="chevron-left"></span></button>
+          <button type="button" class="mes-btn" id="mesBotao" aria-haspopup="dialog" aria-expanded="false"><span id="mesRotulo"></span><span data-icon="chevron-down"></span></button>
+          <button type="button" class="nav-arrow" id="mesProximo" aria-label="Próximo mês"><span data-icon="chevron-right"></span></button>
+        </div>
+        <button type="button" class="btn btn-outline" id="baixarSugeridas" title="Baixar categorias e subcategorias sugeridas"><span data-icon="download"></span>Baixar sugeridas</button>
+        <button type="button" class="btn btn-outline" id="novaCategoria"><span data-icon="plus"></span>Nova categoria</button>
+      </div>
+    </div>
+
+    <div class="grid cat-top">
+      <section class="card">
+        <div class="card-head">
+          <h2 class="card-title">Distribuição por categoria</h2>
+          <span class="card-sub" id="distMes"></span>
+        </div>
+        <div id="distribuicao"></div>
+      </section>
+
+      <section class="card">
+        <div class="card-head">
+          <h2 class="card-title">Orçamento mensal</h2>
+          <span class="card-sub" id="orcMes"></span>
+        </div>
+        <ul class="budget-list" id="orcamentos"></ul>
+      </section>
+    </div>
+
+    <section class="card">
+      <div class="card-head">
+        <h2 class="card-title">Todas as categorias</h2>
+        <span class="card-sub" id="totalCategorias"></span>
+      </div>
+      <ul class="row-list" id="listaDespesas"></ul>
+    </section>
+
+    <section class="card" id="cardReceitas">
+      <div class="card-head">
+        <h2 class="card-title">Categorias de receita</h2>
+        <span class="card-sub" id="totalReceitas"></span>
+      </div>
+      <ul class="row-list" id="listaReceitas"></ul>
+    </section>
+
+  </div>
+</main>
+
+<script src="js/data.js"></script>
+<script src="js/core.js"></script>
+<script src="js/components.js"></script>
+<script src="js/widgets.js"></script>
+<script src="js/carteira-form.js"></script>
+<script src="js/boas-vindas.js"></script>
+<script src="js/transacao-form.js"></script>
+<script src="js/transferencia-form.js"></script>
+<script src="js/licenca.js"></script>
+<script src="js/atualizacao.js"></script>
+<script src="js/categorias.js"></script>
+</body>
+</html>

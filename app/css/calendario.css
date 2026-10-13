@@ -1,0 +1,73 @@
+/* GSCASH — calendário do campo de data
+   (parte do estilos.css; a ordem dos @import importa) */
+
+/* =========================================================
+   Calendário (campo de data)
+   ========================================================= */
+
+.cal-pop {
+  position: fixed;
+  z-index: 120;
+  width: 320px;
+  padding: 16px;
+  background: #fff;
+  border: 1px solid var(--border-strong);
+  border-radius: 18px;
+  box-shadow: 0 18px 44px rgba(28, 26, 20, .16);
+  user-select: none;
+  animation: cal-in .14s ease;
+}
+
+@keyframes cal-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.cal-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
+.cal-title { padding: 0 8px; font-size: 16.5px; font-weight: 600; letter-spacing: -.01em; }
+.cal-nav { display: flex; gap: 4px; }
+.cal-nav button {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  color: var(--text-2);
+}
+.cal-nav button:hover { background: var(--surface-2); color: var(--text); }
+.cal-nav svg { width: 17px; height: 17px; }
+
+.cal-week, .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); }
+.cal-week span { padding: 4px 0 8px; text-align: center; color: var(--muted); font-size: 12.5px; font-weight: 500; }
+.cal-grid { gap: 2px 0; }
+
+.cal-day {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  margin: 0 auto;
+  border-radius: 50%;
+  font-size: 14.5px;
+  color: var(--text);
+  transition: background .12s;
+}
+.cal-day:hover { background: var(--surface-2); }
+.cal-day:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+.cal-day.out { color: #C3BDAF; }
+.cal-day.today { box-shadow: inset 0 0 0 1.5px var(--primary); color: var(--primary); font-weight: 600; }
+.cal-day.sel,
+.cal-day.sel:hover { background: var(--primary); color: #fff; font-weight: 600; box-shadow: none; }
+
+.cal-foot { display: flex; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+
+.chip-btn {
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 99px;
+  background: var(--chip);
+  color: var(--text-2);
+  font-size: 14px;
+  font-weight: 500;
+}
+.chip-btn:hover { background: var(--chip-hover); color: var(--text); }

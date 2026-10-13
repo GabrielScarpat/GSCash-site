@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Entrar · GSCASH</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/fonts.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/entrar.css">
+</head>
+<body class="entrar-pagina">
+
+<div class="entrar-caixa">
+  <div class="entrar-marca">
+    <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+      <path d="M30 117A86 86 0 0 1 202 117Z"/>
+      <path d="M54 135H226A86 86 0 0 1 54 135Z"/>
+    </svg>
+    GSCASH
+  </div>
+
+  <div class="entrar-cartao">
+    <div class="entrar-abas" role="tablist" id="abas">
+      <button type="button" role="tab" class="ativa" data-aba="entrar" aria-selected="true">Entrar</button>
+      <button type="button" role="tab" data-aba="criar" aria-selected="false">Criar conta</button>
+    </div>
+
+    <form id="formulario" novalidate>
+      <h1 id="titulo">Bem-vindo de volta</h1>
+      <p class="entrar-sub" id="subtitulo">Entre para ver suas contas em qualquer aparelho.</p>
+
+      <div class="campo" id="campoEmail">
+        <label for="email">E-mail</label>
+        <input id="email" type="email" placeholder="voce@exemplo.com" autocomplete="email" required>
+      </div>
+      <div class="campo" id="campoSenha">
+        <label for="senha" id="rotuloSenha">Senha</label>
+        <div class="senha-caixa">
+          <input id="senha" type="password" placeholder="Sua senha" autocomplete="current-password" required aria-describedby="regraSenha">
+          <button type="button" class="mostrar-senha" id="mostrarSenha" aria-label="Mostrar senha" aria-pressed="false"><svg class="icone-olho" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.06 12.35a1 1 0 0 1 0-.7 10.75 10.75 0 0 1 19.88 0 1 1 0 0 1 0 .7 10.75 10.75 0 0 1-19.88 0"/><circle cx="12" cy="12" r="3"/></svg><svg class="icone-olho-fechado hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c4.36 0 8.15 2.63 9.94 6.65a1 1 0 0 1 0 .7 10.6 10.6 0 0 1-1.62 2.6"/><path d="M14.08 14.16a3 3 0 0 1-4.24-4.24"/><path d="M17.48 17.5A10.56 10.56 0 0 1 12 19c-4.36 0-8.15-2.63-9.94-6.65a1 1 0 0 1 0-.7 10.7 10.7 0 0 1 4.46-5.14"/><path d="m2 2 20 20"/></svg></button>
+        </div>
+        <p class="regra-senha hidden" id="regraSenha"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Pelo menos 8 caracteres</p>
+      </div>
+      <button type="button" class="entrar-link" id="esqueci">Esqueci minha senha</button>
+
+      <p class="entrar-aviso" id="aviso" role="alert" hidden></p>
+
+      <button type="submit" class="entrar-principal" id="enviar">Entrar</button>
+
+      <div id="blocoGoogle">
+        <div class="entrar-ou">ou</div>
+        <button type="button" class="entrar-google" id="google">
+          <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.9 2.4 30.4 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.6 5.9c4.4-4.1 7-10.1 7-17.6z"/><path fill="#FBBC05" d="M10.5 28.7A14.5 14.5 0 0 1 9.5 24c0-1.6.3-3.2.8-4.7l-7.9-6.1A24 24 0 0 0 0 24c0 3.9.9 7.5 2.6 10.8l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.6-5.9c-2.1 1.4-4.9 2.3-8.3 2.3-6.3 0-11.6-4.1-13.5-9.9l-7.9 6.1C6.5 42.6 14.6 48 24 48z"/></svg>
+          Continuar com Google
+        </button>
+      </div>
+      <button type="button" class="entrar-link centro hidden" id="voltar">Voltar para o login</button>
+    </form>
+  </div>
+
+  <p class="entrar-rodape">Seus dados ficam guardados na nuvem, só você tem acesso. <a href="https://gabrielscarpat.github.io/GSCash-site/privacidade.html" target="_blank" rel="noopener">Política de privacidade</a></p>
+</div>
+
+<script src="js/vendor/supabase.js"></script>
+<script src="js/supabase.js"></script>
+<script src="js/entrar.js"></script>
+</body>
+</html>

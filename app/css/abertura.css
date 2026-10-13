@@ -1,0 +1,44 @@
+/* GSCASH — tela de abertura do app de computador (js/abertura.js)
+   (parte do estilos.css; a ordem dos @import importa) */
+
+.abertura {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+  background: var(--primary);
+  color: var(--bg);
+  transition: opacity .35s ease;
+}
+
+.abertura.saindo { opacity: 0; pointer-events: none; }
+
+.abertura-marca {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  font-size: 44px;
+  font-weight: 700;
+  letter-spacing: -.01em;
+}
+
+.abertura-marca svg { width: 104px; height: 104px; }
+
+/* as duas metades da moeda vão e voltam: o que entra e o que sai */
+.abertura-marca .metade-cima { animation: abertura-cima 1.6s ease-in-out infinite; }
+.abertura-marca .metade-baixo { animation: abertura-baixo 1.6s ease-in-out infinite; }
+
+@keyframes abertura-cima { 50% { transform: translateX(12px); } }
+@keyframes abertura-baixo { 50% { transform: translateX(-12px); } }
+
+.abertura-msg { font-size: 14px; opacity: .7; }
+
+@media (prefers-reduced-motion: reduce) {
+  .abertura-marca .metade-cima,
+  .abertura-marca .metade-baixo { animation: none; }
+}

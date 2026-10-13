@@ -1,0 +1,20 @@
+/* =========================================================
+   GSCASH — estilos (índice)
+   Cada arquivo cuida de um assunto. A ORDEM abaixo importa:
+   regras de baixo podem sobrescrever as de cima.
+   ========================================================= */
+
+@import url('base.css');
+@import url('componentes.css');
+@import url('abertura.css');
+@import url('responsivo.css');
+@import url('painel.css');
+@import url('relatorio.css');
+@import url('transacoes.css');
+@import url('categorias.css');
+@import url('carteiras.css');
+@import url('calendario.css');
+@import url('faturas.css');
+@import url('transferencias.css');
+@import url('rodape.css');
+@import url('licenca.css');

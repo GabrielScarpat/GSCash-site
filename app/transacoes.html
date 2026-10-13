@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Transações · GSCASH</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/fonts.css">
+  <link rel="stylesheet" href="css/estilos.css">
+  <script src="js/vendor/supabase.js"></script>
+  <script src="js/supabase.js"></script>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <a href="index.html" class="logo"><span class="logo-mark"></span>GSCASH</a>
+    <ul class="nav-links">
+      <li><a href="index.html" data-nav="painel">Painel</a></li>
+      <li><a href="transacoes.html" data-nav="transacoes">Transações</a></li>
+      <li><a href="carteiras.html" data-nav="carteiras">Carteiras</a></li>
+      <li><a href="faturas.html" data-nav="faturas">Faturas</a></li>
+      <li><a href="categorias.html" data-nav="categorias">Categorias</a></li>
+    </ul>
+    <div class="topbar-acoes">
+      <button type="button" class="btn btn-outline" data-acao="transferir" title="Transferir entre contas"><span data-icon="transfer"></span><span class="rotulo">Transferir</span></button>
+      <button type="button" class="btn btn-primary" data-acao="novo-gasto"><span data-icon="plus"></span>Novo gasto</button>
+    </div>
+  </div>
+</header>
+
+<main class="page">
+  <div class="container stack">
+
+    <div class="page-head">
+      <h1 class="page-title">Transações</h1>
+      <p class="page-meta num" id="resumo"></p>
+    </div>
+
+    <section class="card filters" aria-label="Filtros">
+      <div class="field filter-search">
+        <label for="busca">Buscar</label>
+        <div class="input">
+          <span data-icon="search"></span>
+          <input id="busca" type="search" placeholder="Descrição ou valor" autocomplete="off">
+        </div>
+      </div>
+      <div class="field"><span class="field-label">Categoria</span><div id="filtroCategoria"></div></div>
+      <div class="field"><span class="field-label">Carteira</span><div id="filtroCarteira"></div></div>
+      <div class="field"><span class="field-label">Mês</span><div id="filtroMes"></div></div>
+    </section>
+
+    <section class="card tx-card">
+      <div id="lista"></div>
+      <div class="list-foot" id="rodapeLista"></div>
+    </section>
+
+  </div>
+</main>
+
+<script src="js/data.js"></script>
+<script src="js/core.js"></script>
+<script src="js/components.js"></script>
+<script src="js/widgets.js"></script>
+<script src="js/carteira-form.js"></script>
+<script src="js/boas-vindas.js"></script>
+<script src="js/transacao-form.js"></script>
+<script src="js/transferencia-form.js"></script>
+<script src="js/licenca.js"></script>
+<script src="js/atualizacao.js"></script>
+<script src="js/transacoes.js"></script>
+</body>
+</html>

@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Faturas · GSCASH</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/fonts.css">
+  <link rel="stylesheet" href="css/estilos.css">
+  <script src="js/vendor/supabase.js"></script>
+  <script src="js/supabase.js"></script>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <a href="index.html" class="logo"><span class="logo-mark"></span>GSCASH</a>
+    <ul class="nav-links">
+      <li><a href="index.html" data-nav="painel">Painel</a></li>
+      <li><a href="transacoes.html" data-nav="transacoes">Transações</a></li>
+      <li><a href="carteiras.html" data-nav="carteiras">Carteiras</a></li>
+      <li><a href="faturas.html" data-nav="faturas">Faturas</a></li>
+      <li><a href="categorias.html" data-nav="categorias">Categorias</a></li>
+    </ul>
+    <div class="topbar-acoes">
+      <button type="button" class="btn btn-outline" data-acao="transferir" title="Transferir entre contas"><span data-icon="transfer"></span><span class="rotulo">Transferir</span></button>
+      <button type="button" class="btn btn-primary" data-acao="novo-gasto"><span data-icon="plus"></span>Novo gasto</button>
+    </div>
+  </div>
+</header>
+
+<main class="page">
+  <div class="container stack">
+
+    <div class="page-head">
+      <h1 class="page-title">Faturas</h1>
+      <button type="button" class="btn btn-outline" id="configurar"><span data-icon="card"></span>Configurar crédito</button>
+    </div>
+
+    <div class="card-pills" id="cartoes" role="tablist" aria-label="Cartões"></div>
+
+    <div id="conteudo" class="stack"></div>
+
+  </div>
+</main>
+
+<script src="js/data.js"></script>
+<script src="js/core.js"></script>
+<script src="js/components.js"></script>
+<script src="js/widgets.js"></script>
+<script src="js/carteira-form.js"></script>
+<script src="js/boas-vindas.js"></script>
+<script src="js/transacao-form.js"></script>
+<script src="js/transferencia-form.js"></script>
+<script src="js/licenca.js"></script>
+<script src="js/atualizacao.js"></script>
+<script src="js/faturas.js"></script>
+</body>
+</html>

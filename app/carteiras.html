@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Carteiras · GSCASH</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/fonts.css">
+  <link rel="stylesheet" href="css/estilos.css">
+  <script src="js/vendor/supabase.js"></script>
+  <script src="js/supabase.js"></script>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <a href="index.html" class="logo"><span class="logo-mark"></span>GSCASH</a>
+    <ul class="nav-links">
+      <li><a href="index.html" data-nav="painel">Painel</a></li>
+      <li><a href="transacoes.html" data-nav="transacoes">Transações</a></li>
+      <li><a href="carteiras.html" data-nav="carteiras">Carteiras</a></li>
+      <li><a href="faturas.html" data-nav="faturas">Faturas</a></li>
+      <li><a href="categorias.html" data-nav="categorias">Categorias</a></li>
+    </ul>
+    <div class="topbar-acoes">
+      <button type="button" class="btn btn-outline" data-acao="transferir" title="Transferir entre contas"><span data-icon="transfer"></span><span class="rotulo">Transferir</span></button>
+      <button type="button" class="btn btn-primary" data-acao="novo-gasto"><span data-icon="plus"></span>Novo gasto</button>
+    </div>
+  </div>
+</header>
+
+<main class="page">
+  <div class="container stack">
+
+    <div class="page-head">
+      <h1 class="page-title">Carteiras</h1>
+      <div class="head-acoes">
+        <label class="chave-ocultas hidden" id="chaveOcultas">Mostrar ocultas<button type="button" class="switch" role="switch" aria-checked="false" id="mostrarOcultas"></button></label>
+        <button type="button" class="btn btn-outline" data-acao="transferir"><span data-icon="transfer"></span>Transferir</button>
+        <button type="button" class="btn btn-outline" id="novaCarteira"><span data-icon="plus"></span>Nova carteira</button>
+      </div>
+    </div>
+
+    <section class="card">
+      <div class="card-head">
+        <span class="label" id="saldoRotulo">Saldo total em carteiras</span>
+        <span class="card-sub" id="qtdCarteiras"></span>
+      </div>
+      <p class="mid-value num total-wallets" id="saldoTotal">—</p>
+      <div class="stacked-bar" id="barraCarteiras"></div>
+      <ul class="inline-legend" id="legendaCarteiras"></ul>
+      <p class="fora-total hidden" id="foraTotal"></p>
+    </section>
+
+    <div class="grid wallet-grid" id="carteiras"></div>
+
+  </div>
+</main>
+
+<script src="js/data.js"></script>
+<script src="js/core.js"></script>
+<script src="js/components.js"></script>
+<script src="js/widgets.js"></script>
+<script src="js/carteira-form.js"></script>
+<script src="js/boas-vindas.js"></script>
+<script src="js/transacao-form.js"></script>
+<script src="js/transferencia-form.js"></script>
+<script src="js/licenca.js"></script>
+<script src="js/atualizacao.js"></script>
+<script src="js/carteiras.js"></script>
+</body>
+</html>

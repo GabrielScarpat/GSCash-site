@@ -1,0 +1,249 @@
+/* GSCASH — cores, tipografia, navegação, botões e estrutura da página
+   (parte do estilos.css; a ordem dos @import importa) */
+
+/* =========================================================
+   GSCASH — estilos globais
+   ========================================================= */
+
+:root {
+  /* símbolo da marca (moeda partida, versão para tamanhos pequenos) — originais em logo/ */
+  --marca-simbolo: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'%3E%3Cpath d='M32 112A80 80 0 0 1 192 112Z M64 140H224A80 80 0 0 1 64 140Z'/%3E%3C/svg%3E");
+
+  --bg: #F3EFE4;
+  --surface: #FDFCF8;
+  --surface-2: #F6F3EB;
+  --chip: #E9E5D9;
+  --chip-hover: #E1DCCD;
+  --border: #ECE7DA;
+  --border-strong: #DDD7C7;
+
+  --text: #1B1B19;
+  --text-2: #4A4740;
+  --muted: #7A766B;
+
+  --primary: #1D3A5E;
+  --primary-hover: #16304F;
+  --primary-soft: #E3EAF2;
+
+  --danger: #C2392B;
+  --danger-soft: #EAD3C9;
+  --warning: #E58A2B;
+  --success: #2E7D32;
+
+  --radius-sm: 10px;
+  --radius: 14px;
+  --radius-lg: 22px;
+  --shadow-modal: 0 24px 60px rgba(28, 26, 20, .22);
+
+  --font: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --container: 1640px;
+}
+
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 15px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "cv11", "ss01";
+}
+
+h1, h2, h3, p { margin: 0; }
+a { color: inherit; text-decoration: none; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; background: none; border: 0; padding: 0; }
+svg { flex-shrink: 0; }
+
+.num { font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+.hidden { display: none !important; }
+
+.container {
+  max-width: var(--container);
+  margin: 0 auto;
+  padding: 0 48px;
+}
+
+/* ---------- Navegação ---------- */
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.topbar-inner {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  height: 72px;
+  max-width: 1920px;
+  margin: 0 auto;
+  padding: 0 40px;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  font-size: 20px;
+  letter-spacing: -.01em;
+  color: var(--primary);
+}
+
+.logo-mark {
+  width: 34px;
+  height: 34px;
+  background: currentColor;
+  -webkit-mask: var(--marca-simbolo) center / contain no-repeat;
+  mask: var(--marca-simbolo) center / contain no-repeat;
+}
+
+.nav-links {
+  display: flex;
+  gap: 4px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.nav-links a {
+  display: block;
+  padding: 10px 16px;
+  border-radius: 10px;
+  color: var(--text-2);
+  font-size: 16px;
+  transition: background .15s, color .15s;
+}
+
+.nav-links a:hover { background: var(--surface-2); color: var(--text); }
+.nav-links a.active { background: var(--chip); color: var(--text); font-weight: 500; }
+
+.topbar .btn-primary { margin-left: auto; }
+
+/* ---------- Botões ---------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 20px;
+  border-radius: 10px;
+  font-weight: 500;
+  font-size: 15px;
+  white-space: nowrap;
+  transition: background .15s, border-color .15s, opacity .15s;
+}
+
+.btn svg { width: 18px; height: 18px; }
+
+.btn-primary { background: var(--primary); color: #fff; }
+.btn-primary:hover { background: var(--primary-hover); }
+
+.btn-outline {
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  color: var(--text);
+}
+.btn-outline:hover { background: var(--surface-2); }
+
+.btn-danger { background: var(--danger); color: #fff; }
+.btn-danger:hover { background: #A82F23; }
+
+.btn-block { width: 100%; }
+
+.icon-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  color: var(--text-2);
+  transition: background .15s, color .15s;
+}
+.icon-btn:hover { background: var(--surface-2); color: var(--text); }
+.icon-btn svg { width: 18px; height: 18px; }
+.icon-btn.danger:hover { color: var(--danger); background: #F6E7E2; }
+
+.link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--primary);
+  font-weight: 500;
+}
+.link-btn svg { width: 16px; height: 16px; }
+.link-btn:hover { text-decoration: underline; }
+
+/* ---------- Página ---------- */
+
+.page { padding: 36px 0 64px; }
+
+.page-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+
+.page-title {
+  font-size: 30px;
+  font-weight: 600;
+  letter-spacing: -.02em;
+}
+
+.page-meta { color: var(--text-2); font-size: 16px; }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 32px;
+}
+
+.card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.card-title { font-size: 19px; font-weight: 600; letter-spacing: -.01em; }
+.card-sub { color: var(--muted); font-size: 15px; }
+
+.label { color: var(--text-2); font-size: 15px; }
+
+.big-value {
+  font-size: clamp(40px, 4.4vw, 64px);
+  font-weight: 700;
+  letter-spacing: -.035em;
+  line-height: 1.1;
+  margin: 6px 0 8px;
+}
+
+.mid-value {
+  font-size: clamp(28px, 2.4vw, 36px);
+  font-weight: 700;
+  letter-spacing: -.03em;
+  line-height: 1.15;
+  margin: 8px 0;
+}
+
+.grid { display: grid; gap: 22px; }
+.stack { display: flex; flex-direction: column; gap: 22px; }

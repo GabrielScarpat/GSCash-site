@@ -1,0 +1,84 @@
+/* GSCASH — ajustes gerais para telas menores
+   (parte do estilos.css; a ordem dos @import importa) */
+
+/* =========================================================
+   Responsivo
+   ========================================================= */
+
+@media (max-width: 1100px) {
+  .container { padding: 0 28px; }
+  .topbar-inner { padding: 0 28px; gap: 16px; }
+  /* topo mais compacto: menu mais junto e "Transferir" só com o ícone (o nome fica no title) */
+  .nav-links a { padding: 10px 12px; }
+  .topbar-acoes .btn-outline .rotulo { display: none; }
+  .topbar-acoes .btn-outline { width: 44px; padding: 0; }
+}
+
+/* abaixo disso o topo não cabe numa linha: o menu desce para uma segunda linha, como no celular */
+@media (max-width: 960px) {
+  .topbar-inner {
+    flex-wrap: wrap;
+    height: auto;
+    gap: 10px 12px;
+    padding: 12px 28px 0;
+  }
+  .nav-links {
+    order: 3;
+    width: calc(100% + 56px);
+    margin: 0 -28px;
+    padding: 0 24px 10px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .nav-links::-webkit-scrollbar { display: none; }
+}
+
+@media (max-width: 760px) {
+  body { font-size: 14.5px; }
+  .container { padding: 0 16px; }
+
+  .topbar-inner {
+    flex-wrap: wrap;
+    height: auto;
+    gap: 10px 12px;
+    padding: 12px 16px 0;
+  }
+
+  .nav-links {
+    order: 3;
+    width: calc(100% + 32px);
+    margin: 0 -16px;
+    padding: 0 12px 10px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .nav-links::-webkit-scrollbar { display: none; }
+  .nav-links a { padding: 8px 14px; font-size: 15px; }
+
+  .topbar .btn-primary { height: 40px; padding: 0 14px; }
+
+  .page { padding: 22px 0 48px; }
+  .page-title { font-size: 25px; }
+  .card { padding: 20px; border-radius: 18px; }
+
+  .donut-wrap { grid-template-columns: 1fr; justify-items: center; gap: 20px; }
+  .donut { max-width: 240px; }
+  .legend { width: 100%; }
+
+  .tx { gap: 12px; }
+  .tx-actions { margin-left: 4px; gap: 0; }
+
+  /* modal vira tela cheia no celular, como no design */
+  .modal-backdrop { padding: 0; place-items: end stretch; }
+  .modal {
+    max-width: none;
+    height: 100%;
+    max-height: none;
+    border-radius: 0;
+  }
+  .modal.sm { height: auto; border-radius: 22px 22px 0 0; }
+  .modal-foot { margin-top: auto; }
+
+  /* Categoria e Subcategoria uma embaixo da outra */
+  .row-2.empilhar { grid-template-columns: 1fr; }
+}
