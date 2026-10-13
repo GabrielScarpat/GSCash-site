@@ -248,7 +248,8 @@ window.GS = window.GS || {};
   function faixaTeste() {
     faixa('teste', `
       <span class="ic">${icone('clock')}</span>
-      <span><strong>Teste grátis: ${info.dias === 1 ? 'falta 1 dia' : `faltam ${info.dias} dias`}</strong> (até ${ATE(info.testeAte)}). Depois, ative sua licença para continuar lançando.</span>
+      <span class="longo"><strong>Teste grátis: ${info.dias === 1 ? 'falta 1 dia' : `faltam ${info.dias} dias`}</strong> (até ${ATE(info.testeAte)}). Depois, ative sua licença para continuar lançando.</span>
+      <span class="curto"><strong>Teste grátis:</strong> ${GS.plural(info.dias, 'dia', 'dias')}</span>
       <div class="acoes">
         <button type="button" class="btn btn-outline" data-comprar>Quero comprar</button>
         <button type="button" class="btn btn-primary" data-chave>${icone('key')}Ativar chave</button>

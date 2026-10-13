@@ -795,8 +795,76 @@ window.GS = window.GS || {};
      Marca o link ativo, liga o botão "Novo gasto" e
      redesenha a tela sempre que os dados mudam.      */
 
+  /* ---------- Celular: abas embaixo (vidro, com a "gota" na aba ativa) e "Novo gasto" flutuante ----------
+     Feitas a partir dos links do menu do topo; o CSS (celular.css) só mostra em telas estreitas. */
+
+  const ICONE_ABA = { painel: 'painel', transacoes: 'list', carteiras: 'carteira', faturas: 'cartao', categorias: 'etiqueta' };
+
+  function barraCelular(pagina) {
+    const links = [...document.querySelectorAll('.nav-links a')];
+    if (!links.length || document.querySelector('.barra-celular')) return;
+    const barra = el('nav', 'barra-celular');
+    barra.setAttribute('aria-label', 'Telas do GSCASH');
+    barra.innerHTML = '<span class="gota" aria-hidden="true"></span>' + links.map(a => {
+      const ativa = a.dataset.nav === pagina;
+      return `<a class="aba${ativa ? ' on' : ''}" href="${esc(a.getAttribute('href'))}"${ativa ? ' aria-current="page"' : ''}>`
+        + `${icone(ICONE_ABA[a.dataset.nav] || 'list')}<span class="nome">${esc(a.textContent.trim())}</span></a>`;
+    }).join('');
+    const fab = el('button', 'fab-novo', icone('plus'));
+    fab.type = 'button';
+    fab.dataset.acao = 'novo-gasto';
+    fab.setAttribute('aria-label', 'Novo gasto');
+    fab.title = 'Novo gasto';
+    document.body.append(barra, fab);
+
+    // a gota fica embaixo da aba aberta. A passagem de uma aba para outra é feita pelo navegador
+    // (transição entre páginas, em celular.css): a gota só escorre quando a tela nova já está
+    // desenhada, em vez de andar antes e a página demorar a chegar.
+    const gota = barra.querySelector('.gota');
+    const ativa = barra.querySelector('.aba.on');
+    const acomodar = () => {
+      if (!ativa || !barra.offsetWidth) return;   // offsetWidth 0 = escondida (computador)
+      gota.style.transform = `translateX(${ativa.offsetLeft}px)`;
+      gota.style.width = `${ativa.offsetWidth}px`;
+    };
+    acomodar();   // já no primeiro desenho da página
+    if (document.fonts) document.fonts.ready.then(acomodar);
+    window.addEventListener('resize', acomodar);
+    // a aba tocada responde na hora, enquanto a próxima tela carrega
+    barra.addEventListener('click', e => {
+      const aba = e.target.closest('.aba');
+      if (aba === ativa) e.preventDefault();
+      else if (aba) aba.classList.add('indo');
+    });
+    // voltou pelo botão "voltar" do navegador: a página reaparece como estava
+    window.addEventListener('pageshow', () => barra.querySelectorAll('.indo').forEach(a => a.classList.remove('indo')));
+  }
+
+  // celular: o lápis e a lixeira das linhas somem (celular.css) e tocar na linha abre as mesmas ações
+  document.addEventListener('click', e => {
+    if (!matchMedia('(max-width: 640px)').matches) return;
+    const linha = e.target.closest('.tx');
+    const acoes = linha && linha.querySelector('.tx-actions');
+    if (!acoes || acoes.contains(e.target)) return;
+    const botoes = [...acoes.querySelectorAll('button')];
+    if (!botoes.length) return;
+    const titulo = linha.querySelector('.tx-title')?.textContent.trim() || 'Transação';
+    const corpo = el('div', 'acoes-linha', botoes.map((b, i) => {
+      const rotulo = (b.getAttribute('aria-label') || '').replace(` ${titulo}`, '');
+      return `<button type="button" class="btn btn-outline btn-block${b.classList.contains('danger') ? ' perigo' : ''}" data-i="${i}">${b.innerHTML}${esc(rotulo)}</button>`;
+    }).join(''));
+    const modal = GS.abrirModal({ titulo, corpo, tamanho: 'sm acoes' });
+    corpo.addEventListener('click', ev => {
+      const escolhido = ev.target.closest('[data-i]');
+      if (!escolhido) return;
+      modal.fechar();
+      botoes[Number(escolhido.dataset.i)].click();   // o mesmo caminho do lápis/lixeira (inclusive a trava do só leitura)
+    });
+  });
+
   GS.iniciarPagina = function (pagina, desenhar) {
     document.querySelectorAll('[data-icon]').forEach(s => { s.outerHTML = icone(s.dataset.icon); });
+    barraCelular(pagina);
 
     document.querySelectorAll('.nav-links a').forEach(a => {
       const ativo = a.dataset.nav === pagina;

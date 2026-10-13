@@ -26,6 +26,7 @@
     estado[campo] = valor;
     estado.limite = POR_PAGINA;
     atualizarUrl();
+    contarFiltros();
     desenharLista();
   };
 
@@ -35,6 +36,23 @@
   $('filtroCategoria').append(filtroCategoria.el);
   $('filtroCarteira').append(filtroCarteira.el);
   $('filtroMes').append(filtroMes.el);
+
+  // celular: só a busca fica à mostra; categoria, carteira e mês ficam atrás de "Filtros"
+  // (o número diz quantos estão ligados). No computador o botão não aparece.
+  const secaoFiltros = document.querySelector('.filters');
+  const botaoFiltros = GS.el('button', 'btn btn-outline filtros-btn', `${GS.icone('filtro')}Filtros<span class="n" hidden></span>`);
+  botaoFiltros.type = 'button';
+  botaoFiltros.setAttribute('aria-expanded', 'false');
+  secaoFiltros.querySelector('.filter-search').after(botaoFiltros);
+  botaoFiltros.addEventListener('click', () => {
+    botaoFiltros.setAttribute('aria-expanded', String(secaoFiltros.classList.toggle('abertos')));
+  });
+  function contarFiltros() {
+    const n = [estado.categoria !== 'todas', estado.carteira !== 'todas', estado.mes !== GS.isoMes(GS.hoje())].filter(Boolean).length;
+    const selo = botaoFiltros.querySelector('.n');
+    selo.textContent = n;
+    selo.hidden = !n;
+  }
 
   $('busca').addEventListener('input', e => {
     estado.busca = e.target.value;
@@ -74,6 +92,7 @@
 
     estado.categoria = filtroCategoria.valor;
     estado.carteira = filtroCarteira.valor;
+    contarFiltros();
   }
 
   /* ---------- Lista ---------- */

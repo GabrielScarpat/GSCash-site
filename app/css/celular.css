@@ -1,0 +1,267 @@
+/* GSCASH — celular: topo de uma linha, abas de vidro embaixo e "Novo gasto" flutuante
+   (parte do estilos.css; vem por último para valer sobre o resto)
+   As peças são criadas em components.js (barraCelular) e supabase.js (saudação). */
+
+/* no computador nada disso aparece */
+.barra-celular, .fab-novo, .topbar-acoes .ola, .faixa-licenca .curto, .filtros-btn, .mais-opcoes { display: none; }
+
+@media (max-width: 640px) {
+  body { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
+
+  /* ---------- topo: inicial + "Olá, Gabriel" + transferir ---------- */
+  .topbar { background: var(--bg); border-bottom: 0; }
+  .topbar-inner { flex-wrap: nowrap; height: 64px; padding: 0 16px; gap: 10px; }
+  .topbar .logo, .topbar .nav-links, .topbar [data-acao="novo-gasto"] { display: none; }
+  .topbar-acoes { flex: 1; display: flex; align-items: center; gap: 8px; }
+  .topbar-acoes .conta-btn { order: -2; }
+  .topbar-acoes .ola { order: -1; flex: 1; display: block; min-width: 0; line-height: 1.25; }
+  .topbar-acoes .ola small { display: block; font-size: 12.5px; color: var(--muted); }
+  .topbar-acoes .ola b { display: block; font-size: 17px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .topbar-acoes .btn-outline { width: 40px; height: 40px; padding: 0; border-radius: 50%; background: var(--surface); }
+
+  /* ---------- faixa do teste grátis: uma linha ---------- */
+  .faixa-licenca.teste { flex-wrap: nowrap; gap: 8px; margin: 0 16px 6px; padding: 7px 7px 7px 12px; border-radius: 14px; font-size: 13.5px; }
+  .faixa-licenca.teste .ic { width: auto; height: auto; background: none; }
+  .faixa-licenca.teste .longo { display: none; }
+  .faixa-licenca.teste .curto { display: block; flex: 1; }
+  .faixa-licenca.teste .acoes { width: auto; margin-left: auto; }
+  .faixa-licenca.teste [data-comprar] { display: none; }
+  .faixa-licenca.teste .btn { height: 32px; padding: 0 12px; font-size: 13px; border-radius: 10px; }
+
+  .page { padding-top: 10px; }
+
+  /* ---------- abas embaixo: vidro ---------- */
+  .barra-celular {
+    position: fixed;
+    z-index: 60;
+    left: 12px;
+    right: 12px;
+    bottom: calc(12px + env(safe-area-inset-bottom));
+    height: 64px;
+    padding: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-radius: 24px;
+    isolation: isolate;
+    /* desfoca e realça o que passa por trás */
+    background: linear-gradient(180deg, rgba(255, 255, 255, .62), rgba(253, 252, 248, .46));
+    -webkit-backdrop-filter: blur(18px) saturate(1.8);
+    backdrop-filter: blur(18px) saturate(1.8);
+    /* borda que pega luz em cima, sombra bem leve embaixo */
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .9), inset 0 0 0 1px rgba(221, 215, 199, .55), 0 4px 14px rgba(28, 26, 20, .08);
+  }
+  /* reflexo curvo na metade de cima do vidro */
+  .barra-celular::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    inset: 1px 1px 50% 1px;
+    border-radius: 23px 23px 60% 60% / 23px 23px 16px 16px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, .5), rgba(255, 255, 255, 0));
+    pointer-events: none;
+  }
+
+  /* a gota da aba ativa */
+  .barra-celular .gota {
+    position: absolute;
+    top: 6px;
+    left: 0;
+    height: 52px;
+    border-radius: 18px;
+    background: linear-gradient(180deg, #24476F, #1D3A5E);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .18);
+    will-change: transform, width;
+  }
+
+  .barra-celular .aba {
+    position: relative;
+    z-index: 1;
+    flex: 0 1 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 52px;
+    min-width: 42px;
+    padding: 0 13px;
+    border-radius: 18px;
+    color: #857F72;
+    font-size: 13.5px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: color .2s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .barra-celular .aba svg { width: 22px; height: 22px; flex-shrink: 0; transition: transform .15s; }
+  .barra-celular .aba:active svg { transform: scale(.9); }
+  .barra-celular .aba .nome { max-width: 0; overflow: hidden; white-space: nowrap; opacity: 0; transition: max-width .3s ease, opacity .2s, margin .3s ease; }
+  .barra-celular .aba.on { color: #fff; }
+  .barra-celular .aba.on .nome { max-width: 110px; opacity: 1; margin-left: 7px; }
+  .barra-celular .aba.indo { color: var(--primary); }
+  .barra-celular .aba.indo svg { transform: scale(.9); }
+
+  /* ---------- "Novo gasto" flutuante ---------- */
+  .fab-novo {
+    position: fixed;
+    z-index: 60;
+    right: 16px;
+    bottom: calc(88px + env(safe-area-inset-bottom));
+    display: grid;
+    place-items: center;
+    width: 54px;
+    height: 54px;
+    border-radius: 18px;
+    background: var(--primary);
+    color: #fff;
+    box-shadow: 0 6px 14px rgba(29, 58, 94, .22);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .fab-novo svg { width: 26px; height: 26px; stroke-width: 2.2; }
+  .fab-novo:active { transform: scale(.95); }
+
+  /* ---------- Painel ---------- */
+  /* título, olho e relatório (só o ícone) numa linha; períodos em pílulas que deslizam; mês embaixo */
+  .page-head:has(#periodoModos) { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 12px; }
+  .page-head:has(#periodoModos) .period { display: contents; }
+  #relatorio { grid-column: 2; grid-row: 1; width: 44px; height: 44px; padding: 0; gap: 0; border-radius: 50%; font-size: 0; }
+  #relatorio svg { width: 20px; height: 20px; }
+  #periodoModos { grid-column: 1 / -1; width: auto; margin: 0 -16px; padding: 0 16px; gap: 6px; background: none; border-radius: 0; }
+  #periodoModos button { flex-shrink: 0; height: 36px; padding: 0 15px; border-radius: 99px; background: var(--surface); border: 1px solid var(--border-strong); color: var(--text-2); }
+  #periodoModos button.active { background: var(--text); border-color: var(--text); color: #fff; font-weight: 600; }
+  .page-head:has(#periodoModos) .period-nav { grid-column: 1 / -1; }
+
+  /* saldo: cartão azul da marca, como um cartão de banco */
+  .saldo-card { position: relative; overflow: hidden; border: 0; color: #F3EFE4;
+    background: radial-gradient(120% 140% at 100% 0%, #2B5384 0%, #1D3A5E 45%, #142A45 100%); box-shadow: 0 8px 20px rgba(29, 58, 94, .2); }
+  .saldo-card::after { content: ""; position: absolute; right: -44px; top: -44px; width: 180px; height: 180px; border-radius: 50%;
+    border: 28px solid rgba(243, 239, 228, .06); pointer-events: none; }
+  .saldo-card .label, .saldo-card .muted { color: rgba(243, 239, 228, .72); }
+  .saldo-card .big-value { color: #F3EFE4; }
+  .saldo-card .previsto { flex-wrap: wrap; gap: 10px 12px; border-top-color: rgba(243, 239, 228, .14); }
+  .saldo-card .previsto .tile { background: rgba(243, 239, 228, .12); color: #F3EFE4; }
+  .saldo-card .previsto small, .saldo-card .previsto .dif { color: rgba(243, 239, 228, .72); }
+  .saldo-card .previsto strong, .saldo-card .previsto .dif b { color: #F3EFE4; }
+  .saldo-card .previsto .dif { width: 100%; margin-left: 0; text-align: left; font-size: 13px; }
+  .saldo-card .previsto .dif b { display: inline; margin-right: 6px; font-size: 14px; }
+
+  /* gráfico: sem o "sobrou" embaixo de cada mês (os textos se sobrepunham) */
+  .grafico text.sob { display: none; }
+
+  /* ---------- Transações (e listas com lápis/lixeira) ---------- */
+  .filters { grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 10px; padding: 12px; }
+  .filters .filter-search label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .filters > .field:not(.filter-search) { display: none; grid-column: 1 / -1; }
+  .filters.abertos > .field { display: block; }
+  .filtros-btn { display: inline-flex; height: 48px; padding: 0 14px; gap: 7px; }
+  .filtros-btn svg { width: 18px; height: 18px; }
+  .filtros-btn .n { display: grid; place-items: center; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 99px; background: var(--primary); color: #fff; font-size: 11.5px; font-weight: 700; }
+  .filtros-btn .n[hidden] { display: none; }
+
+  .tx { gap: 12px; padding: 11px 0; }
+  .tx .tile { display: grid; width: 38px; height: 38px; border-radius: 11px; flex-shrink: 0; }
+  .tx .tile svg { width: 18px; height: 18px; }
+  .tx-title { font-size: 15px; font-weight: 600; }
+  /* uma linha só: os pedaços encolhem com "…" no fim, com o mesmo espaço entre eles em qualquer lista */
+  .tx-meta { flex-wrap: nowrap; gap: 4px; overflow: hidden; white-space: nowrap; font-size: 12.5px; color: var(--muted); }
+  /* só o primeiro pedaço (categoria › subcategoria) encolhe; na transferência, a descrição do fim */
+  .tx-meta > * { flex-shrink: 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tx-meta > :first-child { flex-shrink: 1; }
+  .tx-transfer .tx-meta > :first-child { flex-shrink: 0; }
+  .tx-transfer .tx-meta > :last-child { flex-shrink: 1; }
+  .tx-meta .caminho { display: block; }
+  .tx-meta .caminho svg { display: inline; vertical-align: -1px; margin: 0 1px; }
+  .tx-meta .rota { display: inline-flex; align-items: center; gap: 3px; }
+  .tx-meta svg { width: 11px; height: 11px; flex-shrink: 0; }
+  .tx-value { font-size: 15px; }
+  .tx-actions { display: none; }
+  .tx:has(.tx-actions) { cursor: pointer; }
+
+  .modal.acoes .modal-body, .acoes-linha { display: grid; gap: 8px; }
+  .acoes-linha .btn { justify-content: flex-start; height: 50px; gap: 10px; }
+  .acoes-linha .btn.perigo { color: var(--danger); }
+
+  /* ---------- Categorias ---------- */
+  .row-item { gap: 10px; padding: 12px 0; }
+  .row-item > .tile, .sub-item > .tile { width: 38px; height: 38px; border-radius: 11px; flex-shrink: 0; }
+  .row-item > .tile svg { width: 18px; height: 18px; }
+  .row-title { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .row-sub { font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .row-sub .sem-celular { display: none; }
+  .row-values strong { font-size: 15px; }
+  .row-values span { font-size: 12.5px; color: var(--muted); }
+  .row-item .icon-btn { width: 32px; height: 32px; flex-shrink: 0; }
+  .row-item .icon-btn svg { width: 18px; height: 18px; }
+  .row-item .icon-btn.kebab { margin-left: -6px; }
+
+  /* ---------- Janelas (Novo gasto, Transferir...) ---------- */
+  /* sobem de baixo, deixando um pedaço da tela à mostra em cima; os campos rolam por dentro
+     e os botões (Salvar, Cancelar) ficam presos embaixo, sempre à vista */
+  .modal-backdrop { padding-top: 28px; }
+  .modal { height: auto; max-height: calc(100dvh - 28px); border-radius: 22px 22px 0 0; }
+  .modal.lg { height: calc(100dvh - 28px); }
+  .modal-foot:empty { display: none; }
+  .modal-head { padding: 18px 18px 6px; }
+  .modal-title { font-size: 21px; }
+  .modal-body { flex: 1 1 auto; min-height: 0; padding: 8px 18px 12px; }
+  .modal-foot { flex-shrink: 0; padding: 12px 18px calc(14px + env(safe-area-inset-bottom)); border-top: 1px solid var(--border); background: var(--surface); }
+
+  /* ---------- Novo gasto: janela só da altura necessária ----------
+     tipo e valor em destaque no topo; data e carteira lado a lado; Única/Recorrente e descrição em "Mais opções" */
+  .modal.lg.form-gasto { height: auto; max-height: calc(100dvh - 48px); }
+  .form-gasto .modal-body { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 10px; align-content: start; }
+  .form-gasto .modal-body > *, .form-gasto .modal-body-form > *, .form-gasto .modal-body .field { grid-column: 1 / -1; min-width: 0; }
+  .form-gasto .row-2 { display: contents; }
+  .form-gasto .field { gap: 5px; }
+  .form-gasto .field-label, .form-gasto .field > label { font-size: 13px; }
+
+  .form-gasto .field:has([data-tipo]) { order: 1; }
+  .form-gasto .field:has([data-tipo]) > .field-label { display: none; }
+  .form-gasto .field:has(#txValor) { order: 2; }
+  .form-gasto .field:has(#txValor) > label { display: none; }
+  .form-gasto [data-wrap="valor"] { height: 64px; }
+  .form-gasto [data-wrap="valor"] input { font-size: 30px; font-weight: 700; letter-spacing: -.02em; }
+  .form-gasto [data-wrap="valor"] .prefix { font-size: 18px; }
+  .form-gasto .field:has(#txTitulo) { order: 3; }
+  .form-gasto .field:has([data-slot="categoria"]) { order: 5; }
+  .form-gasto .field:has([data-slot="subcategoria"]) { order: 6; }
+  .form-gasto .modal-body .field:has([data-slot="data"]) { order: 7; grid-column: 1; }
+  .form-gasto .modal-body .field:has([data-slot="carteira"]) { order: 8; grid-column: 2; }
+  .form-gasto [data-campo-forma] { order: 9; }
+  .form-gasto [data-campo-parcelas] { order: 10; }
+  .form-gasto [data-sem-cartao] { order: 11; }
+  .form-gasto [data-info-fatura] { order: 12; }
+  .form-gasto .mais-opcoes { order: 13; }
+  .form-gasto .toggle:has([data-rec]) { order: 14; }
+  .form-gasto [data-recbox] { order: 15; }
+  .form-gasto .field:has(#txDesc) { order: 16; }
+  .form-gasto:not(.mais-aberto) .so-mais { display: none !important; }
+
+  .mais-opcoes { display: flex; align-items: center; gap: 8px; padding: 6px 2px; color: var(--primary); font-size: 14px; font-weight: 600; text-align: left; }
+  .mais-opcoes svg { width: 18px; height: 18px; flex-shrink: 0; transition: transform .2s; }
+  .mais-opcoes small { margin-left: auto; color: var(--muted); font-size: 12px; font-weight: 400; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mais-aberto .mais-opcoes svg { transform: rotate(180deg); }
+  .mais-aberto .mais-opcoes small { display: none; }
+
+  /* avisos sobem para não ficar atrás das abas */
+  .toast-wrap { bottom: calc(96px + env(safe-area-inset-bottom)); }
+}
+
+@media (max-width: 640px) and (prefers-reduced-motion: reduce) {
+  .barra-celular .aba .nome { transition: none; }
+}
+
+/* ---------- Troca de tela no celular ----------
+   Navegadores novos (Chrome/Android, Safari/iPhone 18.2+) fazem a passagem entre as páginas:
+   a tela atual fica até a nova estar pronta; então o conteúdo troca num esmaecer rápido,
+   o topo, a barra e o "+" ficam parados e a gota escorre da aba antiga para a nova.
+   Nos outros, a página só troca, como antes. */
+@media (max-width: 640px) and (prefers-reduced-motion: no-preference) {
+  @view-transition { navigation: auto; }
+  .topbar { view-transition-name: topo; }
+  .barra-celular { view-transition-name: barra; }
+  .barra-celular .gota { view-transition-name: gota; }
+  .fab-novo { view-transition-name: mais; }
+  ::view-transition-old(root), ::view-transition-new(root) { animation-duration: .16s; }
+  ::view-transition-group(gota) { animation-duration: .32s; animation-timing-function: cubic-bezier(.4, 0, .2, 1); }
+  ::view-transition-old(gota), ::view-transition-new(gota) { height: 100%; }
+}

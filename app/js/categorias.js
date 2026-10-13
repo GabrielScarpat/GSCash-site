@@ -103,7 +103,7 @@
         ${widgets.tileTingido(c.cor, c.icone)}
         <div class="row-body">
           <div class="row-title">${esc(c.nome)}</div>
-          <div class="row-sub">${GS.plural(g.quantidade, 'transação', 'transações')} ${textoMes()}${subs.length ? ` · ${GS.plural(subs.length, 'subcategoria', 'subcategorias')}` : ''}</div>
+          <div class="row-sub">${GS.plural(g.quantidade, 'transação', 'transações')}<span class="sem-celular"> ${textoMes()}</span>${subs.length ? `<span class="sem-celular"> · ${GS.plural(subs.length, 'subcategoria', 'subcategorias')}</span>` : ''}</div>
         </div>
         <div class="row-values num">
           <strong class="${receita && g.total ? 'income' : ''}">${receita && g.total ? '+' : ''}${GS.moeda(g.total)}</strong>

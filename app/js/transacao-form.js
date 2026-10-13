@@ -130,12 +130,29 @@ window.GS = window.GS || {};
       <button type="button" class="btn btn-primary" data-salvar>${icone('check')}<span data-rotulo-salvar>${editando ? 'Salvar alterações' : 'Salvar gasto'}</span></button>`;
 
     const modal = GS.abrirModal({
-      titulo: 'Novo gasto', corpo, rodape, tamanho: 'lg',
+      titulo: 'Novo gasto', corpo, rodape, tamanho: 'lg form-gasto',
       avisoDescarte: () => (editando ? 'As alterações ainda não foram salvas.'
         : tipo === 'receita' ? 'A receita que você estava preenchendo ainda não foi salva.'
         : 'O gasto que você estava preenchendo ainda não foi salvo.'),
     });
     const $ = sel => corpo.querySelector(sel);
+
+    // celular (celular.css): Única/Recorrente e a descrição ficam atrás de "Mais opções"
+    // (o resto fica à vista). Editando um lançamento recorrente ou com descrição, começa aberto.
+    const janela = corpo.closest('.modal');
+    [$('[data-rec]') && $('[data-rec]').parentElement, $('[data-recbox]'), $('#txDesc').closest('.field')]
+      .forEach(c => c && c.classList.add('so-mais'));
+    const botaoMais = GS.el('button', 'mais-opcoes', `${icone('chevron-down')}<span>Mais opções</span><small>repetir, descrição</small>`);
+    botaoMais.type = 'button';
+    botaoMais.setAttribute('aria-expanded', 'false');
+    corpo.append(botaoMais);
+    const abrirMais = aberto => {
+      janela.classList.toggle('mais-aberto', aberto);
+      botaoMais.setAttribute('aria-expanded', String(aberto));
+      botaoMais.querySelector('span').textContent = aberto ? 'Menos opções' : 'Mais opções';
+    };
+    botaoMais.addEventListener('click', () => abrirMais(!janela.classList.contains('mais-aberto')));
+    abrirMais(!!(t.recorrenciaId || t.descricao));
 
     /* campos */
     const valor = GS.campoMoeda($('#txValor'), t.valor);

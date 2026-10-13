@@ -491,6 +491,39 @@ window.GS = window.GS || {};
   function aplicar(db) {
     cache = db;
     gravado = fotografia(paraLinhas(db));
+    guardarCopia();
+  }
+
+  // Cópia dos dados nesta aba do navegador: ao trocar de tela, a próxima aparece na hora com
+  // ela, enquanto a versão da nuvem é buscada em segundo plano. Fica só nesta aba (some ao
+  // fechar a aba) e é apagada ao sair da conta (supabase.js).
+  const CHAVE_COPIA = 'gscash:copia';
+  let mudancas = 0;   // conta as gravações, para a atualização em segundo plano não desfazer uma
+
+  function guardarCopia() {
+    try {
+      sessionStorage.setItem(CHAVE_COPIA, JSON.stringify({ usuario: usuarioId, db: cache }));
+    } catch (e) { /* cheio ou bloqueado: segue sem cópia */ }
+  }
+
+  function lerCopia() {
+    try {
+      const c = JSON.parse(sessionStorage.getItem(CHAVE_COPIA));
+      return c && c.usuario === usuarioId && c.db ? c.db : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // confere com a nuvem depois de mostrar a cópia; se mudou algo (ex.: lançado em outro aparelho), redesenha
+  function atualizarEmSegundoPlano() {
+    const versao = mudancas;
+    gravando.then(baixar).then(({ db }) => {
+      if (versao !== mudancas) return;   // a pessoa gravou algo enquanto isso: o que vale é o que ela fez
+      if (JSON.stringify(db) === JSON.stringify(cache)) return;
+      aplicar(db);
+      if (GS.notificarMudanca) GS.notificarMudanca();
+    }).catch(e => console.warn('Não foi possível conferir os dados com a nuvem', e));
   }
 
   const CONFLITO = { perfis: 'user_id' };
@@ -522,6 +555,7 @@ window.GS = window.GS || {};
       }
     }
     gravado = foto;
+    guardarCopia();
   }
 
   let iniciando = null;
@@ -533,6 +567,13 @@ window.GS = window.GS || {};
         const sessao = await GS.auth.sessao();
         if (!sessao) throw new Error('Faça login para continuar.');
         usuarioId = sessao.user.id;
+
+        const copiaDaAba = lerCopia();
+        if (copiaDaAba) {
+          aplicar(copiaDaAba);
+          atualizarEmSegundoPlano();
+          return;
+        }
 
         const { vazio, db } = await baixar();
         if (!vazio) return aplicar(db);
@@ -557,6 +598,7 @@ window.GS = window.GS || {};
 
   // grava em fila; as respostas da API esperam a gravação terminar
   function salvar() {
+    mudancas++;
     gravando = gravando.then(sincronizar).catch(async e => {
       console.error('Falha ao salvar os dados', e);
       falhaGravacao = new Error('Não foi possível salvar. Verifique a conexão e tente de novo.');

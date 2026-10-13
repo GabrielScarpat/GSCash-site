@@ -188,6 +188,7 @@ window.GS = window.GS || {};
     // trocar: a tela de entrada pede a outra conta; nos dois casos ela confirma de qual conta saiu
     async sair({ trocar = false } = {}) {
       try {
+        sessionStorage.removeItem('gscash:copia');   // a cópia dos dados desta aba (data.js)
         sessionStorage.setItem('gscash:saiu', (GS.usuario && GS.usuario.email) || '');
         if (trocar) sessionStorage.setItem('gscash:trocar', '1');
       } catch (e) { /* sem sessionStorage: só não mostra a confirmação */ }
@@ -230,7 +231,9 @@ window.GS = window.GS || {};
     const acoes = document.querySelector('.topbar-acoes');
     if (!usuario || !acoes || !GS.icone) return;
     const email = usuario.email || '';
-    const inicial = (email.trim()[0] || '?').toUpperCase();
+    const meta = usuario.user_metadata || {};
+    const nomeCompleto = String(meta.full_name || meta.name || '').trim();
+    const inicial = ((nomeCompleto || email).trim()[0] || '?').toUpperCase();
     const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
     const botao = document.createElement('button');
@@ -242,6 +245,13 @@ window.GS = window.GS || {};
     botao.setAttribute('aria-haspopup', 'dialog');
     botao.setAttribute('aria-expanded', 'false');
     acoes.append(botao);
+
+    // celular: "Olá, Gabriel" ao lado da inicial (nome do Google ou o começo do e-mail)
+    const nome = (nomeCompleto || email.split('@')[0] || '').split(/\s+/)[0];
+    const ola = document.createElement('span');
+    ola.className = 'ola';
+    ola.innerHTML = `<small>Olá,</small><b>${esc(nome ? nome[0].toUpperCase() + nome.slice(1) : 'tudo bem?')}</b>`;
+    acoes.append(ola);
 
     let fechar = null;
 
