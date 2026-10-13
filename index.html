@@ -50,6 +50,11 @@
   .regra { display:flex; align-items:center; gap:6px; margin:7px 0 0; font-size:13px; color:var(--muted); }
   .regra svg { width:15px; height:15px; }
   .regra.ok { color:var(--success); }
+  .botao { display:flex; align-items:center; justify-content:center; gap:8px; margin-top:22px; padding:12px; border-radius:10px;
+    background:var(--primary); color:#fff; font-weight:600; text-decoration:none; }
+  .botao:hover { background:var(--primary-hover); }
+  .botao svg { width:18px; height:18px; }
+  .dica { margin-top:12px; font-size:13px; }
 </style>
 </head>
 <body>
@@ -63,7 +68,9 @@
     <section id="confirmado" hidden>
       <div class="icone ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></div>
       <h1>E-mail confirmado!</h1>
-      <p>Sua conta está pronta. Volte ao GSCASH e entre com seu e-mail e senha.</p>
+      <p>Sua conta está pronta. Entre com seu e-mail e senha para começar.</p>
+      <a class="botao" href="app/entrar.html">Abrir o GSCASH<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a>
+      <p class="dica">Usa o GSCASH no computador? Pode entrar por ele também.</p>
     </section>
 
     <section id="novaSenha" hidden>
@@ -87,7 +94,8 @@
     <section id="senhaTrocada" hidden>
       <div class="icone ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></div>
       <h1>Senha alterada!</h1>
-      <p>Volte ao GSCASH e entre com a nova senha.</p>
+      <p>Agora é só entrar com a nova senha.</p>
+      <a class="botao" href="app/entrar.html">Abrir o GSCASH<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a>
     </section>
 
     <section id="expirado" hidden>
