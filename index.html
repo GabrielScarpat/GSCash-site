@@ -104,6 +104,11 @@
       <p>Este link já foi usado ou venceu. Volte ao GSCASH e peça um novo.</p>
     </section>
 
+    <section id="conferindo" hidden>
+      <h1>Conferindo o link…</h1>
+      <p>Só um instante.</p>
+    </section>
+
     <section id="neutro">
       <h1>Tudo certo por aqui</h1>
       <p>Você pode fechar esta página e voltar ao GSCASH.</p>
@@ -122,7 +127,7 @@
   const tipo = params.get('type');
   const deuErro = params.has('error') || params.has('error_code');
 
-  const telas = ['confirmado', 'novaSenha', 'senhaTrocada', 'expirado', 'neutro'];
+  const telas = ['confirmado', 'novaSenha', 'senhaTrocada', 'expirado', 'conferindo', 'neutro'];
   function mostrar(id) {
     telas.forEach(t => { document.getElementById(t).hidden = t !== id; });
   }
@@ -137,6 +142,19 @@
   cliente.auth.onAuthStateChange(evento => {
     if (evento === 'PASSWORD_RECOVERY') mostrar('novaSenha');
   });
+
+  // Links novos dos e-mails: gscash.com.br/?token_hash=...&type=recovery|email. O código só é
+  // usado aqui, quando a página abre no navegador (programas que "abrem" o link para checar
+  // se é seguro não o gastam). Os links antigos (com #access_token) seguem funcionando acima.
+  const codigo = params.get('token_hash');
+  if (codigo && !deuErro) {
+    mostrar('conferindo');
+    cliente.auth.verifyOtp({ token_hash: codigo, type: tipo === 'recovery' ? 'recovery' : 'email' }).then(({ error }) => {
+      history.replaceState(null, '', location.pathname);   // tira o código do endereço
+      if (error) return mostrar('expirado');
+      mostrar(tipo === 'recovery' ? 'novaSenha' : 'confirmado');
+    });
+  }
 
   const aviso = document.getElementById('aviso');
 
