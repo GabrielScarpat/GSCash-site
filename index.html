@@ -20,6 +20,8 @@
     box-shadow:0 24px 60px rgba(28,26,20,.22); text-align:center; }
   .icone { width:52px; height:52px; border-radius:50%; display:grid; place-items:center; margin:0 auto 16px;
     background:var(--primary-soft); color:var(--primary); font-size:26px; font-weight:700; }
+  .icone svg { width:26px; height:26px; }
+  .icone.ok { background:#E3F0E4; color:var(--success); }
   .icone.erro { background:var(--danger-soft); color:var(--danger); }
   h1 { margin:0 0 8px; font-size:20px; }
   p { margin:0; color:var(--muted); }
@@ -34,6 +36,15 @@
   button:disabled { opacity:.6; cursor:default; }
   .aviso { margin-top:14px; padding:10px 12px; font-size:13.5px; border-radius:10px; background:var(--danger-soft); color:var(--danger); text-align:left; }
   [hidden] { display:none !important; }
+  .senha-caixa { position:relative; }
+  .senha-caixa input { padding-right:46px; }
+  .senha-caixa input::-ms-reveal { display:none; }
+  .mostrar { position:absolute; right:6px; top:50%; transform:translateY(-50%); width:34px; height:34px; margin:0; padding:0; display:grid; place-items:center; background:none; color:var(--muted); border-radius:8px; }
+  .mostrar:hover { background:var(--border); color:var(--text); }
+  .mostrar svg { width:18px; height:18px; }
+  .regra { display:flex; align-items:center; gap:6px; margin:7px 0 0; font-size:13px; color:var(--muted); }
+  .regra svg { width:15px; height:15px; }
+  .regra.ok { color:var(--success); }
 </style>
 </head>
 <body>
@@ -45,18 +56,22 @@
 
   <div class="cartao">
     <section id="confirmado" hidden>
-      <div class="icone">✓</div>
+      <div class="icone ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></div>
       <h1>E-mail confirmado!</h1>
       <p>Sua conta está pronta. Volte ao GSCASH e entre com seu e-mail e senha.</p>
     </section>
 
     <section id="novaSenha" hidden>
-      <div class="icone">🔒</div>
+      <div class="icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4.5" y="10.5" width="15" height="10" rx="2.5"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/><path d="M12 14.5v2"/></svg></div>
       <h1>Escolha a nova senha</h1>
-      <p>Use pelo menos 8 caracteres.</p>
+      <p>Escolha uma senha nova para a sua conta.</p>
       <form id="formSenha" novalidate>
         <label for="senha">Nova senha</label>
-        <input id="senha" type="password" autocomplete="new-password" required>
+        <div class="senha-caixa">
+          <input id="senha" type="password" autocomplete="new-password" required aria-describedby="regra">
+          <button type="button" class="mostrar" id="mostrar" aria-label="Mostrar senha" aria-pressed="false"><svg class="olho-aberto" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.06 12.35a1 1 0 0 1 0-.7 10.75 10.75 0 0 1 19.88 0 1 1 0 0 1 0 .7 10.75 10.75 0 0 1-19.88 0"/><circle cx="12" cy="12" r="3"/></svg><svg class="olho-fechado" hidden viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c4.36 0 8.15 2.63 9.94 6.65a1 1 0 0 1 0 .7 10.6 10.6 0 0 1-1.62 2.6"/><path d="M14.08 14.16a3 3 0 0 1-4.24-4.24"/><path d="M17.48 17.5A10.56 10.56 0 0 1 12 19c-4.36 0-8.15-2.63-9.94-6.65a1 1 0 0 1 0-.7 10.7 10.7 0 0 1 4.46-5.14"/><path d="m2 2 20 20"/></svg></button>
+        </div>
+        <p class="regra" id="regra"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Pelo menos 8 caracteres</p>
         <label for="senha2">Repita a nova senha</label>
         <input id="senha2" type="password" autocomplete="new-password" required>
         <p class="aviso" id="aviso" role="alert" hidden></p>
@@ -65,13 +80,13 @@
     </section>
 
     <section id="senhaTrocada" hidden>
-      <div class="icone">✓</div>
+      <div class="icone ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></div>
       <h1>Senha alterada!</h1>
       <p>Volte ao GSCASH e entre com a nova senha.</p>
     </section>
 
     <section id="expirado" hidden>
-      <div class="icone erro">!</div>
+      <div class="icone erro"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5"/><path d="M12 16.5h.01"/></svg></div>
       <h1>Link expirado</h1>
       <p>Este link já foi usado ou venceu. Volte ao GSCASH e peça um novo.</p>
     </section>
@@ -111,6 +126,20 @@
   });
 
   const aviso = document.getElementById('aviso');
+
+  // regra da senha sempre à vista (verde quando atende) e o olho que mostra o que foi digitado
+  const campoSenha = document.getElementById('senha');
+  campoSenha.addEventListener('input', () => document.getElementById('regra').classList.toggle('ok', campoSenha.value.length >= 8));
+  document.getElementById('mostrar').addEventListener('click', () => {
+    const mostrar = campoSenha.type === 'password';
+    ['senha', 'senha2'].forEach(id => { document.getElementById(id).type = mostrar ? 'text' : 'password'; });
+    const b = document.getElementById('mostrar');
+    b.setAttribute('aria-pressed', String(mostrar));
+    b.setAttribute('aria-label', mostrar ? 'Ocultar senha' : 'Mostrar senha');
+    b.querySelector('.olho-aberto').toggleAttribute('hidden', mostrar);
+    b.querySelector('.olho-fechado').toggleAttribute('hidden', !mostrar);
+    campoSenha.focus();
+  });
   const falhar = texto => { aviso.textContent = texto; aviso.hidden = false; };
 
   document.getElementById('formSenha').addEventListener('submit', async e => {
