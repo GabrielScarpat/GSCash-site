@@ -194,7 +194,7 @@
     $('baixarLinha').hidden = false;
   }
 
-  // "Começar grátis" da página do site (sobre.html#criar... → entrar.html#criar): abre em "Criar conta"
+  // "Começar grátis" da página inicial do site (→ entrar.html#criar): abre em "Criar conta"
   if (location.hash === '#criar') trocarModo('criar');
 
   // veio pelo link "recuperar senha" do e-mail: pede a nova senha em vez de entrar direto

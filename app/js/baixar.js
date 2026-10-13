@@ -87,7 +87,7 @@ window.GS = window.GS || {};
     avisar(nome);
   });
 
-  // links já escritos na página (sobre.html): somem dentro do programa e até a 2.0 sair
+  // links já escritos na página inicial do site (site/index.html): somem dentro do programa
   if (noPrograma || !INSTALADOR_PRONTO) {
     const esconder = () => document.querySelectorAll('[data-baixar]').forEach(a => { a.hidden = true; });
     document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded', esconder) : esconder();

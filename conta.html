@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GSCASH</title>
+<meta name="robots" content="noindex">
+<script>
+  // página dos links dos e-mails (confirmar conta, trocar senha, link vencido): a inicial
+  // (index.html) manda para cá quem chega com esses dados no endereço. Sem eles, vai para o app.
+  if (!/(access_token|error|type|code|token_hash)=/.test(location.hash + location.search)) location.replace('app/');
+</script>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<style>
+  :root { --bg:#F3EFE4; --surface:#FDFCF8; --surface-2:#F6F3EB; --border:#ECE7DA; --border-strong:#DDD7C7;
+    --text:#1B1B19; --text-2:#4A4740; --muted:#7A766B; --primary:#1D3A5E; --primary-hover:#16304F; --primary-soft:#E3EAF2;
+    --danger:#C2392B; --danger-soft:#EAD3C9; --success:#2E7D32; }
+  *,*::before,*::after { box-sizing: border-box; }
+  body { margin:0; min-height:100vh; display:grid; place-items:center; padding:24px; background:var(--bg); color:var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size:15px; line-height:1.5; }
+  .caixa { width:100%; max-width:420px; }
+  .marca { display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:28px; color:var(--primary);
+    font-size:22px; font-weight:700; letter-spacing:.04em; }
+  .marca svg { width:34px; height:34px; }
+  .cartao { background:var(--surface); border:1px solid var(--border); border-radius:22px; padding:28px;
+    box-shadow:0 24px 60px rgba(28,26,20,.22); text-align:center; }
+  .icone { width:52px; height:52px; border-radius:50%; display:grid; place-items:center; margin:0 auto 16px;
+    background:var(--primary-soft); color:var(--primary); font-size:26px; font-weight:700; }
+  .icone svg { width:26px; height:26px; }
+  .icone.ok { background:#E3F0E4; color:var(--success); }
+  .icone.erro { background:var(--danger-soft); color:var(--danger); }
+  h1 { margin:0 0 8px; font-size:20px; }
+  p { margin:0; color:var(--muted); }
+  form { text-align:left; margin-top:20px; }
+  label { display:block; font-size:13px; font-weight:500; color:var(--text-2); margin:14px 0 6px; }
+  input { width:100%; padding:11px 13px; outline:none; font:inherit; color:inherit; background:var(--surface-2);
+    border:1px solid var(--border-strong); border-radius:10px; }
+  input:focus { border-color:var(--primary); box-shadow:0 0 0 3px var(--primary-soft); }
+  button { width:100%; margin-top:20px; padding:12px; border:0; border-radius:10px; background:var(--primary);
+    color:#fff; font:inherit; font-weight:600; cursor:pointer; }
+  button:hover { background:var(--primary-hover); }
+  button:disabled { opacity:.6; cursor:default; }
+  .aviso { margin-top:14px; padding:10px 12px; font-size:13.5px; border-radius:10px; background:var(--danger-soft); color:var(--danger); text-align:left; }
+  [hidden] { display:none !important; }
+  .senha-caixa { position:relative; }
+  .senha-caixa input { padding-right:46px; }
+  .senha-caixa input::-ms-reveal { display:none; }
+  .mostrar { position:absolute; right:6px; top:50%; transform:translateY(-50%); width:34px; height:34px; margin:0; padding:0; display:grid; place-items:center; background:none; color:var(--muted); border-radius:8px; }
+  .mostrar:hover { background:var(--border); color:var(--text); }
+  .mostrar svg { width:18px; height:18px; }
+  .regra { display:flex; align-items:center; gap:6px; margin:7px 0 0; font-size:13px; color:var(--muted); }
+  .regra svg { width:15px; height:15px; }
+  .regra.ok { color:var(--success); }
+  .botao { display:flex; align-items:center; justify-content:center; gap:8px; margin-top:22px; padding:12px; border-radius:10px;
+    background:var(--primary); color:#fff; font-weight:600; text-decoration:none; }
+  .botao:hover { background:var(--primary-hover); }
+  .botao svg { width:18px; height:18px; }
+  .dica { margin-top:12px; font-size:13px; }
+</style>
+</head>
+<body>
+<div class="caixa">
+  <div class="marca">
+    <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M30 117A86 86 0 0 1 202 117Z"/><path d="M54 135H226A86 86 0 0 1 54 135Z"/></svg>
+    GSCASH
+  </div>
+
+  <div class="cartao">
+    <section id="confirmado" hidden>
+      <div class="icone ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></div>
+      <h1>E-mail confirmado!</h1>
+      <p>Sua conta está pronta. Entre com seu e-mail e senha para começar.</p>
+      <a class="botao" href="app/entrar.html">Abrir o GSCASH<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a>
+      <p class="dica">Usa o GSCASH no computador? Pode entrar por ele também.</p>
+    </section>
+
+    <section id="novaSenha" hidden>
+      <div class="icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4.5" y="10.5" width="15" height="10" rx="2.5"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/><path d="M12 14.5v2"/></svg></div>
+      <h1>Escolha a nova senha</h1>
+      <p>Escolha uma senha nova para a sua conta.</p>
+      <form id="formSenha" novalidate>
+        <label for="senha">Nova senha</label>
+        <div class="senha-caixa">
+          <input id="senha" type="password" autocomplete="new-password" required aria-describedby="regra">
+          <button type="button" class="mostrar" id="mostrar" aria-label="Mostrar senha" aria-pressed="false"><svg class="olho-aberto" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.06 12.35a1 1 0 0 1 0-.7 10.75 10.75 0 0 1 19.88 0 1 1 0 0 1 0 .7 10.75 10.75 0 0 1-19.88 0"/><circle cx="12" cy="12" r="3"/></svg><svg class="olho-fechado" hidden viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c4.36 0 8.15 2.63 9.94 6.65a1 1 0 0 1 0 .7 10.6 10.6 0 0 1-1.62 2.6"/><path d="M14.08 14.16a3 3 0 0 1-4.24-4.24"/><path d="M17.48 17.5A10.56 10.56 0 0 1 12 19c-4.36 0-8.15-2.63-9.94-6.65a1 1 0 0 1 0-.7 10.7 10.7 0 0 1 4.46-5.14"/><path d="m2 2 20 20"/></svg></button>
+        </div>
+        <p class="regra" id="regra"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Pelo menos 8 caracteres</p>
+        <label for="senha2">Repita a nova senha</label>
+        <input id="senha2" type="password" autocomplete="new-password" required>
+        <p class="aviso" id="aviso" role="alert" hidden></p>
+        <button type="submit" id="salvar">Salvar nova senha</button>
+      </form>
+    </section>
+
+    <section id="senhaTrocada" hidden>
+      <div class="icone ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></div>
+      <h1>Senha alterada!</h1>
+      <p>Agora é só entrar com a nova senha.</p>
+      <a class="botao" href="app/entrar.html">Abrir o GSCASH<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a>
+    </section>
+
+    <section id="expirado" hidden>
+      <div class="icone erro"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5"/><path d="M12 16.5h.01"/></svg></div>
+      <h1>Link expirado</h1>
+      <p>Este link já foi usado ou venceu. Volte ao GSCASH e peça um novo.</p>
+    </section>
+
+    <section id="conferindo" hidden>
+      <h1>Conferindo o link…</h1>
+      <p>Só um instante.</p>
+    </section>
+
+    <section id="neutro">
+      <h1>Tudo certo por aqui</h1>
+      <p>Você pode fechar esta página e voltar ao GSCASH.</p>
+    </section>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
+<script>
+  // A chave abaixo é a PUBLICÁVEL (feita para ficar em páginas públicas); a RLS protege os dados.
+  const SUPABASE_URL = 'https://dlgxytheymnlcnxtbqib.supabase.co';
+  const SUPABASE_CHAVE = 'sb_publishable_TfUsoMVnlnPnAe3BzbO8jQ_qfWAHcnI';
+
+  // o que o link do e-mail trouxe: lido antes de o supabase-js limpar o endereço
+  const params = new URLSearchParams(location.hash.slice(1) || location.search.slice(1));
+  const tipo = params.get('type');
+  const deuErro = params.has('error') || params.has('error_code');
+
+  const telas = ['confirmado', 'novaSenha', 'senhaTrocada', 'expirado', 'conferindo', 'neutro'];
+  function mostrar(id) {
+    telas.forEach(t => { document.getElementById(t).hidden = t !== id; });
+  }
+
+  if (deuErro) mostrar('expirado');
+  else if (tipo === 'signup' || tipo === 'email' || tipo === 'email_change') mostrar('confirmado');
+  else if (tipo === 'recovery') mostrar('novaSenha');
+
+  const cliente = window.supabase.createClient(SUPABASE_URL, SUPABASE_CHAVE, {
+    auth: { persistSession: false, detectSessionInUrl: true },
+  });
+  cliente.auth.onAuthStateChange(evento => {
+    if (evento === 'PASSWORD_RECOVERY') mostrar('novaSenha');
+  });
+
+  // Links novos dos e-mails: gscash.com.br/?token_hash=...&type=recovery|email. O código só é
+  // usado aqui, quando a página abre no navegador (programas que "abrem" o link para checar
+  // se é seguro não o gastam). Os links antigos (com #access_token) seguem funcionando acima.
+  const codigo = params.get('token_hash');
+  if (codigo && !deuErro) {
+    mostrar('conferindo');
+    cliente.auth.verifyOtp({ token_hash: codigo, type: tipo === 'recovery' ? 'recovery' : 'email' }).then(({ error }) => {
+      history.replaceState(null, '', location.pathname);   // tira o código do endereço
+      if (error) return mostrar('expirado');
+      mostrar(tipo === 'recovery' ? 'novaSenha' : 'confirmado');
+    });
+  }
+
+  const aviso = document.getElementById('aviso');
+
+  // regra da senha sempre à vista (verde quando atende) e o olho que mostra o que foi digitado
+  const campoSenha = document.getElementById('senha');
+  campoSenha.addEventListener('input', () => document.getElementById('regra').classList.toggle('ok', campoSenha.value.length >= 8));
+  document.getElementById('mostrar').addEventListener('click', () => {
+    const mostrar = campoSenha.type === 'password';
+    ['senha', 'senha2'].forEach(id => { document.getElementById(id).type = mostrar ? 'text' : 'password'; });
+    const b = document.getElementById('mostrar');
+    b.setAttribute('aria-pressed', String(mostrar));
+    b.setAttribute('aria-label', mostrar ? 'Ocultar senha' : 'Mostrar senha');
+    b.querySelector('.olho-aberto').toggleAttribute('hidden', mostrar);
+    b.querySelector('.olho-fechado').toggleAttribute('hidden', !mostrar);
+    campoSenha.focus();
+  });
+  const falhar = texto => { aviso.textContent = texto; aviso.hidden = false; };
+
+  document.getElementById('formSenha').addEventListener('submit', async e => {
+    e.preventDefault();
+    aviso.hidden = true;
+    const senha = document.getElementById('senha').value;
+    if (senha.length < 8) return falhar('A senha precisa ter pelo menos 8 caracteres.');
+    if (senha !== document.getElementById('senha2').value) return falhar('As senhas não são iguais.');
+
+    const botao = document.getElementById('salvar');
+    botao.disabled = true;
+    const { error } = await cliente.auth.updateUser({ password: senha });
+    botao.disabled = false;
+    if (error) {
+      return falhar(error.code === 'weak_password' ? 'Senha fraca. Use pelo menos 8 caracteres.'
+        : error.code === 'same_password' ? 'Escolha uma senha diferente da atual.'
+        : 'Não foi possível salvar. Peça um novo link no app e tente de novo.');
+    }
+    await cliente.auth.signOut();
+    mostrar('senhaTrocada');
+  });
+</script>
+</body>
+</html>
