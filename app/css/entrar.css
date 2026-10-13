@@ -60,6 +60,9 @@
 }
 .entrar-google:hover { background: var(--surface-2); }
 
+.entrar-baixar { text-align: center; color: var(--text-2); font-size: 14px; margin-top: 18px; }
+.entrar-baixar .link-btn { margin-left: 4px; font-weight: 600; }
+
 .entrar-rodape { text-align: center; color: var(--muted); font-size: 12.5px; margin-top: 18px; }
 
 .entrar-rodape a { color: var(--primary); }

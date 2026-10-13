@@ -187,6 +187,16 @@
     (trocar ? el.email : el.enviar).focus();
   }
 
+  // "Prefere instalar no computador? Baixar para Windows" (só no navegador, e só com a 2.0 publicada)
+  const linkBaixar = GS.baixar.linkHtml();
+  if (linkBaixar) {
+    $('baixarLinha').innerHTML = `Prefere instalar no computador? ${linkBaixar}`;
+    $('baixarLinha').hidden = false;
+  }
+
+  // "Começar grátis" da página do site (sobre.html#criar... → entrar.html#criar): abre em "Criar conta"
+  if (location.hash === '#criar') trocarModo('criar');
+
   // veio pelo link "recuperar senha" do e-mail: pede a nova senha em vez de entrar direto
   const veioDoLinkDeSenha = /type=recovery/.test(location.hash);
   GS.supabase.auth.onAuthStateChange(evento => {

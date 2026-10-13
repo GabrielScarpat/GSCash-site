@@ -145,7 +145,8 @@ window.GS = window.GS || {};
     if (!GS.noDesktop) {
       await GS.licenca.pronta;
       const licenca = GS.licenca.rodapeHtml().replace(/<span class="sep">·<\/span>$/, '');
-      const f = rodape(`<span>GSCASH · navegador</span><span class="sep">·</span>${TEXTO_DADOS}${licenca ? `<span class="sep">·</span>${licenca}` : ''}`);
+      const baixar = GS.baixar.linkHtml();
+      const f = rodape(`<span>GSCASH · navegador</span><span class="sep">·</span>${TEXTO_DADOS}${licenca ? `<span class="sep">·</span>${licenca}` : ''}${baixar ? `<span class="sep">·</span>${baixar}` : ''}`);
       f.querySelector('[data-licenca]')?.addEventListener('click', GS.licenca.abrirJanela);
       return;
     }
