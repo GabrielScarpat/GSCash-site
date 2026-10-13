@@ -135,6 +135,8 @@ window.GS = window.GS || {};
     // no navegador padrão e volta para um endereço local do app.py (fluxo PKCE: o navegador
     // devolve só um código, que vale uma vez e só junto com o segredo guardado aqui).
     // `sinal` (AbortSignal) permite cancelar a espera.
+    noDesktop,
+
     async entrarComGoogle({ sinal } = {}) {
       await googleDisponivel();
       if (!noDesktop) {
@@ -143,7 +145,8 @@ window.GS = window.GS || {};
           provider: 'google',
           options: { redirectTo: voltarPara(), queryParams: { prompt: 'select_account' } },
         }));
-        return;
+        // o navegador já está indo para o Google: quem chamou não deve navegar para outro lugar
+        return { saiuDaPagina: true };
       }
 
       const pkce = clientePkce();

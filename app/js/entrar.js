@@ -134,6 +134,7 @@
 
   function fimEsperaGoogle() {
     esperaGoogle = null;
+    el.google.disabled = false;
     el.google.innerHTML = textoGoogle;
     el.enviar.disabled = false;
   }
@@ -145,15 +146,27 @@
     }
     esperaGoogle = new AbortController();
     el.enviar.disabled = true;
-    el.google.textContent = 'Cancelar login com Google';
-    avisar('Abrimos o Google no seu navegador. Escolha sua conta lá e depois volte aqui.', true);
+    if (GS.auth.noDesktop) {
+      el.google.textContent = 'Cancelar login com Google';
+      avisar('Abrimos o Google no seu navegador. Escolha sua conta lá e depois volte aqui.', true);
+    } else {
+      // no navegador a própria página vai para o Google (e volta logada para o app)
+      el.google.disabled = true;
+      avisar('Abrindo o Google…', true);
+    }
     try {
-      await GS.auth.entrarComGoogle({ sinal: esperaGoogle.signal });
+      const r = await GS.auth.entrarComGoogle({ sinal: esperaGoogle.signal });
+      if (r && r.saiuDaPagina) return;  // não navegar: atropelaria a ida para o Google
       irParaOApp();
     } catch (err) {
       fimEsperaGoogle();
       avisar(err.name === 'AbortError' ? 'Login com Google cancelado.' : err.message, err.name === 'AbortError');
     }
+  });
+
+  // voltou do Google pelo botão Voltar do navegador: a página volta como estava, então destrava o botão
+  window.addEventListener('pageshow', e => {
+    if (e.persisted && esperaGoogle) { fimEsperaGoogle(); avisar(''); }
   });
 
   // acabou de sair pelo menu da conta: confirma de qual conta saiu (e, se for troca, pede a outra)
