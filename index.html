@@ -4,6 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>GSCASH</title>
+<script>
+  // gscash.com.br abre o app; esta página só aparece para quem chega por um link de e-mail
+  // (confirmar conta, trocar senha ou link vencido, que trazem estes dados no endereço)
+  if (!/(access_token|error|type|code|token_hash)=/.test(location.hash + location.search)) location.replace('app/');
+</script>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <style>
   :root { --bg:#F3EFE4; --surface:#FDFCF8; --surface-2:#F6F3EB; --border:#ECE7DA; --border-strong:#DDD7C7;
