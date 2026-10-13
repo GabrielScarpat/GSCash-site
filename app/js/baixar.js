@@ -9,9 +9,9 @@
 window.GS = window.GS || {};
 
 (function () {
-  // false enquanto a Release mais nova for a 1.4.0 (sem conta e sem teste grátis): os links
-  // ficam escondidos. Mudar para true ao publicar a 2.0.0.
-  const INSTALADOR_PRONTO = false;
+  // false esconde os links (ex.: se a Release mais nova não servir para quem vem do site).
+  // Ligado desde a 2.0.0, a primeira versão com conta e teste grátis.
+  const INSTALADOR_PRONTO = true;
 
   // sempre o instalador da versão mais nova (publicar.bat cria a Release com este arquivo)
   const URL_INSTALADOR = 'https://github.com/GabrielScarpat/GSCash-versoes/releases/latest/download/Instalar-GSCASH.exe';
