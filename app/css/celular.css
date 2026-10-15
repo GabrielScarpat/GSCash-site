@@ -277,7 +277,7 @@
 .convite-fechar { position: absolute; top: -9px; right: -9px; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 99px;
   background: var(--surface); border: 1px solid var(--border-strong); color: var(--text-2); }
 .convite-fechar svg { width: 15px; height: 15px; }
-.conta-item.instalar { background: var(--primary-soft); color: var(--primary); font-weight: 600; }
+.conta-item:is(.instalar, .lembrete) { background: var(--primary-soft); color: var(--primary); font-weight: 600; }
 
 .instalar-passos { display: grid; gap: 10px; }
 .instalar-passo { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px; background: var(--surface-2);
@@ -289,3 +289,14 @@
   background: var(--surface); border: 1px solid var(--border); color: #2F7CF6; }
 .instalar-ic svg { width: 16px; height: 16px; }
 .instalar-dica { margin: 2px 0 0; padding: 10px 12px; border-radius: 12px; background: var(--surface-2); color: var(--muted); font-size: 13px; line-height: 1.45; }
+
+/* ---------- lembrete diário (js/lembrete.js) ---------- */
+.convite-lembrete .icone-sino { display: grid; place-items: center; width: 44px; height: 44px; flex-shrink: 0; border-radius: 12px;
+  background: var(--primary-soft); color: var(--primary); }
+.convite-lembrete .icone-sino svg { width: 22px; height: 22px; }
+.lembrete-ligado { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 12px; background: #DCEBDC;
+  color: var(--success); font-size: 14.5px; font-weight: 600; }
+.lembrete-ligado svg { width: 18px; height: 18px; flex-shrink: 0; }
+.lembrete-aviso { display: flex; gap: 10px; padding: 12px 14px; border-radius: 12px; background: var(--primary-soft); color: var(--primary);
+  font-size: 14.5px; line-height: 1.45; }
+.lembrete-aviso svg { width: 18px; height: 18px; flex-shrink: 0; margin-top: 2px; }

@@ -271,6 +271,7 @@ window.GS = window.GS || {};
         <hr>
         ${GS.abrirTour ? `<button type="button" class="conta-item" data-tour>${GS.icone('play')}Ver o tour do GSCASH (1 min)</button>` : ''}
         ${GS.instalar && GS.instalar.disponivel() ? `<button type="button" class="conta-item instalar" data-instalar>${GS.icone('download')}Instalar o app no celular</button>` : ''}
+        ${GS.lembrete && GS.lembrete.visivel() ? `<button type="button" class="conta-item lembrete" data-lembrete>${GS.icone('sino')}Lembrete diário</button>` : ''}
         <button type="button" class="conta-item" data-acao="trocar">${GS.icone('transfer')}Trocar de conta</button>
         <button type="button" class="conta-item sair" data-acao="sair">${GS.icone('logout')}Sair da conta</button>
         <p class="conta-nota">Seus dados ficam salvos na sua conta. Ao sair, o GSCASH volta para a tela de entrada.</p>`;
@@ -301,6 +302,11 @@ window.GS = window.GS || {};
         if (e.target.closest('[data-instalar]')) {
           fechar();
           GS.instalar.abrir();
+          return;
+        }
+        if (e.target.closest('[data-lembrete]')) {
+          fechar();
+          GS.lembrete.abrir();
           return;
         }
         const b = e.target.closest('[data-acao]');
