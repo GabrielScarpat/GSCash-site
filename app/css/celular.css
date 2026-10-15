@@ -264,3 +264,28 @@
   ::view-transition-group(gota) { animation-duration: .32s; animation-timing-function: cubic-bezier(.4, 0, .2, 1); }
   ::view-transition-old(gota), ::view-transition-new(gota) { height: 100%; }
 }
+
+/* ---------- instalar no celular (js/instalar.js) ---------- */
+.convite-app { position: relative; display: flex; align-items: center; gap: 12px; padding: 14px 14px 14px 12px; border-radius: 18px;
+  background: var(--surface); border: 1px solid var(--border); box-shadow: 0 6px 20px rgba(28, 26, 20, .06); }
+.convite-app .icone-app { display: grid; place-items: center; width: 44px; height: 44px; flex-shrink: 0; border-radius: 11px; background: var(--primary); }
+.convite-app .icone-app svg { width: 28px; height: 28px; }
+.convite-app .txt { flex: 1; min-width: 0; }
+.convite-app b { display: block; font-size: 14.5px; font-weight: 600; white-space: nowrap; }
+.convite-app small { display: block; margin-top: 1px; color: var(--text-2); font-size: 12.5px; line-height: 1.35; }
+.convite-app .btn { height: 34px; padding: 0 14px; font-size: 13.5px; border-radius: 10px; }
+.convite-fechar { position: absolute; top: -9px; right: -9px; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 99px;
+  background: var(--surface); border: 1px solid var(--border-strong); color: var(--text-2); }
+.convite-fechar svg { width: 15px; height: 15px; }
+.conta-item.instalar { background: var(--primary-soft); color: var(--primary); font-weight: 600; }
+
+.instalar-passos { display: grid; gap: 10px; }
+.instalar-passo { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px; background: var(--surface-2);
+  color: var(--text-2); font-size: 14.5px; line-height: 1.45; }
+.instalar-passo b { color: var(--text); font-weight: 600; }
+.instalar-passo .n { display: grid; place-items: center; width: 24px; height: 24px; flex-shrink: 0; border-radius: 99px; background: var(--chip);
+  color: var(--text); font-size: 12.5px; font-weight: 700; }
+.instalar-ic { display: inline-grid; place-items: center; width: 28px; height: 28px; margin: 0 2px; border-radius: 8px; vertical-align: middle;
+  background: var(--surface); border: 1px solid var(--border); color: #2F7CF6; }
+.instalar-ic svg { width: 16px; height: 16px; }
+.instalar-dica { margin: 2px 0 0; padding: 10px 12px; border-radius: 12px; background: var(--surface-2); color: var(--muted); font-size: 13px; line-height: 1.45; }
