@@ -1,0 +1,84 @@
+/* GSCASH — importar extrato, fatura ou planilha (js/importar.js)
+   (parte do estilos.css; a ordem dos @import importa) */
+
+.modal.importar { max-width: 920px; }
+.modal.importar .modal-body { gap: 16px; }
+
+/* 1. arquivo */
+.imp-soltar { display: grid; justify-items: center; gap: 8px; padding: 28px 20px; border: 2px dashed var(--border-strong); border-radius: 18px;
+  background: var(--surface-2); text-align: center; cursor: pointer; transition: border-color .15s, background .15s; }
+.imp-soltar:hover, .imp-soltar:focus-visible, .imp-soltar.sobre { border-color: var(--primary); background: var(--primary-soft); outline: none; }
+.imp-soltar .ic { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 14px; background: var(--primary-soft); color: var(--primary); }
+.imp-soltar .ic svg { width: 26px; height: 26px; }
+.imp-soltar b { font-size: 16px; font-weight: 600; }
+.imp-soltar small { color: var(--muted); font-size: 13.5px; }
+.imp-soltar .btn { margin-top: 6px; pointer-events: none; }
+.imp-fontes { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.imp-fontes > div { padding: 14px; border-radius: 14px; border: 1px solid var(--border); color: var(--text-2); font-size: 13.5px; line-height: 1.45; }
+.imp-fontes > div > b:first-child { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; color: var(--text); font-size: 14.5px; font-weight: 600; }
+.imp-fontes svg { width: 18px; height: 18px; color: var(--primary); }
+.imp-fontes b { font-weight: 600; color: var(--text); }
+.imp-erro { display: flex; gap: 10px; padding: 12px 14px; border-radius: 12px; background: #F4DCD6; color: #7E2318 !important; font-size: 14px; line-height: 1.45; }
+.imp-erro svg { width: 18px; height: 18px; flex-shrink: 0; margin-top: 1px; }
+.imp-arquivo { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px; background: var(--surface-2); }
+.imp-arquivo .ic { display: grid; place-items: center; width: 40px; height: 40px; flex-shrink: 0; border-radius: 10px; background: #DCEBDC; color: var(--success); }
+.imp-arquivo .ic svg { width: 20px; height: 20px; }
+.imp-arquivo > span:nth-child(2) { flex: 1; min-width: 0; }
+.imp-arquivo b { display: block; font-size: 14.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.imp-arquivo small { color: var(--muted); font-size: 13px; }
+.imp-carregando { display: flex; align-items: center; gap: 10px; padding: 30px 0; justify-content: center; }
+.imp-carregando .roda-botao { border-color: var(--border-strong); border-top-color: var(--primary); }
+
+/* 2. colunas */
+.imp-colunas { overflow-x: auto; border: 1px solid var(--border); border-radius: 12px; }
+.imp-colunas table { border-collapse: collapse; min-width: 100%; font-size: 13.5px; }
+.imp-colunas th { padding: 8px; background: var(--surface-2); text-align: left; font-weight: 500; vertical-align: bottom; }
+.imp-colunas th small { display: block; margin: 0 0 4px 2px; color: var(--muted); font-size: 12px; white-space: nowrap; }
+.imp-colunas td { padding: 8px 10px; border-top: 1px solid var(--border); color: var(--text-2); white-space: nowrap; max-width: 260px; overflow: hidden; text-overflow: ellipsis; }
+.imp-colunas td.cinza { opacity: .45; }
+.imp-papel, .imp-sinal { height: 38px; min-width: 120px; padding: 0 10px; border-radius: 9px; border: 1px solid var(--border-strong); background: var(--surface);
+  font: inherit; font-size: 13.5px; color: var(--text); }
+.imp-papel.ok { border-color: var(--primary); background: var(--primary-soft); color: var(--primary); font-weight: 600; }
+.imp-sinal { width: 100%; height: 46px; font-size: 14.5px; border-radius: 12px; }
+
+/* 3. revisar */
+.imp-resumo { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip-r { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border-radius: 99px; background: var(--surface-2); color: var(--text-2); font-size: 13px; }
+.chip-r b { color: var(--text); font-weight: 600; }
+.chip-r.aviso { background: #F6E6CF; color: #6E400C; }
+.chip-r svg { width: 15px; height: 15px; }
+.imp-itens { border: 1px solid var(--border); border-radius: 14px; }
+.imp-item { display: grid; grid-template-columns: 20px 52px minmax(0, 1fr) 210px 104px; gap: 10px; align-items: center; padding: 8px 12px; border-top: 1px solid var(--border); font-size: 13.5px; }
+.imp-item:first-child { border-top: 0; }
+.imp-item.rep { background: #FBF4EA; }
+.imp-item.rep .desc b, .imp-item.rep .val { opacity: .55; }
+.imp-marca { width: 18px; height: 18px; accent-color: var(--primary); }
+.imp-item .data { color: var(--muted); font-size: 12.5px; white-space: nowrap; }
+.imp-item .desc { min-width: 0; }
+.imp-item .desc b { display: block; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.imp-item .desc small { display: block; color: var(--muted); font-size: 12px; }
+.imp-item .desc small.aviso { color: #9A5B12; }
+.imp-cat { display: flex; align-items: center; gap: 6px; width: 100%; height: 36px; padding: 0 10px; border-radius: 9px; border: 1px solid var(--border-strong);
+  background: var(--surface); font: inherit; font-size: 13px; color: var(--text); text-align: left; }
+.imp-cat:hover { border-color: var(--primary); }
+.imp-cat > span:not(.sug) { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.imp-cat .bol { width: 9px; height: 9px; flex-shrink: 0; border-radius: 99px; }
+.imp-cat .sug, .imp-legenda svg { color: var(--primary); }
+.imp-cat .sug svg { width: 13px; height: 13px; display: block; }
+.imp-item .cat-slot .select-btn { height: 36px; font-size: 13px; border-radius: 9px; }
+.imp-item .val { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.imp-item .val.e { color: var(--success); }
+.imp-legenda { display: flex; align-items: flex-start; gap: 8px; color: var(--muted) !important; font-size: 12.5px; }
+.imp-legenda svg { width: 14px; height: 14px; flex-shrink: 0; margin-top: 2px; }
+
+@media (max-width: 640px) {
+  .imp-fontes { grid-template-columns: 1fr; }
+  .imp-item { grid-template-columns: 20px minmax(0, 1fr) auto; grid-template-areas: "m d v" "m x x" "m c c"; row-gap: 4px; padding: 10px 12px; }
+  .imp-item .imp-marca { grid-area: m; align-self: start; margin-top: 2px; }
+  .imp-item .data { grid-area: x; margin-top: -2px; }
+  .imp-item .cat-slot { margin-top: 2px; }
+  .imp-item .desc { grid-area: d; }
+  .imp-item .cat-slot { grid-area: c; }
+  .imp-item .val { grid-area: v; align-self: start; }
+  .imp-cat { height: 32px; font-size: 12.5px; }
+}

@@ -764,6 +764,29 @@ window.GS = window.GS || {};
       return responder(criadas);
     },
 
+    // importação (extrato, fatura, planilha): grava vários de uma vez, com o id que vier
+    // (o id fixo é o que impede importar o mesmo lançamento duas vezes); ids já usados ficam de fora
+    importarTransacoes(lista) {
+      const db = carregar();
+      const usados = new Set(db.transacoes.map(t => t.id));
+      const criadas = [];
+      for (const dados of lista) {
+        const t = limparTransacao(dados);
+        aplicarSubcategoria(db, t);
+        if (!t.titulo || t.valor <= 0 || !/^\d{4}-\d{2}-\d{2}$/.test(t.data || '')) continue;
+        if (validarCredito(db, t)) continue;
+        const id = String(dados.id || novoId('t'));
+        if (usados.has(id)) continue;
+        usados.add(id);
+        Object.assign(t, { id, criadoEm: Date.now() + criadas.length });
+        db.transacoes.push(t);
+        criadas.push(t);
+      }
+      if (!criadas.length) return falhar('Nenhum lançamento novo para importar.');
+      salvar();
+      return responder(criadas);
+    },
+
     atualizarTransacao(id, dados) {
       const db = carregar();
       const t = db.transacoes.find(x => x.id === id);

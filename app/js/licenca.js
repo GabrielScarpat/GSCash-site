@@ -30,7 +30,7 @@ window.GS = window.GS || {};
     '[data-acao="configurar"]', '[data-acao="pagar"]', '[data-acao="adiantar"]', '[data-acao="desfazer"]',
     '#novaCarteira', '#novaCategoria', '#definirOrcamento', '#configurar',
     '[data-editar]', '[data-excluir]', '[data-editar-credito]', '[data-switch]', 'button[data-saldo]', '[data-orcamento]',
-    '[data-passo]',
+    '[data-passo]', '#importar', '[data-importar]',
   ].join(',');
 
   let info = { estado: 'livre' };
