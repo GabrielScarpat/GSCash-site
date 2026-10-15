@@ -25,9 +25,6 @@
   .faixa-licenca.teste .longo { display: none; }
   .faixa-licenca.teste .curto { display: block; flex: 1; }
   .faixa-licenca.teste .acoes { width: auto; margin-left: auto; }
-  /* no celular cabe um botão só: o de comprar ("Ativar chave" continua na janela de licença) */
-  .faixa-licenca.teste [data-chave] { display: none; }
-  .faixa-licenca.teste [data-comprar] { background: var(--primary); border-color: var(--primary); color: #fff; }
   .faixa-licenca.teste .btn { height: 32px; padding: 0 12px; font-size: 13px; border-radius: 10px; }
 
   .page { padding-top: 10px; }

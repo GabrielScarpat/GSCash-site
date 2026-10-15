@@ -428,7 +428,6 @@ window.GS = window.GS || {};
     el.setAttribute('role', 'status');
     const topo = document.querySelector('.topbar');
     topo ? topo.after(el) : document.body.prepend(el);
-    el.querySelector('[data-chave]')?.addEventListener('click', abrirAtivacao);
     el.querySelector('[data-comprar]')?.addEventListener('click', comprar);
     return el;
   }
@@ -436,15 +435,13 @@ window.GS = window.GS || {};
   const ATE = iso => data(iso).split(' ').slice(0, 2).join(' ');  // "19 out"
 
   // teste grátis: faixa azul em todas as páginas
+  // (as faixas só oferecem comprar; quem tem uma chave ativa pelo link "Licença" do rodapé)
   function faixaTeste() {
     faixa('teste', `
       <span class="ic">${icone('clock')}</span>
       <span class="longo"><strong>Teste grátis: ${info.dias === 1 ? 'falta 1 dia' : `faltam ${info.dias} dias`}</strong> (até ${ATE(info.testeAte)}). Depois, ative sua licença para continuar lançando.</span>
       <span class="curto"><strong>Teste grátis:</strong> ${GS.plural(info.dias, 'dia', 'dias')}</span>
-      <div class="acoes">
-        <button type="button" class="btn btn-outline" data-comprar>Quero comprar</button>
-        <button type="button" class="btn btn-primary" data-chave>${icone('key')}Ativar chave</button>
-      </div>`);
+      <div class="acoes"><button type="button" class="btn btn-primary" data-comprar>${icone('pix')}Quero comprar</button></div>`);
   }
 
   // faltam 30 dias ou menos: avisa uma vez por dia
@@ -472,18 +469,12 @@ window.GS = window.GS || {};
       faixa('vencida', `
         <span class="ic">${icone('lock')}</span>
         <span><strong>Seu teste grátis acabou.</strong> Seus dados continuam aqui: ative sua licença para voltar a lançar e editar.</span>
-        <div class="acoes">
-          <button type="button" class="btn btn-outline" data-comprar>Quero comprar</button>
-          <button type="button" class="btn btn-primary" data-chave>${icone('key')}Ativar chave</button>
-        </div>`);
+        <div class="acoes"><button type="button" class="btn btn-primary" data-comprar>${icone('pix')}Quero comprar</button></div>`);
     } else {
       faixa('vencida', `
         <span class="ic">${icone('lock')}</span>
         <span><strong>Licença vencida em ${data(info.validade)}.</strong> O GSCASH está em modo só leitura: você vê seus dados e gera relatórios, mas não lança nem edita.</span>
-        <div class="acoes">
-          <button type="button" class="btn btn-outline" data-chave>${icone('key')}Inserir chave</button>
-          <button type="button" class="btn btn-primary" data-comprar>${icone('pix')}Renovar</button>
-        </div>`);
+        <div class="acoes"><button type="button" class="btn btn-primary" data-comprar>${icone('pix')}Renovar</button></div>`);
     }
     document.addEventListener('click', e => {
       if (!e.target.closest(ESCRITA)) return;
