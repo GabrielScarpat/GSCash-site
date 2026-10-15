@@ -21,6 +21,8 @@ window.GS = window.GS || {};
   const noDesktop = (() => {
     try {
       if (new URLSearchParams(location.search).has('desktop')) sessionStorage.setItem('gscash:desktop', '1');
+      // app/?comprar (botão do site): lembra até a pessoa entrar, e licenca.js abre a compra
+      if (new URLSearchParams(location.search).has('comprar')) sessionStorage.setItem('gscash:comprar', '1');
       return sessionStorage.getItem('gscash:desktop') === '1';
     } catch (e) {
       return false;

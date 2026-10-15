@@ -22,9 +22,6 @@ window.GS = window.GS || {};
   const fmtPreco = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
   const preco = centavos => fmtPreco.format(centavos / 100);  // não usa GS.moeda: o preço aparece mesmo com valores ocultos
 
-  // "Quero comprar": WhatsApp de quem vende (o mesmo número do app.py)
-  const WHATSAPP_VENDAS = '5573999239911';
-  const MENSAGEM_COMPRA = 'Olá! Quero comprar a licença do GSCASH.';
 
   // botões que gravam algo: no modo só leitura ficam travados
   // (a mesma lista está em css/licenca.css)
@@ -100,16 +97,210 @@ window.GS = window.GS || {};
     else if (info.estado === 'teste-acabou') travar();
     else if (info.estado === 'vencida') travar();
     else if (info.estado === 'vencendo') avisoVencendo();
+
+    // veio do botão "Quero comprar" do site (app/?comprar, guardado por supabase.js até depois do login)
+    try {
+      if (sessionStorage.getItem('gscash:comprar') && info.estado !== 'livre') {
+        sessionStorage.removeItem('gscash:comprar');
+        setTimeout(abrirCompra, 400);
+      }
+    } catch (e) { /* sem sessionStorage: segue sem abrir */ }
     return info;
   })();
 
-  async function comprar() {
-    if (GS.noDesktop) {
-      (await GS.apiDesktop()).comprar_licenca();
-      return;
-    }
-    window.open(`https://wa.me/${WHATSAPP_VENDAS}?text=${encodeURIComponent(MENSAGEM_COMPRA)}`, '_blank', 'noopener');
+  /* ---------- janela "Comprar licença" (Pix pelo Mercado Pago) ----------
+     1. resumo e nome na licença  2. QR code e copia e cola, conferindo o pagamento a cada 4 s
+     3. pronto. Quem libera a licença é a Edge Function "pix", quando o Mercado Pago confirma. */
+
+  const noCelular = () => matchMedia('(max-width: 640px)').matches;
+  const hora = iso => new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+  async function pedirPix(corpo) {
+    const { data: r, error } = await GS.supabase.functions.invoke('pix', { body: corpo });
+    if (!error) return r;
+    let msg = 'Não foi possível gerar o Pix agora. Verifique a conexão e tente de novo.';
+    try { msg = (await error.context.json()).erro || msg; } catch (e) { /* sem corpo: fica a mensagem padrão */ }
+    throw new Error(msg);
   }
+
+  async function copiar(botao, texto) {
+    try {
+      await navigator.clipboard.writeText(texto);
+    } catch (e) {
+      const t = GS.el('textarea');
+      t.value = texto;
+      document.body.append(t);
+      t.select();
+      document.execCommand('copy');
+      t.remove();
+    }
+    if (botao.dataset.textoOriginal === undefined) botao.dataset.textoOriginal = botao.innerHTML;
+    botao.innerHTML = `${icone('check')}Copiado`;
+    botao.classList.add('copiado');
+    clearTimeout(botao._volta);
+    botao._volta = setTimeout(() => {
+      botao.innerHTML = botao.dataset.textoOriginal;
+      botao.classList.remove('copiado');
+    }, 2000);
+  }
+
+  function abrirCompra() {
+    const renovando = info.estado === 'ativa' || info.estado === 'vencendo';
+    // 1 ano somado ao que ainda falta (ou a partir de hoje)
+    const base = renovando ? GS.parseData(info.validade) : GS.hoje();
+    const novaValidade = new Date(base.getFullYear() + 1, base.getMonth(), base.getDate());
+    const meta = (GS.usuario && GS.usuario.user_metadata) || {};
+    const nomeInicial = info.nome || String(meta.full_name || meta.name || '').trim();
+
+    let fechado = false;
+    let espera;
+    const modal = GS.abrirModal({
+      titulo: 'Comprar licença',
+      corpo: '',
+      aoFechar: () => {
+        fechado = true;
+        clearTimeout(espera);
+        document.removeEventListener('visibilitychange', aoVoltar);
+      },
+    });
+    const titulo = t => { modal.el.querySelector('.modal-title').textContent = t; };
+    const rodape = (html, um) => {
+      modal.foot.className = `modal-foot${um ? ' um' : ''}`;
+      modal.foot.innerHTML = html;
+      modal.foot.querySelectorAll('[data-fechar]').forEach(b => b.addEventListener('click', () => modal.fechar()));
+    };
+
+    /* 1. resumo */
+    modal.body.innerHTML = `
+      <div class="compra-plano">
+        <div class="topo"><b>GSCASH · 1 ano</b><span class="selo-promo">Promoção</span></div>
+        <span class="preco num"><s>${preco(PRECO_DE)}</s>${preco(PRECO_POR)}<small>por ano</small></span>
+        <ul>
+          <li>${icone('check')}Todos os recursos, sem limite de lançamentos</li>
+          <li>${icone('check')}Vale no navegador e no programa para Windows</li>
+          <li>${icone('check')}Ativa na hora, assim que o Pix for pago</li>
+        </ul>
+      </div>
+      ${renovando
+        ? `<div class="compra-renova">${icone('clock')}<span>Sua licença vale até <b>${data(info.validade)}</b>. Com a renovação, passa a valer até <b>${data(novaValidade)}</b>.</span></div>`
+        : `<div class="field"><label for="nomeLicenca">Nome na licença</label>
+             <div class="input"><input id="nomeLicenca" maxlength="80" autocomplete="name" value="${esc(nomeInicial)}"></div></div>`}
+      <div class="compra-seguro">${icone('lock')}Pagamento por Pix, processado pelo Mercado Pago</div>`;
+    rodape(`<button type="button" class="btn btn-outline" data-fechar>Cancelar</button>
+            <button type="button" class="btn btn-primary" data-pagar>${icone('pix')}Pagar com Pix</button>`);
+
+    const campoNome = modal.body.querySelector('#nomeLicenca');
+    const erroNome = msg => {
+      const campo = campoNome.closest('.field');
+      campo.querySelector('.field-error')?.remove();
+      campo.querySelector('.input').classList.toggle('invalid', !!msg);
+      if (msg) campo.append(GS.el('span', 'field-error', `${icone('alert')}${esc(msg)}`));
+    };
+    campoNome?.addEventListener('input', () => erroNome(null));
+
+    let nome = nomeInicial;
+    async function gerar(botao) {
+      if (campoNome) {
+        nome = campoNome.value.trim().replace(/\s+/g, ' ');
+        if (nome.length < 2) {
+          erroNome('Escreva o nome que vai na licença.');
+          return campoNome.focus();
+        }
+      }
+      const original = botao.innerHTML;
+      botao.disabled = true;
+      botao.innerHTML = '<span class="roda-botao" aria-hidden="true"></span>Gerando o Pix…';
+      try {
+        const pix = await pedirPix({ acao: 'criar', nome });
+        if (!fechado) mostrarPix(pix);
+      } catch (e) {
+        botao.disabled = false;
+        botao.innerHTML = original;
+        campoNome ? erroNome(e.message) : GS.toast(e.message, 'erro');
+      }
+    }
+    modal.foot.querySelector('[data-pagar]').addEventListener('click', e => gerar(e.currentTarget));
+    campoNome?.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); gerar(modal.foot.querySelector('[data-pagar]')); }
+    });
+
+    /* 2. Pix: no celular a pessoa paga no mesmo aparelho, então o "copiar" vem primeiro e o QR fica guardado */
+    let pixAtual;
+    function mostrarPix(pix) {
+      pixAtual = pix;
+      titulo('Pague com Pix');
+      const qr = `<div class="pix-qr"><img alt="QR code do Pix" src="data:image/png;base64,${pix.qr_base64}"></div>`;
+      const esperando = texto => `<div class="pix-esperando"><span class="pix-giro" aria-hidden="true"></span><span><b>Esperando o pagamento</b>${texto}</span></div>`;
+      modal.body.innerHTML = `<div class="pix-valor"><small>Valor</small><b class="num">${preco(Math.round(pix.valor * 100))}</b></div>` + (noCelular()
+        ? `<button type="button" class="btn btn-primary pix-copiar-grande" data-copiar>${icone('copiar')}Copiar código Pix</button>
+           <ol class="pix-passos"><li><span class="n">1</span>Toque em copiar.</li><li><span class="n">2</span>No app do seu banco, escolha Pix copia e cola e cole o código.</li></ol>
+           ${esperando('Volte para cá depois de pagar: a licença ativa sozinha.')}
+           <details class="pix-dobra"><summary>Mostrar QR code</summary>${qr}</details>`
+        : `${qr}
+           <ol class="pix-passos"><li><span class="n">1</span>Abra o app do seu banco e escolha pagar com Pix.</li><li><span class="n">2</span>Aponte a câmera para o QR code ou cole o código abaixo.</li></ol>
+           <div class="pix-copia"><code>${esc(pix.qr_code)}</code><button type="button" class="btn btn-outline" data-copiar>${icone('copiar')}Copiar</button></div>
+           ${esperando('A licença ativa sozinha quando o Pix cair. Pode deixar esta janela aberta.')}
+           <div class="pix-validade">Este código vale até ${hora(pix.expira_em)}.</div>`);
+      modal.body.querySelector('[data-copiar]').addEventListener('click', e => copiar(e.currentTarget, pix.qr_code));
+      rodape('<button type="button" class="btn btn-outline" data-fechar>Pagar depois</button>', true);
+      clearTimeout(espera);
+      espera = setTimeout(vigiar, 4000);
+    }
+
+    // pergunta ao servidor se o Pix já caiu (a cada 4 s, e na hora em que a pessoa volta do app do banco)
+    async function vigiar() {
+      clearTimeout(espera);
+      if (fechado || !pixAtual) return;
+      try {
+        const r = await pedirPix({ acao: 'conferir', id: pixAtual.id });
+        if (fechado) return;
+        if (r.status === 'aprovado') return mostrarPronto(r);
+        if (r.status === 'expirado') return mostrarVencido();
+      } catch (e) {
+        // sem internet por um instante: tenta de novo
+      }
+      if (!fechado) espera = setTimeout(vigiar, 4000);
+    }
+    function aoVoltar() {
+      if (document.visibilityState === 'visible') vigiar();
+    }
+    document.addEventListener('visibilitychange', aoVoltar);
+
+    function mostrarVencido() {
+      pixAtual = null;
+      titulo('Pague com Pix');
+      modal.body.innerHTML = `
+        <div class="ativ-ok pix-vencido">
+          <span class="ic">${icone('clock')}</span>
+          <h3 class="ativ-titulo">Este código venceu</h3>
+          <p>O código Pix vale por 30 minutos. Gere um novo para pagar.</p>
+        </div>`;
+      rodape(`<button type="button" class="btn btn-outline" data-fechar>Fechar</button>
+              <button type="button" class="btn btn-primary" data-pagar>${icone('pix')}Gerar outro Pix</button>`);
+      modal.foot.querySelector('[data-pagar]').addEventListener('click', e => gerar(e.currentTarget));
+    }
+
+    /* 3. pronto */
+    function mostrarPronto(r) {
+      pixAtual = null;
+      titulo('Licença ativa');
+      modal.body.innerHTML = `
+        <div class="ativ-ok">
+          <span class="ic">${icone('check')}</span>
+          <h3 class="ativ-titulo">Pagamento confirmado, ${esc(r.nome.split(' ')[0])}!</h3>
+          <p>Licença ativada para <b>${esc(r.nome)}</b>.<br>Ela vale até <b>${data(r.validade)}</b>, no computador e no navegador.</p>
+          <p class="pix-validade">O comprovante fica no app do seu banco.</p>
+        </div>`;
+      rodape(`<button type="button" class="btn btn-primary" data-continuar>Continuar${icone('arrow-right')}</button>`, true);
+      const continuar = modal.foot.querySelector('[data-continuar]');
+      continuar.addEventListener('click', () => location.reload());
+      continuar.focus();
+    }
+
+    setTimeout(() => (campoNome || modal.foot.querySelector('[data-pagar]')).focus(), 50);
+  }
+
+  const comprar = () => abrirCompra();
 
   /* ---------- campo da chave ---------- */
 
@@ -141,7 +332,7 @@ window.GS = window.GS || {};
           <span class="preco num"><s>${preco(PRECO_DE)}</s>${preco(PRECO_POR)}<small>por ano</small></span>
           <button type="button" class="btn btn-outline" data-comprar>Quero comprar</button>
         </div>
-        <p>Pague por Pix e receba a chave pelo WhatsApp.</p>
+        <p>Pague por Pix aqui mesmo: a licença ativa na hora.</p>
       </div>`;
     const campo = campoChave();
     corpo.querySelector('[data-slot="campo"]').replaceWith(campo.el);
@@ -153,7 +344,7 @@ window.GS = window.GS || {};
                <button type="button" class="btn btn-primary" data-ativar>${icone('key')}Ativar</button>`,
       avisoDescarte: 'A chave que você colou ainda não foi ativada.',
     });
-    corpo.querySelector('[data-comprar]').addEventListener('click', comprar);
+    corpo.querySelector('[data-comprar]').addEventListener('click', () => { modal.fechar(); abrirCompra(); });
 
     const botao = modal.foot.querySelector('[data-ativar]');
     const enviar = async () => {
@@ -266,7 +457,7 @@ window.GS = window.GS || {};
       <span>Sua licença vence <strong>${dias(info.dias)}</strong> (${data(info.validade)}). Renove para continuar lançando seus gastos.</span>
       <div class="acoes">
         <button type="button" class="btn btn-outline" data-depois>Agora não</button>
-        <button type="button" class="btn btn-primary" data-chave>${icone('key')}Inserir nova chave</button>
+        <button type="button" class="btn btn-primary" data-comprar>${icone('pix')}Renovar</button>
       </div>`);
     el.querySelector('[data-depois]').addEventListener('click', () => {
       GS.api.salvarPreferencia('licencaAvisoDispensado', hoje).catch(err => GS.toast(err.message, 'erro'));
@@ -289,7 +480,10 @@ window.GS = window.GS || {};
       faixa('vencida', `
         <span class="ic">${icone('lock')}</span>
         <span><strong>Licença vencida em ${data(info.validade)}.</strong> O GSCASH está em modo só leitura: você vê seus dados e gera relatórios, mas não lança nem edita.</span>
-        <div class="acoes"><button type="button" class="btn btn-primary" data-chave>${icone('key')}Inserir nova chave</button></div>`);
+        <div class="acoes">
+          <button type="button" class="btn btn-outline" data-chave>${icone('key')}Inserir chave</button>
+          <button type="button" class="btn btn-primary" data-comprar>${icone('pix')}Renovar</button>
+        </div>`);
     }
     document.addEventListener('click', e => {
       if (!e.target.closest(ESCRITA)) return;
@@ -315,5 +509,5 @@ window.GS = window.GS || {};
     return `<span>${texto}</span><span class="sep">·</span><button type="button" class="link-btn" data-licenca>Licença</button><span class="sep">·</span>`;
   }
 
-  GS.licenca = { pronta, rodapeHtml, abrirJanela, abrirAtivacao };
+  GS.licenca = { pronta, rodapeHtml, abrirJanela, abrirAtivacao, abrirCompra };
 })();
