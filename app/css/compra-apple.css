@@ -1,0 +1,9 @@
+/* =========================================================
+   GSCASH — compra pela Apple (app do iPhone, js/compra-apple.js)
+   O resto da janela usa as mesmas classes da compra por Pix (licenca.css).
+   ========================================================= */
+
+.compra-carregando { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 28px 0; color: var(--text-2); font-size: 14.5px; }
+.compra-carregando .roda-botao { border-color: var(--border-strong); border-top-color: var(--primary); }
+.compra-restaurar { margin: 0; text-align: center; color: var(--muted); font-size: 13.5px; }
+.compra-restaurar .link-btn { font-size: 14px; font-weight: 600; }
