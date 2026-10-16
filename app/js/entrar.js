@@ -227,46 +227,54 @@
   el.esqueci.addEventListener('click', () => trocarModo('recuperar'));
   el.voltar.addEventListener('click', () => trocarModo('entrar'));
   el.form.addEventListener('submit', enviar);
-  // login com Google: no app de computador ele continua no navegador padrão;
+  // login com Google ou com a Apple: no app de computador ele continua no navegador padrão;
   // enquanto isso a tela avisa o que fazer e o mesmo botão vira "Cancelar"
-  const textoGoogle = el.google.innerHTML;
-  let esperaGoogle = null;
+  const botoesExternos = { google: el.google, apple: $('apple') };
+  const NOMES = { google: { com: 'Google', o: 'o Google' }, apple: { com: 'Apple', o: 'a Apple' } };
+  const textos = Object.fromEntries(Object.entries(botoesExternos).map(([k, b]) => [k, b.innerHTML]));
+  let espera = null;  // { provedor, controle }
 
-  function fimEsperaGoogle() {
-    esperaGoogle = null;
-    el.google.disabled = false;
-    el.google.innerHTML = textoGoogle;
+  function fimEspera() {
+    if (!espera) return;
+    botoesExternos[espera.provedor].innerHTML = textos[espera.provedor];
+    espera = null;
+    Object.values(botoesExternos).forEach(x => { x.disabled = false; });
     el.enviar.disabled = false;
   }
 
-  el.google.addEventListener('click', async () => {
-    if (esperaGoogle) {
-      esperaGoogle.abort();
+  Object.entries(botoesExternos).forEach(([provedor, botao]) => botao.addEventListener('click', async () => {
+    if (espera) {
+      if (espera.provedor === provedor) espera.controle.abort();
       return;
     }
-    esperaGoogle = new AbortController();
+    espera = { provedor, controle: new AbortController() };
     el.enviar.disabled = true;
+    Object.values(botoesExternos).forEach(x => { if (x !== botao) x.disabled = true; });
+    const nome = NOMES[provedor];
     if (GS.auth.noDesktop) {
-      el.google.textContent = 'Cancelar login com Google';
-      avisar('Abrimos o Google no seu navegador. Escolha sua conta lá e depois volte aqui.', true);
+      botao.textContent = `Cancelar login com ${nome.com}`;
+      avisar(`Abrimos ${nome.o} no seu navegador. Entre lá e depois volte aqui.`, true);
     } else {
-      // no navegador a própria página vai para o Google (e volta logada para o app)
-      el.google.disabled = true;
-      avisar('Abrindo o Google…', true);
+      // no navegador a própria página vai para o provedor (e volta logada para o app)
+      botao.disabled = true;
+      avisar(`Abrindo ${nome.o}…`, true);
     }
     try {
-      const r = await GS.auth.entrarComGoogle({ sinal: esperaGoogle.signal });
-      if (r && r.saiuDaPagina) return;  // não navegar: atropelaria a ida para o Google
+      const r = await GS.auth.entrarCom(provedor, { sinal: espera.controle.signal });
+      if (r && r.saiuDaPagina) return;  // não navegar: atropelaria a ida para o provedor
       irParaOApp();
     } catch (err) {
-      fimEsperaGoogle();
-      avisar(err.name === 'AbortError' ? 'Login com Google cancelado.' : err.message, err.name === 'AbortError');
+      fimEspera();
+      avisar(err.name === 'AbortError' ? `Login com ${nome.com} cancelado.` : err.message, err.name === 'AbortError');
     }
-  });
+  }));
 
-  // voltou do Google pelo botão Voltar do navegador: a página volta como estava, então destrava o botão
+  // o botão da Apple só aparece quando ela estiver ligada no Supabase (até lá, daria erro)
+  GS.auth.provedoresLigados().then(ligados => { $('apple').classList.toggle('hidden', !ligados.apple); }).catch(() => {});
+
+  // voltou do Google/Apple pelo botão Voltar do navegador: a página volta como estava, então destrava o botão
   window.addEventListener('pageshow', e => {
-    if (e.persisted && esperaGoogle) { fimEsperaGoogle(); avisar(''); }
+    if (e.persisted && espera) { fimEspera(); avisar(''); }
   });
 
   // acabou de sair pelo menu da conta: confirma de qual conta saiu (e, se for troca, pede a outra)

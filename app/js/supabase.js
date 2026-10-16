@@ -107,16 +107,23 @@ window.GS = window.GS || {};
     auth: { flowType: 'pkce', persistSession: true, autoRefreshToken: false, detectSessionInUrl: false, storage: armazenamentoDesktop },
   }));
 
-  // o Google precisa estar ligado no Supabase; senão o navegador cairia numa página de erro técnica
-  async function googleDisponivel() {
-    let ligado = false;
-    try {
-      const resp = await fetch(`${SUPABASE_URL}/auth/v1/settings`, { headers: { apikey: SUPABASE_CHAVE } });
-      ligado = resp.ok && !!((await resp.json()).external || {}).google;
-    } catch (e) {
-      throw new Error(traduzir(e));
+  // quais logins externos estão ligados no Supabase (Google, Apple); lido uma vez por página
+  const NOMES = { google: 'Google', apple: 'Apple' };
+  let provedores = null;
+  function provedoresLigados() {
+    if (!provedores) {
+      provedores = fetch(`${SUPABASE_URL}/auth/v1/settings`, { headers: { apikey: SUPABASE_CHAVE } })
+        .then(r => (r.ok ? r.json() : {}))
+        .then(j => j.external || {})
+        .catch(e => { provedores = null; throw new Error(traduzir(e)); });
     }
-    if (!ligado) throw new Error('O login com Google ainda não está disponível. Use e-mail e senha.');
+    return provedores;
+  }
+
+  // o provedor precisa estar ligado no Supabase; senão o navegador cairia numa página de erro técnica
+  async function provedorDisponivel(provedor) {
+    const ligados = await provedoresLigados();
+    if (!ligados[provedor]) throw new Error(`O login com ${NOMES[provedor]} ainda não está disponível. Use e-mail e senha.`);
   }
 
   GS.auth = {
@@ -146,29 +153,33 @@ window.GS = window.GS || {};
       await executar(cliente.auth.resend({ type: 'signup', email: email.trim(), options: { emailRedirectTo: SITE_EMAILS } }));
     },
 
-    // No navegador: vai para o Google e volta para o app.
+    provedoresLigados,
+
+    // No navegador: vai para o Google (ou a Apple) e volta para o app.
     // No app de computador: o Google bloqueia login em janelas embutidas, então o login abre
     // no navegador padrão e volta para um endereço local do app.py (fluxo PKCE: o navegador
     // devolve só um código, que vale uma vez e só junto com o segredo guardado aqui).
     // `sinal` (AbortSignal) permite cancelar a espera.
     noDesktop,
 
-    async entrarComGoogle({ sinal } = {}) {
-      await googleDisponivel();
+    entrarComGoogle(opcoes) { return GS.auth.entrarCom('google', opcoes); },
+
+    // provedor: 'google' ou 'apple' (a volta no app de computador usa o mesmo endereço local)
+    async entrarCom(provedor, { sinal } = {}) {
+      await provedorDisponivel(provedor);
+      // o Google deixa escolher a conta toda vez; a Apple não tem essa opção
+      const extras = provedor === 'google' ? { queryParams: { prompt: 'select_account' } } : {};
       if (!noDesktop) {
-        if (!temHttp) throw new Error('O login com Google só funciona com o app aberto por um endereço http(s).');
-        await executar(cliente.auth.signInWithOAuth({
-          provider: 'google',
-          options: { redirectTo: voltarPara(), queryParams: { prompt: 'select_account' } },
-        }));
-        // o navegador já está indo para o Google: quem chamou não deve navegar para outro lugar
+        if (!temHttp) throw new Error(`O login com ${NOMES[provedor]} só funciona com o app aberto por um endereço http(s).`);
+        await executar(cliente.auth.signInWithOAuth({ provider: provedor, options: { redirectTo: voltarPara(), ...extras } }));
+        // o navegador já está indo para o provedor: quem chamou não deve navegar para outro lugar
         return { saiuDaPagina: true };
       }
 
       const pkce = clientePkce();
       const dados = await executar(pkce.auth.signInWithOAuth({
-        provider: 'google',
-        options: { redirectTo: VOLTA_GOOGLE_DESKTOP, skipBrowserRedirect: true, queryParams: { prompt: 'select_account' } },
+        provider: provedor,
+        options: { redirectTo: VOLTA_GOOGLE_DESKTOP, skipBrowserRedirect: true, ...extras },
       }));
       const api = await apiDesktop();
       const inicio = await api.login_google_iniciar(dados.url);

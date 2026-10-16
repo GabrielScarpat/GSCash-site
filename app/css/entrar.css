@@ -59,6 +59,14 @@
   border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--surface); font-weight: 500;
 }
 .entrar-google:hover { background: var(--surface-2); }
+/* "Continuar com a Apple": preto, como a Apple pede, com o mesmo tamanho do Google */
+.entrar-apple {
+  width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 11px; margin-bottom: 10px;
+  border: 1px solid #000; border-radius: var(--radius-sm); background: #000; color: #fff; font-weight: 500;
+}
+.entrar-apple:hover { background: #1F1F1F; }
+.entrar-apple:disabled, .entrar-google:disabled { opacity: .6; cursor: default; }
+.entrar-apple svg { width: 17px; height: 17px; margin-top: -2px; }
 
 .entrar-baixar { text-align: center; color: var(--text-2); font-size: 14px; margin-top: 18px; }
 .entrar-baixar .link-btn { margin-left: 4px; font-weight: 600; }
