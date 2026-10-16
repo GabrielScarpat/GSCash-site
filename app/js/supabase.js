@@ -227,6 +227,9 @@ window.GS = window.GS || {};
 
   /* ---------- Menu da conta (inicial no topo, como no Google) ---------- */
 
+  // conta do dono do app: vê o item "Painel do GSCASH" (o servidor confere de novo antes de mostrar os números)
+  const DONO = 'gabrielscarpat123@gmail.com';
+
   const paginaCarregada = new Promise(r => (document.readyState === 'complete' ? r() : window.addEventListener('load', r, { once: true })));
 
   Promise.all([logado, paginaCarregada]).then(([usuario]) => {
@@ -269,6 +272,7 @@ window.GS = window.GS || {};
           <strong>${esc(email)}</strong>
         </div>
         <hr>
+        ${email === DONO ? `<a class="conta-item" href="admin.html">${GS.icone('painel')}Painel do GSCASH</a>` : ''}
         ${GS.abrirTour ? `<button type="button" class="conta-item" data-tour>${GS.icone('play')}Ver o tour do GSCASH (1 min)</button>` : ''}
         ${GS.instalar && GS.instalar.disponivel() ? `<button type="button" class="conta-item instalar" data-instalar>${GS.icone('download')}Instalar o app no celular</button>` : ''}
         ${GS.importar ? `<button type="button" class="conta-item" data-importar>${GS.icone('subir')}Importar extrato ou planilha</button>` : ''}

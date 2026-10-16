@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex">
+  <title>Painel do GSCASH</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/fonts.css?v=cf8de80">
+  <link rel="stylesheet" href="css/estilos.css?v=cf8de80">
+  <link rel="stylesheet" href="css/admin.css?v=cf8de80">
+  <script src="js/vendor/supabase.js?v=cf8de80"></script>
+  <script src="js/supabase.js?v=cf8de80"></script>
+</head>
+<body class="admin">
+
+<header class="adm-topo">
+  <a href="index.html" class="adm-marca">GSCASH</a>
+  <span class="adm-selo">Só você vê</span>
+  <a href="index.html" class="adm-voltar" data-icone="voltar">Voltar ao app</a>
+</header>
+
+<main class="adm-pagina" id="conteudo">
+  <div class="adm-cab">
+    <div><h1>Painel do GSCASH</h1><small id="atualizado">Carregando…</small></div>
+    <div class="adm-periodo" role="group" aria-label="Período">
+      <button type="button" data-dias="7">7 dias</button>
+      <button type="button" data-dias="30" class="on">30 dias</button>
+      <button type="button" data-dias="0">Tudo</button>
+    </div>
+  </div>
+  <div id="corpo"></div>
+</main>
+
+<script src="js/admin.js?v=cf8de80"></script>
+</body>
+</html>
