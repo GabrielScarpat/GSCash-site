@@ -634,9 +634,6 @@ window.GS = window.GS || {};
     return el;
   }
 
-  // o ícone do Pix só onde a compra é por Pix
-  const IC_COMPRA = GS.nativo ? '' : icone('pix');
-
   const ATE = iso => data(iso).split(' ').slice(0, 2).join(' ');  // "19 out"
 
   // teste grátis: faixa azul em todas as páginas
@@ -646,7 +643,7 @@ window.GS = window.GS || {};
       <span class="ic">${icone('clock')}</span>
       <span class="longo"><strong>Teste grátis: ${info.dias === 1 ? 'falta 1 dia' : `faltam ${info.dias} dias`}</strong> (até ${ATE(info.testeAte)}). Depois, ative sua licença para continuar lançando.</span>
       <span class="curto"><strong>Teste grátis:</strong> ${GS.plural(info.dias, 'dia', 'dias')}</span>
-      <div class="acoes"><button type="button" class="btn btn-primary" data-comprar>${IC_COMPRA}Quero comprar</button></div>`);
+      <div class="acoes"><button type="button" class="btn btn-primary" data-comprar>Quero comprar</button></div>`);
   }
 
   // faltam 30 dias ou menos: avisa uma vez por dia
@@ -659,7 +656,7 @@ window.GS = window.GS || {};
       <span>Sua licença vence <strong>${dias(info.dias)}</strong> (${data(info.validade)}). Renove para continuar lançando seus gastos.</span>
       <div class="acoes">
         <button type="button" class="btn btn-outline" data-depois>Agora não</button>
-        <button type="button" class="btn btn-primary" data-comprar>${IC_COMPRA}Renovar</button>
+        <button type="button" class="btn btn-primary" data-comprar>Renovar</button>
       </div>`);
     el.querySelector('[data-depois]').addEventListener('click', () => {
       GS.api.salvarPreferencia('licencaAvisoDispensado', hoje).catch(err => GS.toast(err.message, 'erro'));
@@ -674,12 +671,12 @@ window.GS = window.GS || {};
       faixa('vencida', `
         <span class="ic">${icone('lock')}</span>
         <span><strong>Seu teste grátis acabou.</strong> Seus dados continuam aqui: ative sua licença para voltar a lançar e editar.</span>
-        <div class="acoes"><button type="button" class="btn btn-primary" data-comprar>${IC_COMPRA}Quero comprar</button></div>`);
+        <div class="acoes"><button type="button" class="btn btn-primary" data-comprar>Quero comprar</button></div>`);
     } else {
       faixa('vencida', `
         <span class="ic">${icone('lock')}</span>
         <span><strong>Licença vencida em ${data(info.validade)}.</strong> O GSCASH está em modo só leitura: você vê seus dados e gera relatórios, mas não lança nem edita.</span>
-        <div class="acoes"><button type="button" class="btn btn-primary" data-comprar>${IC_COMPRA}Renovar</button></div>`);
+        <div class="acoes"><button type="button" class="btn btn-primary" data-comprar>Renovar</button></div>`);
     }
     document.addEventListener('click', e => {
       if (!e.target.closest(ESCRITA)) return;
