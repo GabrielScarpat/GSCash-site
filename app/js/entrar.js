@@ -282,6 +282,14 @@
     el.titulo.textContent = 'Entrar com outra conta';
     el.sub.textContent = 'Use o e-mail e a senha da outra conta.';
   }
+  // acabou de excluir a conta (js/excluir-conta.js)
+  try {
+    if (sessionStorage.getItem('gscash:excluida')) {
+      sessionStorage.removeItem('gscash:excluida');
+      saiuDe = null;
+      setTimeout(() => avisar('Sua conta foi excluída. Seus dados foram apagados. Obrigado por ter usado o GSCASH.', true), 0);
+    }
+  } catch (e) { /* segue */ }
   if (saiuDe !== null) {
     avisar(saiuDe ? `Você saiu da conta ${saiuDe}.` : 'Você saiu da sua conta.', true);
     (trocar ? el.email : el.enviar).focus();

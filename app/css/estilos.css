@@ -4,19 +4,19 @@
    regras de baixo podem sobrescrever as de cima.
    ========================================================= */
 
-@import url('base.css?v=3ff7ae1');
-@import url('componentes.css?v=3ff7ae1');
-@import url('abertura.css?v=3ff7ae1');
-@import url('responsivo.css?v=3ff7ae1');
-@import url('painel.css?v=3ff7ae1');
-@import url('relatorio.css?v=3ff7ae1');
-@import url('transacoes.css?v=3ff7ae1');
-@import url('categorias.css?v=3ff7ae1');
-@import url('carteiras.css?v=3ff7ae1');
-@import url('calendario.css?v=3ff7ae1');
-@import url('faturas.css?v=3ff7ae1');
-@import url('transferencias.css?v=3ff7ae1');
-@import url('rodape.css?v=3ff7ae1');
-@import url('licenca.css?v=3ff7ae1');
-@import url('importar.css?v=3ff7ae1');
-@import url('celular.css?v=3ff7ae1');
+@import url('base.css?v=1e5cf0e');
+@import url('componentes.css?v=1e5cf0e');
+@import url('abertura.css?v=1e5cf0e');
+@import url('responsivo.css?v=1e5cf0e');
+@import url('painel.css?v=1e5cf0e');
+@import url('relatorio.css?v=1e5cf0e');
+@import url('transacoes.css?v=1e5cf0e');
+@import url('categorias.css?v=1e5cf0e');
+@import url('carteiras.css?v=1e5cf0e');
+@import url('calendario.css?v=1e5cf0e');
+@import url('faturas.css?v=1e5cf0e');
+@import url('transferencias.css?v=1e5cf0e');
+@import url('rodape.css?v=1e5cf0e');
+@import url('licenca.css?v=1e5cf0e');
+@import url('importar.css?v=1e5cf0e');
+@import url('celular.css?v=1e5cf0e');

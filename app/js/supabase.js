@@ -293,7 +293,8 @@ window.GS = window.GS || {};
         ${GS.lembrete && GS.lembrete.visivel() ? `<button type="button" class="conta-item lembrete" data-lembrete>${GS.icone('sino')}Lembrete diário</button>` : ''}
         <button type="button" class="conta-item" data-acao="trocar">${GS.icone('transfer')}Trocar de conta</button>
         <button type="button" class="conta-item sair" data-acao="sair">${GS.icone('logout')}Sair da conta</button>
-        <p class="conta-nota">Seus dados ficam salvos na sua conta. Ao sair, o GSCASH volta para a tela de entrada.</p>`;
+        <p class="conta-nota">Seus dados ficam salvos na sua conta. Ao sair, o GSCASH volta para a tela de entrada.</p>
+        ${GS.excluirConta ? '<button type="button" class="conta-excluir" data-excluir-conta>Excluir minha conta</button>' : ''}`;
       document.body.append(cartao);
 
       // alinhado à direita da inicial, sem sair da tela
@@ -321,6 +322,11 @@ window.GS = window.GS || {};
         if (e.target.closest('[data-instalar]')) {
           fechar();
           GS.instalar.abrir();
+          return;
+        }
+        if (e.target.closest('[data-excluir-conta]')) {
+          fechar();
+          GS.excluirConta.abrir();
           return;
         }
         if (e.target.closest('[data-importar]')) {
