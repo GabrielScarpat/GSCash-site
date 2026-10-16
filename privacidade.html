@@ -48,7 +48,7 @@
       GSCASH
     </a>
     <h1>Política de privacidade</h1>
-    <p class="atualizado">Última atualização: 12 de outubro de 2026</p>
+    <p class="atualizado">Última atualização: 16 de outubro de 2026</p>
   </div>
 </header>
 
@@ -59,7 +59,7 @@
       <li>O GSCASH guarda os seus dados financeiros <strong>para você controlar os seus gastos</strong>, e para nada além disso.</li>
       <li><strong>Não vendemos</strong> seus dados, <strong>não mostramos anúncios</strong> e não usamos seus dados para fazer perfil de você.</li>
       <li>Cada pessoa só enxerga a própria conta. Ninguém além de você vê os seus lançamentos dentro do app.</li>
-      <li>Você pode pedir uma cópia dos seus dados ou a exclusão da sua conta a qualquer momento.</li>
+      <li>Você pode baixar uma cópia dos seus lançamentos e <strong>excluir a sua conta pelo próprio app</strong>, a qualquer momento.</li>
     </ul>
   </div>
 
@@ -69,7 +69,8 @@
       <li><a href="#quem">Quem somos</a></li>
       <li><a href="#dados">Quais dados coletamos</a></li>
       <li><a href="#uso">Para que usamos</a></li>
-      <li><a href="#google">Login com Google</a></li>
+      <li><a href="#google">Login com Google e com a Apple</a></li>
+      <li><a href="#pagamentos">Pagamentos</a></li>
       <li><a href="#compartilhamento">Com quem compartilhamos</a></li>
       <li><a href="#seguranca">Como protegemos</a></li>
       <li><a href="#guarda">Por quanto tempo guardamos</a></li>
@@ -81,7 +82,7 @@
 
   <section id="quem">
     <h2>1. Quem somos</h2>
-    <p>O GSCASH é um aplicativo de controle de gastos pessoais para Windows, desenvolvido e mantido por Gabriel Scarpat, que é o responsável pelo tratamento dos seus dados pessoais (o "controlador", nos termos da Lei Geral de Proteção de Dados, Lei nº 13.709/2018, a LGPD).</p>
+    <p>O GSCASH é um aplicativo de controle de gastos pessoais que funciona no navegador, no Windows e no iPhone. Ele é desenvolvido e mantido por Gabriel Scarpat, que é o responsável pelo tratamento dos seus dados pessoais (o "controlador", nos termos da Lei Geral de Proteção de Dados, Lei nº 13.709/2018, a LGPD).</p>
     <p>Para qualquer assunto sobre privacidade, escreva para <a href="mailto:suporte.gscash@gmail.com">suporte.gscash@gmail.com</a>.</p>
   </section>
 
@@ -91,86 +92,107 @@
     <table>
       <thead><tr><th>Dado</th><th>Exemplos</th></tr></thead>
       <tbody>
-        <tr><td>Conta</td><td>Seu e-mail e sua senha. A senha é guardada de forma cifrada pelo nosso provedor de login: nem nós conseguimos lê-la.</td></tr>
+        <tr><td>Conta</td><td>Seu e-mail e sua senha. A senha é guardada de forma cifrada pelo nosso provedor de login: nem nós conseguimos lê-la. Se você entrar com o Google ou com a Apple, veja a seção 4.</td></tr>
         <tr><td>Dados financeiros que você lança</td><td>Carteiras e contas, saldos iniciais, cartões de crédito (limite, dias de fechamento e vencimento), lançamentos (título, descrição, valor, data, categoria), transferências, pagamentos de fatura, categorias, subcategorias e orçamentos.</td></tr>
         <tr><td>Preferências</td><td>Escolhas de exibição do app, como ocultar valores ou quantos meses mostrar no gráfico.</td></tr>
       </tbody>
     </table>
-    <p><strong>O GSCASH não pede nem guarda</strong> número de cartão, senha de banco, CPF ou acesso às suas contas bancárias. Os valores são digitados por você.</p>
+    <p><strong>O GSCASH não pede</strong> senha de banco nem acesso às suas contas bancárias. Os valores são digitados por você ou vêm de um arquivo que você mesmo escolhe importar.</p>
+
+    <h3>Arquivos que você importa</h3>
+    <p>Quando você importa um extrato, fatura ou planilha (PDF, Excel, OFX ou CSV), o arquivo é lido <strong>no seu próprio aparelho</strong>. Ele não é enviado para nós: só os lançamentos que você revisa e confirma são salvos na sua conta.</p>
 
     <h3>Dados gerados pelo uso</h3>
     <ul>
       <li><strong>Registros de acesso:</strong> nosso provedor de login registra data e hora dos acessos, endereço IP e tipo de navegador, para segurança e para investigar problemas.</li>
       <li><strong>Datas de criação e alteração</strong> dos seus lançamentos, usadas para manter os dados em ordem entre aparelhos.</li>
+      <li><strong>Licença:</strong> até quando a sua licença vale e o nome que aparece nela.</li>
+      <li><strong>Lembrete diário (se você ligar, no navegador):</strong> o endereço de notificação que o seu navegador cria para o aparelho, para o lembrete das 19h chegar. No app do iPhone, o lembrete é agendado no próprio celular e nada é enviado para nós.</li>
     </ul>
 
-    <h3>Dados que ficam só no seu computador</h3>
+    <h3>Dados que ficam só no seu aparelho</h3>
     <ul>
-      <li><strong>Sessão:</strong> para você não precisar entrar toda vez, o app guarda a sua sessão numa pasta local do Windows (<code>%LOCALAPPDATA%\GSCASH</code>). Ela não é enviada para nós e é apagada quando você sai da conta.</li>
-      <li><strong>Licença:</strong> a chave de licença e o nome de quem comprou ficam no arquivo <code>licenca.json</code>, no seu computador.</li>
-      <li><strong>Registro de funcionamento do app</strong> (<code>gscash.log</code>): eventos como "app aberto" ou "atualização baixada", para ajudar no suporte. Ele fica no seu computador e só chega até nós se você mesmo enviar.</li>
+      <li><strong>Sessão:</strong> para você não precisar entrar toda vez, o app guarda a sua sessão no próprio aparelho (no navegador, no app do iPhone ou, no Windows, na pasta <code>%LOCALAPPDATA%\GSCASH</code>). Ela é apagada quando você sai da conta.</li>
+      <li><strong>Licença antiga do Windows:</strong> quem ativou uma chave de licença em versões antigas tem a chave no arquivo <code>licenca.json</code>, no computador. Hoje a licença fica ligada à conta.</li>
+      <li><strong>Registro de funcionamento do app para Windows</strong> (<code>gscash.log</code>): eventos como "app aberto" ou "atualização baixada", para ajudar no suporte. Ele fica no seu computador e só chega até nós se você mesmo enviar.</li>
     </ul>
   </section>
 
   <section id="uso">
     <h2>3. Para que usamos seus dados</h2>
     <ul>
-      <li><strong>Prestar o serviço:</strong> guardar seus lançamentos, mostrar saldos, faturas, relatórios e gráficos, e deixar seus dados disponíveis quando você entrar em outro computador.</li>
+      <li><strong>Prestar o serviço:</strong> guardar seus lançamentos, mostrar saldos, faturas, relatórios e gráficos, e deixar seus dados disponíveis em qualquer aparelho em que você entrar.</li>
+      <li><strong>Liberar a licença</strong> que você comprou e avisar quando ela estiver perto de vencer.</li>
+      <li><strong>Mandar o lembrete diário</strong>, se você ligar.</li>
       <li><strong>Manter sua conta segura:</strong> confirmar seu e-mail, permitir trocar a senha e identificar acessos suspeitos.</li>
       <li><strong>Falar com você sobre a conta:</strong> enviar e-mails de confirmação e de recuperação de senha. Não enviamos propaganda.</li>
-      <li><strong>Suporte:</strong> responder quando você entra em contato.</li>
+      <li><strong>Suporte e melhoria do app:</strong> o responsável pelo GSCASH vê uma lista das contas com e-mail, data de cadastro, forma de entrar (e-mail, Google ou Apple), a <strong>quantidade</strong> de lançamentos e se a licença foi comprada. Ele <strong>não vê o conteúdo</strong> dos seus lançamentos, valores ou saldos.</li>
     </ul>
-    <p>A base legal é a <strong>execução do contrato</strong> de uso do GSCASH (art. 7º, V, da LGPD), o <strong>legítimo interesse</strong> em manter o serviço seguro (art. 7º, IX) e o cumprimento de <strong>obrigações legais</strong>, quando houver (art. 7º, II).</p>
+    <p>A base legal é a <strong>execução do contrato</strong> de uso do GSCASH (art. 7º, V, da LGPD), o <strong>legítimo interesse</strong> em manter o serviço seguro e melhorá-lo (art. 7º, IX) e o cumprimento de <strong>obrigações legais</strong>, quando houver (art. 7º, II).</p>
   </section>
 
   <section id="google">
-    <h2>4. Login com Google</h2>
+    <h2>4. Login com Google e com a Apple</h2>
     <p>Se você escolher "Continuar com Google", recebemos do Google apenas o seu <strong>nome, e-mail e foto de perfil</strong>. Usamos essas informações só para criar e identificar a sua conta no GSCASH.</p>
     <p>Não temos acesso à sua senha do Google, aos seus e-mails, arquivos, contatos nem a qualquer outro dado da sua conta Google. O uso das informações recebidas das APIs do Google segue a <a href="https://developers.google.com/terms/api-services-user-data-policy" rel="noopener">Política de Dados do Usuário dos Serviços de API do Google</a>, incluindo os requisitos de Uso Limitado.</p>
+    <p>Se você escolher "Continuar com a Apple", recebemos da Apple o seu <strong>e-mail</strong> e, se você permitir, o seu <strong>nome</strong>. Se você usar a opção "Ocultar meu e-mail", recebemos um endereço criado pela Apple, que repassa as mensagens para o seu e-mail de verdade. Não temos acesso à sua senha nem a outros dados da sua conta Apple.</p>
+  </section>
+
+  <section id="pagamentos">
+    <h2>5. Pagamentos</h2>
+    <ul>
+      <li><strong>Pix e cartão de crédito (no navegador e no Windows):</strong> o pagamento é feito pelo Mercado Pago. Guardamos o código do pagamento, o valor, a data, a forma de pagamento e se foi aprovado. Os números do cartão são digitados num formulário do próprio Mercado Pago e <strong>nunca passam por nós</strong>. No cartão, o e-mail e o CPF de quem paga passam pelo nosso servidor apenas para serem enviados ao Mercado Pago, que os exige; nós não os guardamos.</li>
+      <li><strong>Compra no app do iPhone:</strong> o pagamento é feito pela Apple, com a sua conta da App Store. Recebemos da Apple apenas o recibo da compra (código, produto e data), para liberar a licença na sua conta. Não recebemos seus dados de pagamento.</li>
+    </ul>
   </section>
 
   <section id="compartilhamento">
-    <h2>5. Com quem compartilhamos</h2>
+    <h2>6. Com quem compartilhamos</h2>
     <p>Não vendemos nem alugamos seus dados. Eles passam apenas pelos serviços necessários para o GSCASH funcionar, que atuam em nosso nome (os "operadores", na LGPD):</p>
     <table>
       <thead><tr><th>Serviço</th><th>Para quê</th></tr></thead>
       <tbody>
         <tr><td>Supabase</td><td>Banco de dados e login. Os dados ficam em servidores localizados em São Paulo, Brasil.</td></tr>
         <tr><td>Google</td><td>Login com Google (se você escolher) e envio dos e-mails de confirmação e de recuperação de senha.</td></tr>
-        <tr><td>GitHub</td><td>Hospedagem desta página e dos arquivos de atualização do app. O GitHub não recebe seus dados financeiros.</td></tr>
+        <tr><td>Apple</td><td>Login com a Apple (se você escolher) e compras feitas no app do iPhone.</td></tr>
+        <tr><td>Mercado Pago</td><td>Pagamentos por Pix e cartão de crédito.</td></tr>
+        <tr><td>Serviço de notificações do seu navegador</td><td>Entrega do lembrete diário no navegador (Google, Apple, Mozilla ou Microsoft, conforme o navegador que você usa). Ele recebe só o texto do lembrete, nunca seus lançamentos.</td></tr>
+        <tr><td>GitHub</td><td>Hospedagem do site, do app no navegador e dos arquivos de atualização do app para Windows. O GitHub não recebe seus dados financeiros.</td></tr>
       </tbody>
     </table>
     <p>Esses serviços podem processar dados também fora do Brasil, sempre com garantias de proteção compatíveis com a LGPD. Também podemos compartilhar dados se uma autoridade exigir por lei ou ordem judicial.</p>
   </section>
 
   <section id="seguranca">
-    <h2>6. Como protegemos seus dados</h2>
+    <h2>7. Como protegemos seus dados</h2>
     <ul>
       <li>Toda a comunicação entre o app e os servidores é <strong>criptografada</strong> (HTTPS).</li>
       <li>O banco de dados tem regras que fazem <strong>cada pessoa enxergar só as próprias informações</strong>, mesmo que alguém tente acessar por fora do app.</li>
       <li>As senhas são guardadas de forma cifrada e nunca ficam visíveis para nós.</li>
-      <li>No login com Google pelo app de computador, usamos um método (PKCE) em que o navegador só devolve um código de uso único, que não funciona sozinho.</li>
+      <li>No login com Google ou com a Apple pelo app para Windows e pelo app do iPhone, usamos um método (PKCE) em que o navegador só devolve um código de uso único, que não funciona sozinho.</li>
+      <li>Cada compra feita no iPhone é conferida com a assinatura digital da Apple antes de liberar a licença.</li>
     </ul>
     <p>Nenhum sistema é 100% seguro. Se acontecer um incidente que possa trazer risco a você, vamos avisar você e a Autoridade Nacional de Proteção de Dados (ANPD), como manda a lei.</p>
   </section>
 
   <section id="guarda">
-    <h2>7. Por quanto tempo guardamos</h2>
+    <h2>8. Por quanto tempo guardamos</h2>
     <ul>
       <li>Seus dados ficam guardados <strong>enquanto a sua conta existir</strong>.</li>
       <li>Quando você exclui um lançamento, categoria ou carteira no app, ele deixa de aparecer, mas fica marcado como excluído no banco, para manter seus aparelhos em sincronia. Se você quiser que esses itens sejam apagados de vez, é só pedir.</li>
-      <li>Se você pedir a exclusão da conta, apagamos seus dados em até 30 dias, exceto o que a lei nos obrigar a manter.</li>
+      <li><strong>Excluir a conta:</strong> no app, toque na sua inicial, no canto de cima, e em <strong>Excluir minha conta</strong>. Antes, o app oferece uma cópia dos seus lançamentos em planilha. Ao confirmar, a conta e todos os dados dela (lançamentos, carteiras, categorias, licença, pagamentos e lembretes) são apagados na hora. Se preferir, peça a exclusão por e-mail, e apagamos em até 30 dias.</li>
+      <li>Os comprovantes de pagamento continuam com o Mercado Pago ou com a Apple, que os guardam pelo tempo que a lei exige.</li>
       <li>Registros de acesso são guardados pelo tempo exigido pelo Marco Civil da Internet (Lei nº 12.965/2014).</li>
     </ul>
   </section>
 
   <section id="direitos">
-    <h2>8. Seus direitos</h2>
+    <h2>9. Seus direitos</h2>
     <p>Pela LGPD, você pode, a qualquer momento:</p>
     <ul>
       <li>confirmar se tratamos seus dados e <strong>ter acesso</strong> a eles;</li>
       <li><strong>corrigir</strong> dados incompletos ou errados (a maior parte você corrige no próprio app);</li>
-      <li>pedir a <strong>exclusão</strong> da sua conta e dos seus dados;</li>
+      <li>pedir a <strong>exclusão</strong> da sua conta e dos seus dados (ou excluir você mesmo, pelo app);</li>
       <li>pedir uma <strong>cópia</strong> dos seus dados num formato que outro serviço consiga ler (portabilidade);</li>
       <li>saber com quem seus dados são compartilhados;</li>
       <li>retirar o consentimento, quando ele for a base do tratamento;</li>
@@ -180,12 +202,12 @@
   </section>
 
   <section id="menores">
-    <h2>9. Crianças e adolescentes</h2>
+    <h2>10. Crianças e adolescentes</h2>
     <p>O GSCASH não é destinado a crianças com menos de 12 anos. Adolescentes devem usar o app com o conhecimento dos pais ou responsáveis. Se você é responsável por uma criança que criou uma conta, escreva para nós e apagamos os dados.</p>
   </section>
 
   <section id="mudancas">
-    <h2>10. Mudanças nesta política</h2>
+    <h2>11. Mudanças nesta política</h2>
     <p>Podemos atualizar esta política quando o GSCASH mudar. A data da última atualização fica no topo da página. Se a mudança for importante, avisamos pelo app ou por e-mail antes de ela valer.</p>
   </section>
 </main>
