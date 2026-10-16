@@ -150,7 +150,9 @@ window.GS = window.GS || {};
     const base = renovando ? GS.parseData(info.validade) : GS.hoje();
     const novaValidade = new Date(base.getFullYear() + 1, base.getMonth(), base.getDate());
     const meta = (GS.usuario && GS.usuario.user_metadata) || {};
-    const nomeInicial = info.nome || String(meta.full_name || meta.name || '').trim();
+    const email = (GS.usuario && GS.usuario.email) || '';
+    // o nome da licença ("Licenciado para ...") vem da conta: nome do Google/cadastro ou o e-mail
+    const nome = info.nome || String(meta.full_name || meta.name || '').trim() || email;
 
     let fechado = false;
     let espera;
@@ -183,30 +185,12 @@ window.GS = window.GS || {};
       </div>
       ${renovando
         ? `<div class="compra-renova">${icone('clock')}<span>Sua licença vale até <b>${data(info.validade)}</b>. Com a renovação, passa a valer até <b>${data(novaValidade)}</b>.</span></div>`
-        : `<div class="field"><label for="nomeLicenca">Nome na licença</label>
-             <div class="input"><input id="nomeLicenca" maxlength="80" autocomplete="name" value="${esc(nomeInicial)}"></div></div>`}
+        : `<div class="compra-conta"><span>Para a conta</span><b>${esc(email)}</b></div>`}
       <div class="compra-seguro">${icone('lock')}Pagamento por Pix, processado pelo Mercado Pago</div>`;
     rodape(`<button type="button" class="btn btn-outline" data-fechar>Cancelar</button>
             <button type="button" class="btn btn-primary" data-pagar>${icone('pix')}Pagar com Pix</button>`);
 
-    const campoNome = modal.body.querySelector('#nomeLicenca');
-    const erroNome = msg => {
-      const campo = campoNome.closest('.field');
-      campo.querySelector('.field-error')?.remove();
-      campo.querySelector('.input').classList.toggle('invalid', !!msg);
-      if (msg) campo.append(GS.el('span', 'field-error', `${icone('alert')}${esc(msg)}`));
-    };
-    campoNome?.addEventListener('input', () => erroNome(null));
-
-    let nome = nomeInicial;
     async function gerar(botao) {
-      if (campoNome) {
-        nome = campoNome.value.trim().replace(/\s+/g, ' ');
-        if (nome.length < 2) {
-          erroNome('Escreva o nome que vai na licença.');
-          return campoNome.focus();
-        }
-      }
       const original = botao.innerHTML;
       botao.disabled = true;
       botao.innerHTML = '<span class="roda-botao" aria-hidden="true"></span>Gerando o Pix…';
@@ -216,13 +200,10 @@ window.GS = window.GS || {};
       } catch (e) {
         botao.disabled = false;
         botao.innerHTML = original;
-        campoNome ? erroNome(e.message) : GS.toast(e.message, 'erro');
+        GS.toast(e.message, 'erro');
       }
     }
     modal.foot.querySelector('[data-pagar]').addEventListener('click', e => gerar(e.currentTarget));
-    campoNome?.addEventListener('keydown', e => {
-      if (e.key === 'Enter') { e.preventDefault(); gerar(modal.foot.querySelector('[data-pagar]')); }
-    });
 
     /* 2. Pix: no celular a pessoa paga no mesmo aparelho, então o "copiar" vem primeiro e o QR fica guardado */
     let pixAtual;
@@ -297,7 +278,7 @@ window.GS = window.GS || {};
       continuar.focus();
     }
 
-    setTimeout(() => (campoNome || modal.foot.querySelector('[data-pagar]')).focus(), 50);
+    setTimeout(() => modal.foot.querySelector('[data-pagar]').focus(), 50);
   }
 
   const comprar = () => abrirCompra();

@@ -478,6 +478,7 @@ window.GS = window.GS || {};
     return (a >>> 0).toString(36) + (b >>> 0).toString(36);
   }
 
+  const CONVITE = 'gscash:importar-convite';  // convite do Painel já resolvido (fechou ou importou)
   const diasEntre = (a, b) => Math.abs((Date.parse(a) - Date.parse(b)) / 86400000);
 
   /* =========================================================
@@ -886,6 +887,8 @@ window.GS = window.GS || {};
           };
         });
         const criadas = await GS.api.importarTransacoes(lista);
+        try { localStorage.setItem(CONVITE, 'importou'); } catch (e) { /* segue */ }
+        document.querySelector('.convite-importar')?.remove();
         modal.fechar();
         GS.notificarMudanca();
         GS.toast(`${GS.plural(criadas.length, 'lançamento importado', 'lançamentos importados')}`, 'ok', {
@@ -914,4 +917,36 @@ window.GS = window.GS || {};
 
   // botão "Importar" da tela Transações
   document.getElementById('importar')?.addEventListener('click', abrir);
+
+  /* ---------- convite no Painel ----------
+     Para quem já usa mas tem poucos lançamentos (menos de 10). Some de vez depois do X ou da
+     primeira importação. Um convite por vez no Painel: instalar e lembrete vêm antes deste. */
+  async function convitePainel() {
+    const lugar = document.querySelector('main .container');
+    const passos = document.getElementById('primeirosPassos');
+    if (!lugar || !passos) return;  // só no Painel
+    try { if (localStorage.getItem(CONVITE)) return; } catch (e) { return; }
+    await GS.licenca?.pronta;
+    await new Promise(r => setTimeout(r, 900));  // os outros convites aparecem primeiro
+    // primeiros passos à mostra já oferecem importar
+    if (GS.somenteLeitura || document.querySelector('.convite-app') || !passos.classList.contains('hidden')) return;
+    const transacoes = await GS.api.listarTransacoes().catch(() => null);
+    if (!transacoes || transacoes.filter(t => t.tipo === 'despesa' || t.tipo === 'receita').length >= 10) return;
+    if (transacoes.some(t => String(t.id).startsWith('imp'))) return;
+    const el = GS.el('div', 'convite-app convite-importar');
+    el.setAttribute('role', 'region');
+    el.setAttribute('aria-label', 'Importar lançamentos');
+    el.innerHTML = `
+      <span class="icone-sino">${icone('subir')}</span>
+      <span class="txt"><b>Traga o mês inteiro de uma vez</b><small>Importe o extrato do banco (até o PDF) ou sua planilha antiga. O GSCASH sugere as categorias e não duplica nada.</small></span>
+      <button type="button" class="btn btn-primary" data-importar-convite>Importar</button>
+      <button type="button" class="convite-fechar" aria-label="Agora não">${icone('x')}</button>`;
+    el.querySelector('[data-importar-convite]').addEventListener('click', abrir);
+    el.querySelector('.convite-fechar').addEventListener('click', () => {
+      try { localStorage.setItem(CONVITE, 'fechou'); } catch (e) { /* segue */ }
+      el.remove();
+    });
+    lugar.prepend(el);
+  }
+  convitePainel();
 })();

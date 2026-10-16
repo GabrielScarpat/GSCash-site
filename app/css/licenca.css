@@ -127,6 +127,9 @@
 .compra-plano li svg { width: 17px; height: 17px; margin-top: 2px; color: var(--success); flex-shrink: 0; }
 .compra-renova { display: flex; gap: 10px; padding: 12px 14px; border-radius: 12px; background: var(--primary-soft); color: var(--primary); font-size: 14px; line-height: 1.45; }
 .compra-renova svg { width: 18px; height: 18px; margin-top: 1px; flex-shrink: 0; }
+.compra-conta { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--border); font-size: 14.5px; }
+.compra-conta span { color: var(--text-2); }
+.compra-conta b { font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .compra-seguro { display: flex; align-items: center; justify-content: center; gap: 8px; color: var(--muted); font-size: 13px; margin-top: -4px; text-align: center; }
 .compra-seguro svg { width: 15px; height: 15px; flex-shrink: 0; }
 

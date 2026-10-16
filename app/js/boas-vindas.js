@@ -78,7 +78,8 @@
     const passos = [
       { feito: temCarteira, titulo: 'Cadastre sua primeira carteira', dica: 'Sua conta do banco, a carteira de dinheiro ou a poupança, com o saldo de hoje.', botao: 'Criar carteira', acao: 'carteira', primario: true },
       { feito: temCartao, titulo: 'Tem cartão de crédito? Configure', dica: 'Limite, dia de fechamento e de vencimento. Pode pular.', botao: 'Configurar', acao: 'cartao' },
-      { feito: temLancamento, titulo: 'Lance seu primeiro gasto', dica: 'O café de hoje já conta.', botao: 'Novo gasto', acao: 'gasto', primario: true },
+      { feito: temLancamento, titulo: 'Lance seus gastos', dica: 'Um por um, ou traga o mês inteiro do extrato do banco ou da sua planilha.', botao: 'Novo gasto', acao: 'gasto', primario: true,
+        extra: GS.importar && !GS.somenteLeitura ? { botao: 'Importar extrato', acao: 'importar', icone: 'subir' } : null },
     ];
     const feitos = passos.filter(p => p.feito).length;
 
@@ -96,7 +97,7 @@
               <div class="passo-texto"><strong>${esc(p.titulo)}</strong><small>${esc(p.dica)}</small></div>
               ${p.feito
                 ? '<span class="sr-only">Concluído</span>'
-                : `<button type="button" class="btn ${p.primario ? 'btn-primary' : 'btn-outline'}" data-passo="${p.acao}">${esc(p.botao)}</button>`}
+                : `<span class="passo-acoes">${p.extra ? `<button type="button" class="btn btn-outline" data-passo="${p.extra.acao}">${icone(p.extra.icone)}${esc(p.extra.botao)}</button>` : ''}<button type="button" class="btn ${p.primario ? 'btn-primary' : 'btn-outline'}" data-passo="${p.acao}">${esc(p.botao)}</button></span>`}
             </li>`).join('')}
         </ol>
         <button type="button" class="link-btn passos-pular" data-pular>Pular por agora</button>
@@ -107,6 +108,7 @@
       if (b.dataset.passo === 'carteira') GS.abrirFormCarteira(null, { quantas: ctx.carteiras.length });
       if (b.dataset.passo === 'cartao') location.href = 'faturas.html?configurar=1';
       if (b.dataset.passo === 'gasto') GS.abrirFormTransacao();
+      if (b.dataset.passo === 'importar') GS.importar.abrir();
     }));
     alvo.querySelector('[data-pular]').addEventListener('click', async () => {
       alvo.classList.add('hidden');

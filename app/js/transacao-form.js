@@ -127,7 +127,8 @@ window.GS = window.GS || {};
 
     const rodape = `
       <button type="button" class="btn btn-outline" data-fechar>Cancelar</button>
-      <button type="button" class="btn btn-primary" data-salvar>${icone('check')}<span data-rotulo-salvar>${editando ? 'Salvar alterações' : 'Salvar gasto'}</span></button>`;
+      <button type="button" class="btn btn-primary" data-salvar>${icone('check')}<span data-rotulo-salvar>${editando ? 'Salvar alterações' : 'Salvar gasto'}</span></button>
+      ${!editando && GS.importar && !GS.somenteLeitura ? `<p class="dica-importar">Tem muitos para lançar? <button type="button" class="link-btn" data-ir-importar>${icone('subir')}Importe o extrato</button></p>` : ''}`;
 
     const modal = GS.abrirModal({
       titulo: 'Novo gasto', corpo, rodape, tamanho: 'lg form-gasto',
@@ -136,6 +137,7 @@ window.GS = window.GS || {};
         : 'O gasto que você estava preenchendo ainda não foi salvo.'),
     });
     const $ = sel => corpo.querySelector(sel);
+    modal.foot.querySelector('[data-ir-importar]')?.addEventListener('click', () => { modal.fechar(); GS.importar.abrir(); });
 
     // celular (celular.css): Única/Recorrente e a descrição ficam atrás de "Mais opções"
     // (o resto fica à vista). Editando um lançamento recorrente ou com descrição, começa aberto.

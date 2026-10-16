@@ -127,6 +127,23 @@
 
     if (!filtradas.length) {
       const temFiltro = estado.busca || estado.categoria !== 'todas' || estado.carteira !== 'todas';
+      const nenhuma = !ctx.transacoes.some(t => t.tipo === 'despesa' || t.tipo === 'receita');
+      if (nenhuma && !temFiltro && GS.importar && !GS.somenteLeitura) {
+        $('lista').innerHTML = `
+          <div class="vazio-importar">
+            <span class="ic">${GS.icone('subir')}</span>
+            <strong>Nenhuma transação ainda</strong>
+            <p>Lance um gasto agora ou traga tudo de uma vez: extrato do banco (OFX, CSV ou PDF), fatura do cartão ou sua planilha.</p>
+            <div class="acoes">
+              <button type="button" class="btn btn-outline" data-vazio-importar>${GS.icone('subir')}Importar extrato ou planilha</button>
+              <button type="button" class="btn btn-primary" data-vazio-novo>${GS.icone('plus')}Novo gasto</button>
+            </div>
+          </div>`;
+        $('lista').querySelector('[data-vazio-importar]').addEventListener('click', () => GS.importar.abrir());
+        $('lista').querySelector('[data-vazio-novo]').addEventListener('click', () => GS.abrirFormTransacao());
+        $('rodapeLista').innerHTML = '';
+        return;
+      }
       $('lista').innerHTML = widgets.vazio(
         'Nenhuma transação encontrada',
         temFiltro ? 'Tente mudar os filtros ou a busca.' : 'Registre um gasto pelo botão "Novo gasto".'

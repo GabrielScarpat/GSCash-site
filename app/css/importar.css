@@ -82,3 +82,24 @@
   .imp-item .val { grid-area: v; align-self: start; }
   .imp-cat { height: 32px; font-size: 12.5px; }
 }
+
+/* ---------- atalhos para importar (primeiros passos, Transações vazia, Novo gasto, Painel) ---------- */
+.passo-acoes { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; flex-shrink: 0; }
+.passo-acoes .btn svg { width: 16px; height: 16px; }
+.vazio-importar { display: grid; justify-items: center; gap: 8px; padding: 34px 20px; text-align: center; }
+.vazio-importar .ic { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 14px; background: var(--primary-soft); color: var(--primary); }
+.vazio-importar .ic svg { width: 26px; height: 26px; }
+.vazio-importar strong { font-size: 16px; font-weight: 600; }
+.vazio-importar p { max-width: 440px; color: var(--text-2); font-size: 14.5px; }
+.vazio-importar .acoes { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 8px; }
+.dica-importar { grid-column: 1 / -1; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 6px; margin: 2px 0 0; color: var(--text-2); font-size: 13.5px; }
+.dica-importar .link-btn { display: inline-flex; align-items: center; gap: 4px; font-weight: 600; }
+.dica-importar svg { width: 15px; height: 15px; }
+.convite-importar .icone-sino { display: grid; place-items: center; width: 44px; height: 44px; flex-shrink: 0; border-radius: 12px; background: var(--primary-soft); color: var(--primary); }
+.convite-importar .icone-sino svg { width: 22px; height: 22px; }
+.convite-app.convite-importar b { white-space: normal; }
+@media (max-width: 640px) {
+  .passo:has(.passo-acoes) { flex-wrap: wrap; }
+  .passo-acoes { width: 100%; justify-content: stretch; }
+  .passo-acoes .btn { flex: 1; }
+}
