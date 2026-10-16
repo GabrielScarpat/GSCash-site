@@ -14,9 +14,10 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="GSCASH">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <link rel="stylesheet" href="css/fonts.css?v=dce5567">
-  <link rel="stylesheet" href="css/base.css?v=dce5567">
-  <link rel="stylesheet" href="css/entrar.css?v=dce5567">
+  <link rel="stylesheet" href="css/fonts.css?v=c7c583c">
+  <link rel="stylesheet" href="css/base.css?v=c7c583c">
+  <link rel="stylesheet" href="css/entrar.css?v=c7c583c">
+  <link rel="stylesheet" href="css/duas-etapas.css?v=c7c583c">
 </head>
 <body class="entrar-pagina">
 
@@ -86,15 +87,42 @@
       <p class="entrar-aviso" id="confirmarAviso" role="status" hidden></p>
       <button type="button" class="entrar-link centro" id="outroEmail">Usar outro e-mail</button>
     </section>
+
+    <!-- verificação em duas etapas: depois da senha (ou do Google/Apple), o código do celular (js/entrar.js) -->
+    <section class="duas-entrar hidden" id="duasEtapas" aria-live="polite">
+      <span class="duas-escudo" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><rect x="9" y="11" width="6" height="5" rx="1"/><path d="M10.5 11V9.5a1.5 1.5 0 0 1 3 0V11"/></svg></span>
+      <h1>Verificação em duas etapas</h1>
+      <p id="duasTexto">Abra o app autenticador e digite o código do <b>GSCASH</b>.</p>
+      <div id="duasCampo"></div>
+      <p class="entrar-aviso" id="duasAviso" role="alert" hidden></p>
+      <button type="button" class="entrar-principal" id="duasEntrar">Entrar</button>
+      <button type="button" class="entrar-link centro" id="perdiCelular">Perdi o celular</button>
+      <button type="button" class="entrar-link centro discreto" id="duasOutraConta">Entrar com outra conta</button>
+    </section>
+
+    <section class="duas-entrar hidden" id="recuperacao">
+      <h1>Perdeu o celular?</h1>
+      <p>Digite um dos <b>códigos de recuperação</b> que você guardou ao ligar a verificação.</p>
+      <div class="campo">
+        <label for="codigoRecuperacao">Código de recuperação</label>
+        <input id="codigoRecuperacao" type="text" placeholder="XXXX-XXXX" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="12">
+      </div>
+      <p class="entrar-aviso" id="recuperacaoAviso" role="alert" hidden></p>
+      <button type="button" class="entrar-principal" id="recuperacaoEntrar">Entrar com o código</button>
+      <p class="duas-ajuda">Ao entrar assim, a verificação em duas etapas é <b>desligada</b>. Depois, ligue de novo com o celular novo.</p>
+      <p class="duas-suporte">Sem os códigos? Escreva para <a href="mailto:suporte.gscash@gmail.com">suporte.gscash@gmail.com</a> a partir do e-mail da conta.</p>
+      <button type="button" class="entrar-link centro" id="recuperacaoVoltar">Voltar</button>
+    </section>
   </div>
 
   <p class="entrar-baixar" id="baixarLinha" hidden></p>
   <p class="entrar-rodape">Seus dados ficam guardados na nuvem, só você tem acesso. <a href="https://gscash.com.br/privacidade.html" target="_blank" rel="noopener">Política de privacidade</a></p>
 </div>
 
-<script src="js/vendor/supabase.js?v=dce5567"></script>
-<script src="js/supabase.js?v=dce5567"></script>
-<script src="js/baixar.js?v=dce5567"></script>
-<script src="js/entrar.js?v=dce5567"></script>
+<script src="js/vendor/supabase.js?v=c7c583c"></script>
+<script src="js/supabase.js?v=c7c583c"></script>
+<script src="js/baixar.js?v=c7c583c"></script>
+<script src="js/duas-etapas.js?v=c7c583c"></script>
+<script src="js/entrar.js?v=c7c583c"></script>
 </body>
 </html>

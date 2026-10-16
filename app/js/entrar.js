@@ -88,6 +88,112 @@
 
   const irParaOApp = () => location.replace('index.html');
 
+  /* ---------- Verificação em duas etapas ----------
+     Depois da senha (ou do Google/Apple) quem ligou a verificação ainda precisa do código
+     do app autenticador. Vale igual no navegador, no programa para Windows e no iPhone:
+     o login de todos termina aqui, nesta mesma tela. */
+
+  // entrou: vai para o app ou, se a conta tiver a verificação ligada, pede o código antes
+  async function seguir() {
+    if (await GS.auth.duasEtapas.precisaCodigo()) return mostrarDuasEtapas();
+    irParaOApp();
+  }
+
+  function mostrarSo(id) {
+    ['formulario', 'confirmar', 'duasEtapas', 'recuperacao'].forEach(x => $(x).classList.toggle('hidden', x !== id));
+    el.abas.classList.toggle('hidden', id !== 'formulario');
+  }
+
+  function avisarEm(id, texto) {
+    $(id).textContent = texto || '';
+    $(id).hidden = !texto;
+  }
+
+  let campoDuas = null;
+  let conferindo = false;
+
+  async function conferirCodigo(codigo) {
+    if (conferindo) return;
+    if (!/^\d{6}$/.test(codigo)) {
+      avisarEm('duasAviso', 'Digite os 6 dígitos do código.');
+      return campoDuas.focar();
+    }
+    conferindo = true;
+    avisarEm('duasAviso', '');
+    campoDuas.travar(true);
+    const b = $('duasEntrar');
+    b.disabled = true;
+    b.innerHTML = '<span class="roda" aria-hidden="true"></span>Conferindo…';
+    try {
+      await GS.auth.duasEtapas.confirmar(codigo);
+      irParaOApp();
+    } catch (err) {
+      conferindo = false;
+      b.disabled = false;
+      b.textContent = 'Entrar';
+      avisarEm('duasAviso', err.message);
+      campoDuas.erro();
+    }
+  }
+
+  async function mostrarDuasEtapas() {
+    const sessao = await GS.auth.sessao();
+    const email = (sessao && sessao.user && sessao.user.email) || '';
+    const p = $('duasTexto');
+    p.innerHTML = 'Abra o app autenticador e digite o código do <b>GSCASH</b>';
+    if (email) {
+      const b = document.createElement('b');
+      b.textContent = email;
+      p.append(' para ', b);
+    }
+    p.append('.');
+    if (!campoDuas) {
+      campoDuas = GS.duasEtapas.campoCodigo({ aoCompletar: conferirCodigo });
+      $('duasCampo').replaceWith(campoDuas.el);
+    }
+    avisarEm('duasAviso', '');
+    mostrarSo('duasEtapas');
+    setTimeout(() => campoDuas.focar(), 50);
+  }
+
+  $('duasEntrar').addEventListener('click', () => conferirCodigo(campoDuas.valor()));
+
+  // desiste do código: sai desta sessão pela metade e volta ao formulário
+  $('duasOutraConta').addEventListener('click', async () => {
+    await GS.supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+    mostrarSo('formulario');
+    trocarModo('entrar');
+    el.senha.value = '';
+    el.email.focus();
+  });
+
+  $('perdiCelular').addEventListener('click', () => {
+    avisarEm('recuperacaoAviso', '');
+    mostrarSo('recuperacao');
+    $('codigoRecuperacao').focus();
+  });
+  $('recuperacaoVoltar').addEventListener('click', mostrarDuasEtapas);
+
+  async function usarRecuperacao() {
+    const codigo = $('codigoRecuperacao').value.trim();
+    if (codigo.replace(/[^a-z0-9]/gi, '').length !== 8) return avisarEm('recuperacaoAviso', 'O código de recuperação tem 8 letras e números, como K7QM-2XPA.');
+    const b = $('recuperacaoEntrar');
+    b.disabled = true;
+    b.innerHTML = '<span class="roda" aria-hidden="true"></span>Conferindo…';
+    avisarEm('recuperacaoAviso', '');
+    try {
+      await GS.auth.duasEtapas.usarCodigoRecuperacao(codigo);
+      try { sessionStorage.setItem('gscash:2fa-desligada', '1'); } catch (e) { /* segue sem o aviso */ }
+      irParaOApp();
+    } catch (err) {
+      b.disabled = false;
+      b.textContent = 'Entrar com o código';
+      avisarEm('recuperacaoAviso', err.message);
+    }
+  }
+  $('recuperacaoEntrar').addEventListener('click', usarRecuperacao);
+  $('codigoRecuperacao').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); usarRecuperacao(); } });
+
   /* ---------- "Confira seu e-mail" ----------
      Depois de criar a conta o formulário sai da frente: antes, ele ficava lá com um aviso pequeno,
      a pessoa tocava de novo em "Criar conta" e o Supabase (que só reenvia depois de 60 s) respondia
@@ -194,7 +300,7 @@
     try {
       if (modo === 'entrar') {
         await GS.auth.entrar(el.email.value, el.senha.value);
-        return irParaOApp();
+        return await seguir();
       }
       if (modo === 'criar') {
         const { precisaConfirmar } = await GS.auth.criarConta(el.email.value, el.senha.value);
@@ -262,7 +368,9 @@
     try {
       const r = await GS.auth.entrarCom(provedor, { sinal: espera.controle.signal });
       if (r && r.saiuDaPagina) return;  // não navegar: atropelaria a ida para o provedor
-      irParaOApp();
+      fimEspera();
+      avisar('');
+      await seguir();
     } catch (err) {
       fimEspera();
       avisar(err.name === 'AbortError' ? `Login com ${nome.com} cancelado.` : err.message, err.name === 'AbortError');
@@ -321,6 +429,6 @@
 
   // quem já está logado vai direto para o app
   GS.auth.sessao().then(sessao => {
-    if (sessao && !veioDoLinkDeSenha) irParaOApp();
+    if (sessao && !veioDoLinkDeSenha) seguir();
   });
 })();

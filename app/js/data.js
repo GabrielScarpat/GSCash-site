@@ -578,6 +578,13 @@ window.GS = window.GS || {};
         const { vazio, db } = await baixar();
         if (!vazio) return aplicar(db);
 
+        // vazio pode ser o banco escondendo os dados: a verificação em duas etapas foi ligada em
+        // outro aparelho e esta sessão ainda não passou pelo código. Não é conta nova: pede o código.
+        if (await GS.auth.duasEtapas.precisaCodigo({ servidor: true })) {
+          location.replace('entrar.html');
+          return new Promise(() => {});
+        }
+
         // conta nova: oferece trazer os dados que estavam neste aparelho
         const local = await lerDadosLocais();
         const quer = local && (local.transacoes.length || local.carteiras.length) && confirm(

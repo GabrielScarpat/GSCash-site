@@ -56,6 +56,7 @@
   .botao:hover { background:var(--primary-hover); }
   .botao svg { width:18px; height:18px; }
   .dica { margin-top:12px; font-size:13px; }
+  .dica-campo { margin-top:6px; font-size:13px; }
 </style>
 </head>
 <body>
@@ -87,6 +88,11 @@
         <p class="regra" id="regra"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Pelo menos 8 caracteres</p>
         <label for="senha2">Repita a nova senha</label>
         <input id="senha2" type="password" autocomplete="new-password" required>
+        <div id="blocoCodigo" hidden>
+          <label for="codigo2fa">Código da verificação em duas etapas</label>
+          <input id="codigo2fa" type="text" inputmode="numeric" autocomplete="one-time-code" placeholder="6 dígitos do app autenticador" spellcheck="false" maxlength="12">
+          <p class="dica-campo">Perdeu o celular? Digite um dos códigos de recuperação.</p>
+        </div>
         <p class="aviso" id="aviso" role="alert" hidden></p>
         <button type="submit" id="salvar">Salvar nova senha</button>
       </form>
@@ -141,8 +147,33 @@
     auth: { persistSession: false, detectSessionInUrl: true },
   });
   cliente.auth.onAuthStateChange(evento => {
-    if (evento === 'PASSWORD_RECOVERY') mostrar('novaSenha');
+    if (evento === 'PASSWORD_RECOVERY') { mostrar('novaSenha'); conferirDuasEtapas(); }
   });
+
+  // Conta com a verificação em duas etapas: o Supabase só troca a senha depois do código do
+  // celular. Aí aparece mais um campo, que também aceita um código de recuperação.
+  async function conferirDuasEtapas() {
+    const { data } = await cliente.auth.mfa.getAuthenticatorAssuranceLevel();
+    document.getElementById('blocoCodigo').hidden = !(data && data.currentLevel === 'aal1' && data.nextLevel === 'aal2');
+  }
+
+  async function passarDuasEtapas() {
+    const codigo = document.getElementById('codigo2fa').value.trim();
+    if (/^\d{6}$/.test(codigo)) {
+      const { data } = await cliente.auth.mfa.listFactors();
+      const fator = data && data.totp[0];
+      if (!fator) return null;
+      const { error } = await cliente.auth.mfa.challengeAndVerify({ factorId: fator.id, code: codigo });
+      return error ? 'Código incorreto ou vencido. Confira o app e tente de novo.' : null;
+    }
+    if (codigo.replace(/[^a-z0-9]/gi, '').length === 8) {
+      const { data, error } = await cliente.rpc('usar_codigo_recuperacao', { p_codigo: codigo });
+      if (error || !data || !data.ok) return (data && data.erro) || 'Não foi possível conferir o código.';
+      await cliente.auth.refreshSession();
+      return null;
+    }
+    return 'Digite os 6 dígitos do app autenticador (ou um código de recuperação).';
+  }
 
   // Links novos dos e-mails: gscash.com.br/?token_hash=...&type=recovery|email. O código só é
   // usado aqui, quando a página abre no navegador (programas que "abrem" o link para checar
@@ -154,6 +185,7 @@
       history.replaceState(null, '', location.pathname);   // tira o código do endereço
       if (error) return mostrar('expirado');
       mostrar(tipo === 'recovery' ? 'novaSenha' : 'confirmado');
+      if (tipo === 'recovery') conferirDuasEtapas();
     });
   }
 
@@ -183,11 +215,16 @@
 
     const botao = document.getElementById('salvar');
     botao.disabled = true;
+    if (!document.getElementById('blocoCodigo').hidden) {
+      const problema = await passarDuasEtapas();
+      if (problema) { botao.disabled = false; return falhar(problema); }
+    }
     const { error } = await cliente.auth.updateUser({ password: senha });
     botao.disabled = false;
     if (error) {
       return falhar(error.code === 'weak_password' ? 'Senha fraca. Use pelo menos 8 caracteres.'
         : error.code === 'same_password' ? 'Escolha uma senha diferente da atual.'
+        : error.code === 'insufficient_aal' ? (conferirDuasEtapas(), 'Sua conta tem verificação em duas etapas: digite o código do app autenticador.')
         : 'Não foi possível salvar. Peça um novo link no app e tente de novo.');
     }
     await cliente.auth.signOut();

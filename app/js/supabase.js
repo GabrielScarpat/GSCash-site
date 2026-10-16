@@ -73,6 +73,8 @@ window.GS = window.GS || {};
     if (codigo === 'weak_password') return 'Senha fraca. Use pelo menos 8 caracteres.';
     if (codigo === 'over_request_rate_limit' || codigo === 'over_email_send_rate_limit') return 'Muitas tentativas. Espere alguns minutos e tente de novo.';
     if (codigo === 'validation_failed' && /provider/i.test(msg)) return 'O login com Google ainda não está ativado.';
+    if (codigo === 'mfa_verification_failed' || codigo === 'mfa_challenge_expired') return 'Código incorreto ou vencido. Confira o app e tente de novo.';
+    if (codigo === 'insufficient_aal') return 'Confirme com o código do app autenticador antes.';
     if (/failed to fetch|network/i.test(msg)) return 'Sem conexão com a internet.';
     return msg || 'Algo deu errado. Tente de novo.';
   }
@@ -250,6 +252,76 @@ window.GS = window.GS || {};
       await executar(cliente.auth.updateUser({ password: senha }));
     },
 
+    /* Verificação em duas etapas (MFA do Supabase, com app autenticador / TOTP).
+       Depois da senha (ou do Google/Apple) a sessão é "aal1"; quem ligou a verificação só
+       vira "aal2" depois do código do celular, e o banco só entrega os dados com aal2. */
+    duasEtapas: {
+      // true quando a pessoa ligou a verificação e esta sessão ainda não passou pelo código.
+      // servidor: confere a lista de verificações no Supabase (ligada há pouco em outro aparelho)
+      async precisaCodigo({ servidor = false } = {}) {
+        if (servidor) await cliente.auth.refreshSession().catch(() => {});
+        const { data } = await cliente.auth.mfa.getAuthenticatorAssuranceLevel();
+        return !!data && data.currentLevel === 'aal1' && data.nextLevel === 'aal2';
+      },
+
+      // a verificação ligada (ou null), pela sessão guardada neste aparelho
+      async fator() {
+        const dados = await executar(cliente.auth.mfa.listFactors());
+        return dados.totp[0] || null;
+      },
+
+      // confere o código de 6 dígitos; a sessão passa a valer como aal2
+      async confirmar(codigo, fatorId) {
+        const id = fatorId || ((await GS.auth.duasEtapas.fator()) || {}).id;
+        if (!id) throw new Error('A verificação em duas etapas não está ligada nesta conta.');
+        await executar(cliente.auth.mfa.challengeAndVerify({ factorId: id, code: String(codigo).trim() }));
+      },
+
+      // passo 1 de ligar: cria a verificação (ainda sem valer) e devolve o QR code e a chave
+      async comecar() {
+        // uma tentativa anterior que não foi até o fim fica pendente e impediria criar outra
+        const lista = await executar(cliente.auth.mfa.listFactors());
+        for (const f of lista.all.filter(f => f.status !== 'verified')) {
+          await executar(cliente.auth.mfa.unenroll({ factorId: f.id }));
+        }
+        const d = await executar(cliente.auth.mfa.enroll({ factorType: 'totp', issuer: 'GSCASH', friendlyName: 'GSCASH' }));
+        return { id: d.id, qr: d.totp.qr_code, chave: d.totp.secret, endereco: d.totp.uri };
+      },
+
+      // passo 2 de ligar: o código confirma que o app ficou certo; devolve os 8 códigos de recuperação
+      async terminar(fatorId, codigo) {
+        await GS.auth.duasEtapas.confirmar(codigo, fatorId);
+        return executar(cliente.rpc('gerar_codigos_recuperacao'));
+      },
+
+      // gerar novos códigos de recuperação (os antigos deixam de valer); pede o código do celular antes
+      async novosCodigos(codigo) {
+        await GS.auth.duasEtapas.confirmar(codigo);
+        return executar(cliente.rpc('gerar_codigos_recuperacao'));
+      },
+
+      async infoCodigos() {
+        return executar(cliente.rpc('codigos_recuperacao_info'));
+      },
+
+      // desligar: pede o código do celular antes, para ninguém desligar com o aparelho da pessoa desbloqueado
+      async desligar(codigo) {
+        const f = await GS.auth.duasEtapas.fator();
+        if (!f) return;
+        await GS.auth.duasEtapas.confirmar(codigo, f.id);
+        await executar(cliente.auth.mfa.unenroll({ factorId: f.id }));
+        await cliente.auth.refreshSession().catch(() => {});
+      },
+
+      // perdeu o celular: um código de recuperação desliga a verificação e a pessoa entra só com a senha
+      async usarCodigoRecuperacao(codigo) {
+        const r = await executar(cliente.rpc('usar_codigo_recuperacao', { p_codigo: String(codigo) }));
+        if (!r || !r.ok) throw new Error((r && r.erro) || 'Não foi possível usar o código.');
+        // a sessão guardada ainda lembra da verificação: renova para ela saber que foi desligada
+        await executar(cliente.auth.refreshSession());
+      },
+    },
+
     // trocar: a tela de entrada pede a outra conta; nos dois casos ela confirma de qual conta saiu
     async sair({ trocar = false } = {}) {
       try {
@@ -270,8 +342,9 @@ window.GS = window.GS || {};
   const raiz = document.documentElement;
   raiz.style.visibility = 'hidden';
 
-  const logado = GS.auth.sessao().then(sessao => {
-    if (!sessao) {
+  const logado = GS.auth.sessao().then(async sessao => {
+    // sem login, ou com a verificação em duas etapas ligada e o código ainda não digitado
+    if (!sessao || await GS.auth.duasEtapas.precisaCodigo()) {
       location.replace('entrar.html');
       return null;
     }
@@ -340,6 +413,7 @@ window.GS = window.GS || {};
         ${GS.instalar && GS.instalar.disponivel() ? `<button type="button" class="conta-item instalar" data-instalar>${GS.icone('download')}Instalar o app no celular</button>` : ''}
         ${GS.importar ? `<button type="button" class="conta-item" data-importar>${GS.icone('subir')}Importar extrato ou planilha</button>` : ''}
         ${GS.lembrete && GS.lembrete.visivel() ? `<button type="button" class="conta-item lembrete" data-lembrete>${GS.icone('sino')}Lembrete diário</button>` : ''}
+        ${GS.duasEtapas ? `<button type="button" class="conta-item" data-duas-etapas>${GS.icone('escudo')}Verificação em duas etapas${GS.duasEtapas.ligada() ? '<span class="conta-selo ligada">Ligada</span>' : '<span class="conta-selo">Desligada</span>'}</button>` : ''}
         <button type="button" class="conta-item" data-acao="trocar">${GS.icone('transfer')}Trocar de conta</button>
         <button type="button" class="conta-item sair" data-acao="sair">${GS.icone('logout')}Sair da conta</button>
         <p class="conta-nota">Seus dados ficam salvos na sua conta. Ao sair, o GSCASH volta para a tela de entrada.</p>
@@ -386,6 +460,11 @@ window.GS = window.GS || {};
         if (e.target.closest('[data-lembrete]')) {
           fechar();
           GS.lembrete.abrir();
+          return;
+        }
+        if (e.target.closest('[data-duas-etapas]')) {
+          fechar();
+          GS.duasEtapas.abrir();
           return;
         }
         const b = e.target.closest('[data-acao]');
