@@ -21,6 +21,7 @@ window.GS = window.GS || {};
 
   // o supabase.js marca a sessão quando a página roda dentro do programa
   const noPrograma = (() => {
+    if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) return true;  // app do iPhone
     try { return sessionStorage.getItem('gscash:desktop') === '1'; } catch (e) { return false; }
   })();
 

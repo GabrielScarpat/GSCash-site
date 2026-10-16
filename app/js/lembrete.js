@@ -15,7 +15,10 @@ window.GS = window.GS || {};
   const ehIos = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
   const instalado = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
   const temPush = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window && window.isSecureContext;
-  const suportado = temPush && !GS.noDesktop;
+  // no navegador: notificação enviada pelo servidor (Web Push)
+  const pushDaWeb = temPush && !GS.noDesktop && !GS.nativo;
+  // no app do iPhone: o próprio celular agenda as notificações das 19h (LocalNotifications)
+  const suportado = pushDaWeb || GS.nativo;
   // no iPhone pelo Safari não dá, mas o item aparece para explicar e levar à instalação
   const visivel = () => !GS.noDesktop && (suportado || (ehIos && !instalado()));
 
@@ -24,7 +27,7 @@ window.GS = window.GS || {};
   const gravar = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* segue */ } };
 
   // o service worker só recebe notificações (não guarda nada em cache)
-  const registro = suportado ? navigator.serviceWorker.register('sw.js').catch(e => { console.warn('sw.js', e); return null; }) : Promise.resolve(null);
+  const registro = pushDaWeb ? navigator.serviceWorker.register('sw.js').catch(e => { console.warn('sw.js', e); return null; }) : Promise.resolve(null);
 
   async function inscricaoAtual() {
     const reg = await registro;
@@ -64,6 +67,80 @@ window.GS = window.GS || {};
     await sub.unsubscribe();
   }
 
+  /* ---------- app do iPhone: notificações agendadas no próprio celular ----------
+     Ficam agendadas as 19h dos próximos 14 dias; a cada vez que o app é aberto ou
+     sai da tela, a lista é refeita. Se já houve lançamento hoje, a de hoje sai da lista
+     (como o servidor faz no navegador). Quem passar 14 dias sem abrir para de receber. */
+
+  const LN = GS.nativo ? window.Capacitor.registerPlugin('LocalNotifications') : null;
+  const LIGADO_AQUI = 'gscash:lembrete-app';
+  const ID_BASE = 1900;
+  const DIAS = 14;
+  const TITULO = 'Lançou seus gastos de hoje?';
+  const CORPO = 'Toque para anotar em segundos.';
+
+  async function lancouHoje() {
+    try {
+      const h = new Date();
+      const inicio = new Date(h.getFullYear(), h.getMonth(), h.getDate()).getTime();
+      return (await GS.api.listarTransacoes()).some(t => t.criadoEm >= inicio);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  async function agendarNoApp() {
+    const { notifications: pendentes } = await LN.getPending();
+    const nossas = pendentes.filter(n => n.id >= ID_BASE && n.id < ID_BASE + DIAS);
+    if (nossas.length) await LN.cancel({ notifications: nossas.map(n => ({ id: n.id })) });
+    if (ler(LIGADO_AQUI) !== '1') return;
+    const agora = new Date();
+    const pularHoje = await lancouHoje();
+    const lista = [];
+    for (let i = 0; i < DIAS; i++) {
+      const at = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate() + i, 19, 0, 0);
+      if (at <= agora || (i === 0 && pularHoje)) continue;
+      lista.push({ id: ID_BASE + i, title: TITULO, body: CORPO, schedule: { at, allowWhileIdle: true }, extra: { novo: 1 } });
+    }
+    if (lista.length) await LN.schedule({ notifications: lista });
+  }
+
+  const noApp = LN && {
+    async negado() { return (await LN.checkPermissions()).display === 'denied'; },
+    async ligado() { return ler(LIGADO_AQUI) === '1' && (await LN.checkPermissions()).display === 'granted'; },
+    async ligar() {
+      if ((await LN.requestPermissions()).display !== 'granted') return false;
+      gravar(LIGADO_AQUI, '1');
+      await agendarNoApp();
+      return true;
+    },
+    async desligar() {
+      gravar(LIGADO_AQUI, '0');
+      await agendarNoApp();
+    },
+  };
+
+  const naWeb = {
+    async negado() { return Notification.permission === 'denied'; },
+    async ligado() { return !!(await inscricaoAtual()); },
+    ligar,
+    desligar,
+  };
+
+  const motor = GS.nativo ? noApp : naWeb;
+
+  if (GS.nativo) {
+    const refazer = () => agendarNoApp().catch(e => console.warn('lembrete: agendar', e));
+    refazer();
+    // saiu do app (talvez depois de lançar algo): tira o lembrete de hoje se não precisa mais
+    document.addEventListener('visibilitychange', () => { if (document.hidden) refazer(); });
+    // tocou na notificação: abre direto o Novo gasto
+    LN.addListener('localNotificationActionPerformed', e => {
+      const n = e && e.notification;
+      if (n && n.extra && n.extra.novo) location.href = 'index.html?novo=1';
+    });
+  }
+
   /* ---------- janela "Lembrete diário" ---------- */
 
   const EXPLICA = 'Todo dia às 19h, uma notificação lembra você de lançar os gastos. Nos dias em que você já lançou algo, ela não chega.';
@@ -89,7 +166,8 @@ window.GS = window.GS || {};
     }
 
     function bloqueado() {
-      modal.body.innerHTML = `<div class="lembrete-aviso">${icone('alert')}<span>As notificações do GSCASH estão <b>bloqueadas</b> neste aparelho. Libere nas configurações do navegador (ou do celular) e tente de novo.</span></div>`;
+      const onde = GS.nativo ? 'em <b>Ajustes &gt; Notificações &gt; GSCASH</b>' : 'nas configurações do navegador (ou do celular)';
+      modal.body.innerHTML = `<div class="lembrete-aviso">${icone('alert')}<span>As notificações do GSCASH estão <b>bloqueadas</b> neste aparelho. Libere ${onde} e tente de novo.</span></div>`;
       rodape('<button type="button" class="btn btn-primary" data-fechar>Entendi</button>');
       modal.foot.className = 'modal-foot um';
     }
@@ -103,11 +181,11 @@ window.GS = window.GS || {};
         const b = e.currentTarget;
         ocupado(b, 'Ativando…');
         try {
-          if (!(await ligar())) return bloqueado();
+          if (!(await motor.ligar())) return bloqueado();
           gravar(CONVITE_VISTO, '1');
           document.querySelector('.convite-lembrete')?.remove();
           ligadoTela();
-          GS.toast('Lembrete ligado. Mandamos uma notificação de teste.');
+          GS.toast(GS.nativo ? 'Lembrete ligado: todo dia às 19h.' : 'Lembrete ligado. Mandamos uma notificação de teste.');
         } catch (err) {
           console.error('Falha ao ligar o lembrete', err);
           desligadoTela();
@@ -126,7 +204,7 @@ window.GS = window.GS || {};
       modal.foot.querySelector('[data-desligar]').addEventListener('click', async e => {
         ocupado(e.currentTarget, 'Desligando…');
         try {
-          await desligar();
+          await motor.desligar();
           desligadoTela();
           GS.toast('Lembrete desligado neste aparelho.');
         } catch (err) {
@@ -136,17 +214,17 @@ window.GS = window.GS || {};
       });
     }
 
-    if (Notification.permission === 'denied') return bloqueado();
-    (await inscricaoAtual()) ? ligadoTela() : desligadoTela();
+    if (await motor.negado()) return bloqueado();
+    (await motor.ligado()) ? ligadoTela() : desligadoTela();
   }
 
   /* ---------- convite no Painel (uma vez, só no app instalado) ---------- */
 
   async function convite() {
-    if (!suportado || !instalado() || ler(CONVITE_VISTO) || Notification.permission === 'denied') return;
+    if (!suportado || !(GS.nativo || instalado()) || ler(CONVITE_VISTO)) return;
     const lugar = document.querySelector('main .container');
     if (!lugar || !document.getElementById('primeirosPassos')) return;  // só no Painel
-    if (await inscricaoAtual()) return;
+    if (await motor.negado() || await motor.ligado()) return;
     const el = GS.el('div', 'convite-app convite-lembrete');
     el.setAttribute('role', 'region');
     el.setAttribute('aria-label', 'Lembrete diário');

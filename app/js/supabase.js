@@ -29,6 +29,9 @@ window.GS = window.GS || {};
     }
   })();
 
+  // dentro do app do iPhone (Capacitor): sem convite de instalar, sem Windows, sem Pix
+  GS.nativo = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+
   const apiDesktop = () => new Promise(resolve => {
     const api = window.pywebview && window.pywebview.api;
     if (api && api.sessao_ler) return resolve(api);
@@ -100,12 +103,46 @@ window.GS = window.GS || {};
   // app de computador: endereço local do app.py que recebe a volta do Google (igual ao PORTA_GOOGLE)
   const VOLTA_GOOGLE_DESKTOP = 'http://127.0.0.1:53682/google';
 
-  // cliente só para o login com Google no app de computador (fluxo PKCE). Usa o mesmo
-  // armazenamento do cliente principal, então a sessão criada aqui vale para o app todo.
+  // app do iPhone: o Safari do sistema devolve o login para este endereço, que abre o app
+  // (o mesmo esquema está no Info.plist e na lista de endereços permitidos do Supabase)
+  const VOLTA_APP = 'br.com.gscash.app://login';
+
+  // cliente só para o login externo no app de computador e no app do iPhone (fluxo PKCE).
+  // Usa o mesmo armazenamento do cliente principal, então a sessão criada aqui vale para o app todo.
   let pkceCriado = null;
   const clientePkce = () => pkceCriado || (pkceCriado = window.supabase.createClient(SUPABASE_URL, SUPABASE_CHAVE, {
-    auth: { flowType: 'pkce', persistSession: true, autoRefreshToken: false, detectSessionInUrl: false, storage: armazenamentoDesktop },
+    auth: { flowType: 'pkce', persistSession: true, autoRefreshToken: false, detectSessionInUrl: false, ...(noDesktop ? { storage: armazenamentoDesktop } : {}) },
   }));
+
+  // app do iPhone: abre o login no Safari do sistema (o Google não aceita login dentro do app)
+  // e espera o iOS devolver br.com.gscash.app://login?code=... ; fechar o Safari cancela
+  async function entrarNoApp(provedor, extras, sinal) {
+    const pkce = clientePkce();
+    const dados = await executar(pkce.auth.signInWithOAuth({
+      provider: provedor,
+      options: { redirectTo: VOLTA_APP, skipBrowserRedirect: true, ...extras },
+    }));
+    const App = window.Capacitor.registerPlugin('App');
+    const Browser = window.Capacitor.registerPlugin('Browser');
+    const ouvintes = [];
+    const codigo = await new Promise((ok, falha) => {
+      const cancelar = () => falha(new DOMException('Cancelado', 'AbortError'));
+      ouvintes.push(App.addListener('appUrlOpen', ({ url }) => {
+        if (!String(url).startsWith(VOLTA_APP)) return;
+        const q = new URLSearchParams(String(url).split('?')[1]?.split('#')[0] || '');
+        if (q.get('code')) ok(q.get('code'));
+        else falha(new Error(q.get('error_description') || `Não foi possível entrar com ${NOMES[provedor]}.`));
+      }));
+      ouvintes.push(Browser.addListener('browserFinished', cancelar));
+      if (sinal) sinal.addEventListener('abort', cancelar, { once: true });
+      Browser.open({ url: dados.url, presentationStyle: 'popover' }).catch(falha);
+    }).finally(async () => {
+      for (const o of ouvintes) (await o).remove();
+      Browser.close().catch(() => {});  // o Safari não fecha sozinho quando devolve o código
+    });
+    // a sessão vai para o mesmo armazenamento do app: a próxima página já entra logada
+    await executar(pkce.auth.exchangeCodeForSession(codigo));
+  }
 
   // quais logins externos estão ligados no Supabase (Google, Apple); lido uma vez por página
   const NOMES = { google: 'Google', apple: 'Apple' };
@@ -169,6 +206,7 @@ window.GS = window.GS || {};
       await provedorDisponivel(provedor);
       // o Google deixa escolher a conta toda vez; a Apple não tem essa opção
       const extras = provedor === 'google' ? { queryParams: { prompt: 'select_account' } } : {};
+      if (GS.nativo) return entrarNoApp(provedor, extras, sinal);
       if (!noDesktop) {
         if (!temHttp) throw new Error(`O login com ${NOMES[provedor]} só funciona com o app aberto por um endereço http(s).`);
         await executar(cliente.auth.signInWithOAuth({ provider: provedor, options: { redirectTo: voltarPara(), ...extras } }));

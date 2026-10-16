@@ -102,25 +102,72 @@ window.GS = window.GS || {};
     try {
       if (sessionStorage.getItem('gscash:comprar') && info.estado !== 'livre') {
         sessionStorage.removeItem('gscash:comprar');
-        setTimeout(abrirCompra, 400);
+        setTimeout(comprar, 400);
       }
     } catch (e) { /* sem sessionStorage: segue sem abrir */ }
     return info;
   })();
 
-  /* ---------- janela "Comprar licença" (Pix pelo Mercado Pago) ----------
-     1. resumo e nome na licença  2. QR code e copia e cola, conferindo o pagamento a cada 4 s
-     3. pronto. Quem libera a licença é a Edge Function "pix", quando o Mercado Pago confirma. */
+  /* ---------- janela "Comprar licença" (Pix ou cartão, pelo Mercado Pago) ----------
+     1. resumo e forma de pagamento
+     2. Pix: QR code e copia e cola, conferindo o pagamento a cada 4 s
+        cartão: formulário do próprio Mercado Pago (Card Payment Brick), à vista
+     3. pronto. Quem libera a licença é a Edge Function "pix", quando o Mercado Pago aprova. */
 
   const noCelular = () => matchMedia('(max-width: 640px)').matches;
   const hora = iso => new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  const MSG_PIX = 'Não foi possível gerar o Pix agora. Verifique a conexão e tente de novo.';
+  const MSG_CARTAO = 'Não foi possível pagar com cartão agora. Verifique a conexão e tente de novo.';
 
-  async function pedirPix(corpo) {
+  async function pedirPagamento(corpo, msgPadrao = MSG_PIX) {
     const { data: r, error } = await GS.supabase.functions.invoke('pix', { body: corpo });
     if (!error) return r;
-    let msg = 'Não foi possível gerar o Pix agora. Verifique a conexão e tente de novo.';
+    let msg = msgPadrao;
     try { msg = (await error.context.json()).erro || msg; } catch (e) { /* sem corpo: fica a mensagem padrão */ }
     throw new Error(msg);
+  }
+
+  // SDK do Mercado Pago (monta o formulário do cartão): só carrega quando a pessoa escolhe cartão.
+  // Os números do cartão ficam nos campos do Mercado Pago; o GSCASH só recebe um token de uso único.
+  let sdkMP = null;
+  function carregarSdkMP() {
+    if (!sdkMP) {
+      sdkMP = new Promise((ok, falha) => {
+        const s = document.createElement('script');
+        s.src = 'https://sdk.mercadopago.com/js/v2';
+        s.onload = ok;
+        s.onerror = () => {
+          sdkMP = null;
+          s.remove();
+          falha(new Error(MSG_CARTAO));
+        };
+        document.head.append(s);
+      });
+    }
+    return sdkMP;
+  }
+
+  // o formulário do Mercado Pago com as cores do GSCASH
+  function estiloCartao() {
+    const cor = nome => getComputedStyle(document.documentElement).getPropertyValue(nome).trim();
+    return {
+      theme: 'default',
+      customVariables: {
+        baseColor: cor('--primary'),
+        textPrimaryColor: cor('--text'),
+        textSecondaryColor: cor('--text-2'),
+        formBackgroundColor: cor('--surface'),
+        inputBackgroundColor: '#ffffff',
+        outlinePrimaryColor: cor('--border-strong'),
+        outlineSecondaryColor: cor('--border'),
+        errorColor: cor('--danger'),
+        successColor: cor('--success'),
+        borderRadiusSmall: '10px',
+        borderRadiusMedium: '12px',
+        borderRadiusLarge: '14px',
+        formPadding: '0px',
+      },
+    };
   }
 
   async function copiar(botao, texto) {
@@ -156,12 +203,20 @@ window.GS = window.GS || {};
 
     let fechado = false;
     let espera;
+    let pagAtual = null;  // pagamento que está sendo conferido: { id, forma }
+    let brick = null;     // formulário do cartão montado
+    let forma = 'pix';
+    const desmontar = () => {
+      try { brick?.unmount(); } catch (e) { /* já saiu da tela */ }
+      brick = null;
+    };
     const modal = GS.abrirModal({
       titulo: 'Comprar licença',
       corpo: '',
       aoFechar: () => {
         fechado = true;
         clearTimeout(espera);
+        desmontar();
         document.removeEventListener('visibilitychange', aoVoltar);
       },
     });
@@ -171,44 +226,78 @@ window.GS = window.GS || {};
       modal.foot.innerHTML = html;
       modal.foot.querySelectorAll('[data-fechar]').forEach(b => b.addEventListener('click', () => modal.fechar()));
     };
-
-    /* 1. resumo */
-    modal.body.innerHTML = `
-      <div class="compra-plano">
-        <div class="topo"><b>GSCASH · 1 ano</b><span class="selo-promo">Promoção</span></div>
-        <span class="preco num"><s>${preco(PRECO_DE)}</s>${preco(PRECO_POR)}<small>por ano</small></span>
-        <ul>
-          <li>${icone('check')}Todos os recursos, sem limite de lançamentos</li>
-          <li>${icone('check')}Vale no navegador e no programa para Windows</li>
-          <li>${icone('check')}Ativa na hora, assim que o Pix for pago</li>
-        </ul>
-      </div>
-      ${renovando
-        ? `<div class="compra-renova">${icone('clock')}<span>Sua licença vale até <b>${data(info.validade)}</b>. Com a renovação, passa a valer até <b>${data(novaValidade)}</b>.</span></div>`
-        : `<div class="compra-conta"><span>Para a conta</span><b>${esc(email)}</b></div>`}
-      <div class="compra-seguro">${icone('lock')}Pagamento por Pix, processado pelo Mercado Pago</div>`;
-    rodape(`<button type="button" class="btn btn-outline" data-fechar>Cancelar</button>
-            <button type="button" class="btn btn-primary" data-pagar>${icone('pix')}Pagar com Pix</button>`);
-
-    async function gerar(botao) {
+    const girando = (botao, texto) => {
       const original = botao.innerHTML;
       botao.disabled = true;
-      botao.innerHTML = '<span class="roda-botao" aria-hidden="true"></span>Gerando o Pix…';
+      botao.innerHTML = `<span class="roda-botao" aria-hidden="true"></span>${texto}`;
+      return () => { botao.disabled = false; botao.innerHTML = original; };
+    };
+
+    /* 1. resumo e forma de pagamento */
+    const opcao = (f, ic, nomeForma, detalhe) => `
+      <button type="button" class="opcao-serie" role="radio" data-forma="${f}">
+        <span class="opcao-radio"></span><span class="ic">${icone(ic)}</span>
+        <span class="txt"><strong>${nomeForma}</strong><small>${detalhe}</small></span>
+      </button>`;
+    function mostrarResumo() {
+      desmontar();
+      clearTimeout(espera);
+      pagAtual = null;
+      titulo('Comprar licença');
+      modal.body.innerHTML = `
+        <div class="compra-plano">
+          <div class="topo"><b>GSCASH · 1 ano</b><span class="selo-promo">Promoção</span></div>
+          <span class="preco num"><s>${preco(PRECO_DE)}</s>${preco(PRECO_POR)}<small>por ano</small></span>
+          <ul>
+            <li>${icone('check')}Todos os recursos, sem limite de lançamentos</li>
+            <li>${icone('check')}Vale no navegador e no programa para Windows</li>
+            <li>${icone('check')}Ativa na hora, assim que o pagamento for aprovado</li>
+          </ul>
+        </div>
+        ${renovando
+          ? `<div class="compra-renova">${icone('clock')}<span>Sua licença vale até <b>${data(info.validade)}</b>. Com a renovação, passa a valer até <b>${data(novaValidade)}</b>.</span></div>`
+          : `<div class="compra-conta"><span>Para a conta</span><b>${esc(email)}</b></div>`}
+        <div class="compra-forma" role="radiogroup" aria-labelledby="compraForma">
+          <span class="titulo" id="compraForma">Forma de pagamento</span>
+          ${opcao('pix', 'pix', 'Pix', 'QR code ou copia e cola')}
+          ${opcao('cartao', 'cartao', 'Cartão de crédito', `À vista, ${preco(PRECO_POR)}`)}
+        </div>
+        <div class="compra-seguro">${icone('lock')}Pagamento processado pelo Mercado Pago</div>`;
+      rodape(`<button type="button" class="btn btn-outline" data-fechar>Cancelar</button>
+              <button type="button" class="btn btn-primary" data-pagar></button>`);
+      const botao = modal.foot.querySelector('[data-pagar]');
+      const marcar = f => {
+        forma = f;
+        modal.body.querySelectorAll('.compra-forma .opcao-serie').forEach(b => {
+          b.classList.toggle('sel', b.dataset.forma === f);
+          b.setAttribute('aria-checked', b.dataset.forma === f);
+        });
+        botao.innerHTML = f === 'pix' ? `${icone('pix')}Pagar com Pix` : `${icone('cartao')}Continuar`;
+      };
+      modal.body.querySelector('.compra-forma').addEventListener('click', e => {
+        const b = e.target.closest('.opcao-serie');
+        if (b) marcar(b.dataset.forma);
+      });
+      marcar(forma);
+      botao.addEventListener('click', () => (forma === 'pix' ? gerar(botao) : mostrarCartao(botao)));
+      setTimeout(() => botao.focus(), 50);
+    }
+
+    async function gerar(botao) {
+      const volta = girando(botao, 'Gerando o Pix…');
       try {
-        const pix = await pedirPix({ acao: 'criar', nome });
+        const pix = await pedirPagamento({ acao: 'criar', nome });
         if (!fechado) mostrarPix(pix);
       } catch (e) {
-        botao.disabled = false;
-        botao.innerHTML = original;
+        volta();
         GS.toast(e.message, 'erro');
       }
     }
-    modal.foot.querySelector('[data-pagar]').addEventListener('click', e => gerar(e.currentTarget));
 
     /* 2. Pix: no celular a pessoa paga no mesmo aparelho, então o "copiar" vem primeiro e o QR fica guardado */
-    let pixAtual;
     function mostrarPix(pix) {
-      pixAtual = pix;
+      desmontar();
+      pagAtual = { id: pix.id, forma: 'pix' };
       titulo('Pague com Pix');
       const qr = `<div class="pix-qr"><img alt="QR code do Pix" src="data:image/png;base64,${pix.qr_base64}"></div>`;
       const esperando = texto => `<div class="pix-esperando"><span class="pix-giro" aria-hidden="true"></span><span><b>Esperando o pagamento</b>${texto}</span></div>`;
@@ -228,19 +317,22 @@ window.GS = window.GS || {};
       espera = setTimeout(vigiar, 4000);
     }
 
-    // pergunta ao servidor se o Pix já caiu (a cada 4 s, e na hora em que a pessoa volta do app do banco)
+    // pergunta ao servidor se o pagamento já foi aprovado (a cada 4 s, e na hora em que a pessoa volta do app do banco)
     async function vigiar() {
       clearTimeout(espera);
-      if (fechado || !pixAtual) return;
+      if (fechado || !pagAtual) return;
+      const atual = pagAtual;
       try {
-        const r = await pedirPix({ acao: 'conferir', id: pixAtual.id });
-        if (fechado) return;
-        if (r.status === 'aprovado') return mostrarPronto(r);
-        if (r.status === 'expirado') return mostrarVencido();
+        const r = await pedirPagamento({ acao: 'conferir', id: atual.id });
+        if (fechado || pagAtual !== atual) return;
+        if (r.status === 'aprovado') return mostrarPronto(r, atual.forma);
+        if (r.status === 'expirado') {
+          return atual.forma === 'pix' ? mostrarVencido() : mostrarRecusado('O Mercado Pago não aprovou o pagamento.');
+        }
       } catch (e) {
         // sem internet por um instante: tenta de novo
       }
-      if (!fechado) espera = setTimeout(vigiar, 4000);
+      if (!fechado && pagAtual === atual) espera = setTimeout(vigiar, 4000);
     }
     function aoVoltar() {
       if (document.visibilityState === 'visible') vigiar();
@@ -248,7 +340,7 @@ window.GS = window.GS || {};
     document.addEventListener('visibilitychange', aoVoltar);
 
     function mostrarVencido() {
-      pixAtual = null;
+      pagAtual = null;
       titulo('Pague com Pix');
       modal.body.innerHTML = `
         <div class="ativ-ok pix-vencido">
@@ -261,16 +353,141 @@ window.GS = window.GS || {};
       modal.foot.querySelector('[data-pagar]').addEventListener('click', e => gerar(e.currentTarget));
     }
 
+    /* 2. cartão: o formulário é do Mercado Pago; o botão de pagar é o nosso, no rodapé */
+    async function mostrarCartao(botao) {
+      const volta = girando(botao, 'Abrindo…');
+      let inicio;
+      try {
+        [inicio] = await Promise.all([pedirPagamento({ acao: 'cartao-inicio' }, MSG_CARTAO), carregarSdkMP()]);
+      } catch (e) {
+        volta();
+        return GS.toast(e.message, 'erro');
+      }
+      if (fechado) return;
+      desmontar();
+      pagAtual = null;
+      const valor = preco(Math.round(inicio.valor * 100));
+      titulo('Pague com cartão');
+      modal.body.innerHTML = `
+        <div class="cartao-valor"><span>GSCASH · 1 ano, à vista</span><b class="num">${valor}</b></div>
+        <div class="cartao-form" id="compraCartao"></div>
+        <div class="cartao-carregando"><span class="pix-giro" aria-hidden="true"></span>Carregando o formulário…</div>
+        <div class="compra-seguro">${icone('lock')}Os dados do cartão vão direto para o Mercado Pago</div>`;
+      rodape(`<button type="button" class="btn btn-outline" data-voltar>Voltar</button>
+              <button type="button" class="btn btn-primary" data-pagar disabled>${icone('lock')}Pagar ${valor}</button>`);
+      modal.foot.querySelector('[data-voltar]').addEventListener('click', mostrarResumo);
+      const pagar = modal.foot.querySelector('[data-pagar]');
+      const caixa = modal.body.querySelector('#compraCartao');
+
+      let montado;
+      try {
+        const mp = new window.MercadoPago(inicio.chave_publica, { locale: 'pt-BR' });
+        montado = await mp.bricks().create('cardPayment', 'compraCartao', {
+          initialization: { amount: inicio.valor, payer: { email } },
+          customization: {
+            visual: { hidePaymentButton: true, hideFormTitle: true, style: estiloCartao() },
+            paymentMethods: { minInstallments: 1, maxInstallments: 1, types: { excluded: ['debit_card'] } },
+          },
+          callbacks: {
+            onReady: () => {
+              modal.body.querySelector('.cartao-carregando')?.remove();
+              pagar.disabled = false;
+            },
+            onSubmit: () => Promise.resolve(),  // não é usado: quem paga é o botão do rodapé
+            onError: erro => console.error('Formulário do cartão (Mercado Pago)', erro),
+          },
+        });
+      } catch (e) {
+        console.error('Não foi possível montar o formulário do cartão', e);
+        if (fechado || !caixa.isConnected) return;
+        GS.toast(MSG_CARTAO, 'erro');
+        return mostrarResumo();
+      }
+      // a pessoa voltou ou fechou enquanto o formulário carregava
+      if (fechado || !caixa.isConnected) {
+        try { montado.unmount(); } catch (e) { /* já saiu */ }
+        return;
+      }
+      brick = montado;
+      pagar.addEventListener('click', () => pagarCartao(pagar));
+    }
+
+    async function pagarCartao(botao) {
+      if (!brick) return;
+      let dados = null;
+      try {
+        dados = await brick.getFormData();
+      } catch (e) {
+        console.warn('Formulário do cartão incompleto', e);
+      }
+      if (!dados || !dados.token) return;  // o próprio formulário aponta o que falta preencher
+      const voltar = modal.foot.querySelector('[data-voltar]');
+      voltar.disabled = true;
+      const volta = girando(botao, 'Processando…');
+      try {
+        const r = await pedirPagamento({
+          acao: 'cartao', nome,
+          token: dados.token, payment_method_id: dados.payment_method_id, issuer_id: dados.issuer_id, payer: dados.payer,
+        }, MSG_CARTAO);
+        if (fechado) return;
+        if (r.status === 'aprovado') return mostrarPronto(r, 'cartao');
+        if (r.status === 'analise') return mostrarAnalise(r.id);
+        return mostrarRecusado(r.motivo);
+      } catch (e) {
+        volta();
+        voltar.disabled = false;
+        GS.toast(e.message, 'erro');
+      }
+    }
+
+    // às vezes o Mercado Pago confere o pagamento antes de aprovar: a licença ativa sozinha depois
+    function mostrarAnalise(id) {
+      desmontar();
+      pagAtual = { id, forma: 'cartao' };
+      titulo('Pagamento em análise');
+      modal.body.innerHTML = `
+        <div class="ativ-ok cartao-analise">
+          <span class="ic">${icone('clock')}</span>
+          <h3 class="ativ-titulo">Quase lá</h3>
+          <p>O Mercado Pago está conferindo o pagamento. Costuma levar poucos minutos.</p>
+          <p class="pix-validade">A licença ativa sozinha quando ele aprovar. Pode fechar esta janela.</p>
+        </div>`;
+      rodape('<button type="button" class="btn btn-outline" data-fechar>Fechar</button>', true);
+      clearTimeout(espera);
+      espera = setTimeout(vigiar, 4000);
+    }
+
+    function mostrarRecusado(motivo) {
+      desmontar();
+      pagAtual = null;
+      titulo('Pague com cartão');
+      modal.body.innerHTML = `
+        <div class="ativ-ok cartao-recusado">
+          <span class="ic">${icone('alert')}</span>
+          <h3 class="ativ-titulo">O cartão foi recusado</h3>
+          <p>${esc(motivo || 'O banco do cartão não autorizou a compra.')} Nada foi cobrado.</p>
+          <p class="pix-validade">Tente outro cartão ou pague com Pix.</p>
+        </div>`;
+      rodape(`<button type="button" class="btn btn-outline" data-pix>${icone('pix')}Pagar com Pix</button>
+              <button type="button" class="btn btn-primary" data-cartao>Tentar outro cartão</button>`);
+      modal.foot.querySelector('[data-pix]').addEventListener('click', e => gerar(e.currentTarget));
+      const outro = modal.foot.querySelector('[data-cartao]');
+      outro.addEventListener('click', () => mostrarCartao(outro));
+      outro.focus();
+    }
+
     /* 3. pronto */
-    function mostrarPronto(r) {
-      pixAtual = null;
+    function mostrarPronto(r, formaPaga) {
+      desmontar();
+      pagAtual = null;
       titulo('Licença ativa');
+      const cartao = formaPaga === 'cartao';
       modal.body.innerHTML = `
         <div class="ativ-ok">
           <span class="ic">${icone('check')}</span>
-          <h3 class="ativ-titulo">Pagamento confirmado, ${esc(r.nome.split(' ')[0])}!</h3>
+          <h3 class="ativ-titulo">Pagamento ${cartao ? 'aprovado' : 'confirmado'}, ${esc(r.nome.split(' ')[0])}!</h3>
           <p>Licença ativada para <b>${esc(r.nome)}</b>.<br>Ela vale até <b>${data(r.validade)}</b>, no computador e no navegador.</p>
-          <p class="pix-validade">O comprovante fica no app do seu banco.</p>
+          <p class="pix-validade">${cartao ? 'Na fatura do cartão aparece como GSCASH.' : 'O comprovante fica no app do seu banco.'}</p>
         </div>`;
       rodape(`<button type="button" class="btn btn-primary" data-continuar>Continuar${icone('arrow-right')}</button>`, true);
       const continuar = modal.foot.querySelector('[data-continuar]');
@@ -278,10 +495,14 @@ window.GS = window.GS || {};
       continuar.focus();
     }
 
-    setTimeout(() => modal.foot.querySelector('[data-pagar]').focus(), 50);
+    mostrarResumo();
   }
 
-  const comprar = () => abrirCompra();
+  // no app do iPhone a Apple exige a compra pela própria Apple (In-App Purchase, etapa seguinte):
+  // até lá o Pix não aparece lá dentro
+  const comprar = () => (GS.nativo
+    ? (GS.compraApple ? GS.compraApple.abrir() : GS.toast('A compra pelo app do iPhone chega em breve.'))
+    : abrirCompra());
 
   /* ---------- campo da chave ---------- */
 
@@ -313,7 +534,7 @@ window.GS = window.GS || {};
           <span class="preco num"><s>${preco(PRECO_DE)}</s>${preco(PRECO_POR)}<small>por ano</small></span>
           <button type="button" class="btn btn-outline" data-comprar>Quero comprar</button>
         </div>
-        <p>Pague por Pix aqui mesmo: a licença ativa na hora.</p>
+        <p>Pague por Pix ou cartão aqui mesmo: a licença ativa na hora.</p>
       </div>`;
     const campo = campoChave();
     corpo.querySelector('[data-slot="campo"]').replaceWith(campo.el);
@@ -325,7 +546,7 @@ window.GS = window.GS || {};
                <button type="button" class="btn btn-primary" data-ativar>${icone('key')}Ativar</button>`,
       avisoDescarte: 'A chave que você colou ainda não foi ativada.',
     });
-    corpo.querySelector('[data-comprar]').addEventListener('click', () => { modal.fechar(); abrirCompra(); });
+    corpo.querySelector('[data-comprar]').addEventListener('click', () => { modal.fechar(); comprar(); });
 
     const botao = modal.foot.querySelector('[data-ativar]');
     const enviar = async () => {
@@ -413,6 +634,9 @@ window.GS = window.GS || {};
     return el;
   }
 
+  // o ícone do Pix só onde a compra é por Pix
+  const IC_COMPRA = GS.nativo ? '' : icone('pix');
+
   const ATE = iso => data(iso).split(' ').slice(0, 2).join(' ');  // "19 out"
 
   // teste grátis: faixa azul em todas as páginas
@@ -422,7 +646,7 @@ window.GS = window.GS || {};
       <span class="ic">${icone('clock')}</span>
       <span class="longo"><strong>Teste grátis: ${info.dias === 1 ? 'falta 1 dia' : `faltam ${info.dias} dias`}</strong> (até ${ATE(info.testeAte)}). Depois, ative sua licença para continuar lançando.</span>
       <span class="curto"><strong>Teste grátis:</strong> ${GS.plural(info.dias, 'dia', 'dias')}</span>
-      <div class="acoes"><button type="button" class="btn btn-primary" data-comprar>${icone('pix')}Quero comprar</button></div>`);
+      <div class="acoes"><button type="button" class="btn btn-primary" data-comprar>${IC_COMPRA}Quero comprar</button></div>`);
   }
 
   // faltam 30 dias ou menos: avisa uma vez por dia
@@ -435,7 +659,7 @@ window.GS = window.GS || {};
       <span>Sua licença vence <strong>${dias(info.dias)}</strong> (${data(info.validade)}). Renove para continuar lançando seus gastos.</span>
       <div class="acoes">
         <button type="button" class="btn btn-outline" data-depois>Agora não</button>
-        <button type="button" class="btn btn-primary" data-comprar>${icone('pix')}Renovar</button>
+        <button type="button" class="btn btn-primary" data-comprar>${IC_COMPRA}Renovar</button>
       </div>`);
     el.querySelector('[data-depois]').addEventListener('click', () => {
       GS.api.salvarPreferencia('licencaAvisoDispensado', hoje).catch(err => GS.toast(err.message, 'erro'));
@@ -450,12 +674,12 @@ window.GS = window.GS || {};
       faixa('vencida', `
         <span class="ic">${icone('lock')}</span>
         <span><strong>Seu teste grátis acabou.</strong> Seus dados continuam aqui: ative sua licença para voltar a lançar e editar.</span>
-        <div class="acoes"><button type="button" class="btn btn-primary" data-comprar>${icone('pix')}Quero comprar</button></div>`);
+        <div class="acoes"><button type="button" class="btn btn-primary" data-comprar>${IC_COMPRA}Quero comprar</button></div>`);
     } else {
       faixa('vencida', `
         <span class="ic">${icone('lock')}</span>
         <span><strong>Licença vencida em ${data(info.validade)}.</strong> O GSCASH está em modo só leitura: você vê seus dados e gera relatórios, mas não lança nem edita.</span>
-        <div class="acoes"><button type="button" class="btn btn-primary" data-comprar>${icone('pix')}Renovar</button></div>`);
+        <div class="acoes"><button type="button" class="btn btn-primary" data-comprar>${IC_COMPRA}Renovar</button></div>`);
     }
     document.addEventListener('click', e => {
       if (!e.target.closest(ESCRITA)) return;
@@ -481,5 +705,5 @@ window.GS = window.GS || {};
     return `<span>${texto}</span><span class="sep">·</span><button type="button" class="link-btn" data-licenca>Licença</button><span class="sep">·</span>`;
   }
 
-  GS.licenca = { pronta, rodapeHtml, abrirJanela, abrirAtivacao, abrirCompra };
+  GS.licenca = { pronta, rodapeHtml, abrirJanela, abrirAtivacao, abrirCompra: comprar };
 })();

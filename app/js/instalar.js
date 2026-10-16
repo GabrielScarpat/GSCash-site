@@ -27,7 +27,7 @@ window.GS = window.GS || {};
   // aberto pelo ícone da tela inicial: lembra (no Android o navegador e o app dividem o localStorage)
   if (instalado()) gravar(JA_INSTALOU, '1');
 
-  const disponivel = () => ehCelular && !GS.noDesktop && !instalado() && !ler(JA_INSTALOU);
+  const disponivel = () => ehCelular && !GS.noDesktop && !GS.nativo && !instalado() && !ler(JA_INSTALOU);
 
   // Android/Chrome: guarda a janela de instalação para abrir no toque em "Instalar"
   let pedido = null;

@@ -111,7 +111,7 @@
 }
 
 /* =========================================================
-   Janela "Comprar licença" (Pix pelo Mercado Pago)
+   Janela "Comprar licença" (Pix ou cartão, pelo Mercado Pago)
    ========================================================= */
 
 .modal-foot.um { grid-template-columns: 1fr; }
@@ -122,6 +122,12 @@
 .compra-plano .preco { display: inline-flex; align-items: baseline; gap: 8px; font-size: 32px; font-weight: 700; letter-spacing: -.03em; line-height: 1; }
 .compra-plano .preco s { color: var(--muted); font-size: 17px; font-weight: 500; }
 .compra-plano .preco small { color: var(--muted); font-size: 15px; font-weight: 500; letter-spacing: 0; }
+.compra-plano .preco { white-space: nowrap; }  /* "R$ 50,00" e "por ano" nunca quebram no meio */
+@media (max-width: 640px) {
+  .compra-plano .preco { font-size: 28px; gap: 7px; }
+  .compra-plano .preco s { font-size: 15px; }
+  .compra-plano .preco small { font-size: 14px; }
+}
 .compra-plano ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .compra-plano li { display: flex; gap: 10px; color: var(--text-2); font-size: 14.5px; }
 .compra-plano li svg { width: 17px; height: 17px; margin-top: 2px; color: var(--success); flex-shrink: 0; }
@@ -156,3 +162,22 @@ details.pix-dobra summary { list-style: none; cursor: pointer; text-align: cente
 details.pix-dobra summary::-webkit-details-marker { display: none; }
 details.pix-dobra[open] .pix-qr { margin-top: 12px; }
 .pix-vencido .ic { background: #F6E6CF; color: #9A5B12; }
+
+/* forma de pagamento: Pix ou cartão (usa o .opcao-serie dos componentes) */
+.compra-forma { display: grid; gap: 8px; }
+.compra-forma .titulo { color: var(--text-2); font-size: 15px; font-weight: 500; }
+.compra-forma .opcao-serie { align-items: center; }
+.compra-forma .opcao-radio { margin-top: 0; }
+.compra-forma .ic { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; background: var(--chip); color: var(--text); flex-shrink: 0; }
+.compra-forma .opcao-serie.sel .ic { background: #fff; color: var(--primary); }
+.compra-forma .ic svg { width: 19px; height: 19px; }
+.compra-forma .txt { flex: 1; min-width: 0; }
+
+/* cartão: o formulário dentro de #compraCartao é desenhado pelo Mercado Pago */
+.cartao-valor { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 12px 14px; border-radius: 12px; background: var(--surface-2); font-size: 14.5px; }
+.cartao-valor span { color: var(--text-2); }
+.cartao-valor b { font-size: 18px; font-weight: 700; letter-spacing: -.02em; }
+.cartao-form:empty { display: none; }
+.cartao-carregando { display: flex; align-items: center; justify-content: center; gap: 12px; min-height: 280px; color: var(--muted); font-size: 14px; }
+.cartao-recusado .ic { background: #F4DCD6; color: var(--danger); }
+.cartao-analise .ic { background: #F6E6CF; color: #9A5B12; }
