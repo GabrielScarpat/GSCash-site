@@ -82,3 +82,26 @@
 .regra-senha svg { width: 15px; height: 15px; }
 .regra-senha.ok { color: var(--success); }
 .senha-caixa input::-ms-reveal, .senha-caixa input::-ms-clear { display: none; }  /* o Edge (app de computador) tem um olho próprio */
+
+/* botão ocupado ("Criando sua conta…") */
+.entrar-principal { display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; }
+.entrar-principal .roda { width: 16px; height: 16px; flex-shrink: 0; border-radius: 99px; border: 2px solid rgba(255, 255, 255, .35); border-top-color: #fff; animation: entrar-gira .8s linear infinite; }
+@keyframes entrar-gira { to { transform: rotate(360deg); } }
+
+/* "Confira seu e-mail" (depois de criar a conta) */
+.confirmar { display: grid; gap: 12px; text-align: center; }
+.confirmar-ic { display: grid; place-items: center; width: 58px; height: 58px; margin: 0 auto; border-radius: 16px; background: #DCEBDC; color: var(--success); }
+.confirmar-ic svg { width: 28px; height: 28px; }
+.confirmar h1 { margin: 0; font-size: 21px; }
+.confirmar p { color: var(--text-2); font-size: 14.5px; line-height: 1.45; }
+.confirmar p b { color: var(--text); font-weight: 600; word-break: break-word; }
+.confirmar-passos { display: grid; gap: 8px; margin: 0; padding: 12px; list-style: none; border-radius: 14px; background: var(--surface-2); color: var(--text-2); font-size: 13.5px; text-align: left; }
+.confirmar-passos li { display: flex; gap: 10px; }
+.confirmar-passos .n { display: grid; place-items: center; width: 20px; height: 20px; flex-shrink: 0; border-radius: 99px; background: var(--chip); color: var(--text); font-size: 12px; font-weight: 700; }
+.confirmar-passos b { color: var(--text); font-weight: 600; }
+.confirmar-dica { font-size: 13px !important; }
+.confirmar .entrar-principal { margin-top: 4px; }
+.confirmar .entrar-principal svg { width: 18px; height: 18px; }
+.confirmar .entrar-google:disabled { opacity: .55; cursor: default; }
+.confirmar .entrar-aviso { margin-top: 0; text-align: left; }
+.confirmar .entrar-link.centro { margin-top: 2px; }

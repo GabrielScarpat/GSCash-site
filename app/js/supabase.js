@@ -74,14 +74,23 @@ window.GS = window.GS || {};
     return msg || 'Algo deu errado. Tente de novo.';
   }
 
+  // o erro sai traduzido, mas guarda o código do Supabase e, se houver, quantos segundos esperar
+  function erroDe(e) {
+    const erro = new Error(traduzir(e));
+    erro.codigo = e && e.code;
+    const espera = String((e && e.message) || '').match(/after (\d+) seconds?/i);
+    if (espera) erro.segundos = Number(espera[1]);
+    return erro;
+  }
+
   async function executar(promessa) {
     let resp;
     try {
       resp = await promessa;
     } catch (e) {
-      throw new Error(traduzir(e));
+      throw erroDe(e);
     }
-    if (resp.error) throw new Error(traduzir(resp.error));
+    if (resp.error) throw erroDe(resp.error);
     return resp.data;
   }
 
@@ -130,6 +139,11 @@ window.GS = window.GS || {};
         throw new Error(traduzir({ code: 'user_already_exists' }));
       }
       return { precisaConfirmar: !dados.session };
+    },
+
+    // manda de novo o link de confirmação de uma conta criada com e-mail e senha
+    async reenviarConfirmacao(email) {
+      await executar(cliente.auth.resend({ type: 'signup', email: email.trim(), options: { emailRedirectTo: SITE_EMAILS } }));
     },
 
     // No navegador: vai para o Google e volta para o app.

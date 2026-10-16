@@ -14,9 +14,9 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="GSCASH">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <link rel="stylesheet" href="css/fonts.css?v=cf8de80">
-  <link rel="stylesheet" href="css/base.css?v=cf8de80">
-  <link rel="stylesheet" href="css/entrar.css?v=cf8de80">
+  <link rel="stylesheet" href="css/fonts.css?v=3ff7ae1">
+  <link rel="stylesheet" href="css/base.css?v=3ff7ae1">
+  <link rel="stylesheet" href="css/entrar.css?v=3ff7ae1">
 </head>
 <body class="entrar-pagina">
 
@@ -66,15 +66,31 @@
       </div>
       <button type="button" class="entrar-link centro hidden" id="voltar">Voltar para o login</button>
     </form>
+
+    <!-- depois de criar a conta: em vez do formulário, o que fazer agora (js/entrar.js) -->
+    <section class="confirmar hidden" id="confirmar" aria-live="polite">
+      <span class="confirmar-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></span>
+      <h1>Confira seu e-mail</h1>
+      <p id="confirmarTexto"></p>
+      <ol class="confirmar-passos">
+        <li><span class="n">1</span><span>Abra o e-mail do GSCASH (pode levar 1 minuto).</span></li>
+        <li><span class="n">2</span><span>Toque em <b>Confirmar meu e-mail</b>. Pronto, você já entra.</span></li>
+      </ol>
+      <p class="confirmar-dica">Não achou? Veja em <b>Spam</b> ou <b>Promoções</b>.</p>
+      <a class="entrar-principal confirmar-abrir hidden" id="abrirEmail" target="_blank" rel="noopener"></a>
+      <button type="button" class="entrar-google" id="reenviar">Reenviar e-mail</button>
+      <p class="entrar-aviso" id="confirmarAviso" role="status" hidden></p>
+      <button type="button" class="entrar-link centro" id="outroEmail">Usar outro e-mail</button>
+    </section>
   </div>
 
   <p class="entrar-baixar" id="baixarLinha" hidden></p>
   <p class="entrar-rodape">Seus dados ficam guardados na nuvem, só você tem acesso. <a href="https://gscash.com.br/privacidade.html" target="_blank" rel="noopener">Política de privacidade</a></p>
 </div>
 
-<script src="js/vendor/supabase.js?v=cf8de80"></script>
-<script src="js/supabase.js?v=cf8de80"></script>
-<script src="js/baixar.js?v=cf8de80"></script>
-<script src="js/entrar.js?v=cf8de80"></script>
+<script src="js/vendor/supabase.js?v=3ff7ae1"></script>
+<script src="js/supabase.js?v=3ff7ae1"></script>
+<script src="js/baixar.js?v=3ff7ae1"></script>
+<script src="js/entrar.js?v=3ff7ae1"></script>
 </body>
 </html>

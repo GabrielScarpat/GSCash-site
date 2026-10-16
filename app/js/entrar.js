@@ -88,13 +88,109 @@
 
   const irParaOApp = () => location.replace('index.html');
 
+  /* ---------- "Confira seu e-mail" ----------
+     Depois de criar a conta o formulário sai da frente: antes, ele ficava lá com um aviso pequeno,
+     a pessoa tocava de novo em "Criar conta" e o Supabase (que só reenvia depois de 60 s) respondia
+     "Muitas tentativas". Aqui fica o que fazer agora, com o reenvio liberado depois da espera. */
+
+  // botão do e-mail da pessoa (Gmail, Outlook, iCloud, Yahoo); outros ficam sem botão
+  const CAIXAS = [
+    [/@(gmail|googlemail)\.com$/i, 'Abrir o Gmail', 'https://mail.google.com/mail/u/0/#search/gscash'],
+    [/@(outlook|hotmail|live|msn)\.[a-z.]+$/i, 'Abrir o Outlook', 'https://outlook.live.com/mail/0/'],
+    [/@(icloud|me|mac)\.com$/i, 'Abrir o iCloud Mail', 'https://www.icloud.com/mail'],
+    [/@yahoo\.[a-z.]+$/i, 'Abrir o Yahoo Mail', 'https://mail.yahoo.com/'],
+  ];
+  const ICONE_CARTA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>';
+  let emailConfirmar = '';
+  let relogio = null;
+
+  function contarReenvio(segundos) {
+    clearInterval(relogio);
+    const b = $('reenviar');
+    let falta = Math.max(0, Math.round(segundos));
+    const pintar = () => {
+      b.disabled = falta > 0;
+      b.textContent = falta > 0 ? `Reenviar e-mail (em ${falta} s)` : 'Reenviar e-mail';
+    };
+    pintar();
+    relogio = setInterval(() => {
+      falta--;
+      pintar();
+      if (falta <= 0) clearInterval(relogio);
+    }, 1000);
+  }
+
+  function avisarConfirmar(texto, ok) {
+    const a = $('confirmarAviso');
+    a.textContent = texto || '';
+    a.hidden = !texto;
+    a.classList.toggle('ok', !!ok);
+  }
+
+  // motivo: 'criada' (acabou de criar), 'enviado' (tentou de novo logo depois), 'pendente' (tentou entrar sem confirmar)
+  function mostrarConfirmar(email, motivo, segundos) {
+    emailConfirmar = email.trim();
+    const pedaco = document.createElement('b');
+    pedaco.textContent = emailConfirmar;
+    const antes = motivo === 'pendente'
+      ? 'Sua conta ainda não foi confirmada. O link de confirmação foi enviado para '
+      : motivo === 'enviado' ? 'Já enviamos o link de confirmação para ' : 'Enviamos um link de confirmação para ';
+    const p = $('confirmarTexto');
+    p.textContent = antes;
+    p.append(pedaco, '.');
+    const caixa = CAIXAS.find(([re]) => re.test(emailConfirmar));
+    const abrir = $('abrirEmail');
+    abrir.classList.toggle('hidden', !caixa);
+    if (caixa) { abrir.innerHTML = `${ICONE_CARTA}${caixa[1]}`; abrir.href = caixa[2]; }
+    avisarConfirmar('');
+    el.form.classList.add('hidden');
+    el.abas.classList.add('hidden');
+    $('confirmar').classList.remove('hidden');
+    contarReenvio(motivo === 'pendente' ? 0 : (segundos || 60));
+  }
+
+  $('reenviar').addEventListener('click', async () => {
+    const b = $('reenviar');
+    b.disabled = true;
+    b.textContent = 'Reenviando…';
+    try {
+      await GS.auth.reenviarConfirmacao(emailConfirmar);
+      avisarConfirmar('Pronto, enviamos de novo. Confira a caixa de entrada.', true);
+      contarReenvio(60);
+    } catch (err) {
+      if (err.segundos) {
+        avisarConfirmar('');
+        contarReenvio(err.segundos);
+      } else {
+        avisarConfirmar(err.message);
+        contarReenvio(0);
+      }
+    }
+  });
+
+  $('outroEmail').addEventListener('click', () => {
+    clearInterval(relogio);
+    $('confirmar').classList.add('hidden');
+    el.form.classList.remove('hidden');
+    trocarModo('criar');
+    el.email.value = '';
+    el.email.focus();
+  });
+
+  // botão ocupado: rodinha e texto do que está acontecendo (e nada de segundo toque)
+  function ocupar(texto) {
+    el.enviar.disabled = true;
+    el.enviar.innerHTML = `<span class="roda" aria-hidden="true"></span>${texto}`;
+  }
+
   async function enviar(e) {
     e.preventDefault();
     const erro = validar();
     if (erro) return avisar(erro);
 
     avisar('');
-    el.enviar.disabled = true;
+    const ESPERA = { entrar: 'Entrando…', criar: 'Criando sua conta…', recuperar: 'Enviando…', novasenha: 'Salvando…' };
+    ocupar(ESPERA[modo]);
     try {
       if (modo === 'entrar') {
         await GS.auth.entrar(el.email.value, el.senha.value);
@@ -103,7 +199,7 @@
       if (modo === 'criar') {
         const { precisaConfirmar } = await GS.auth.criarConta(el.email.value, el.senha.value);
         if (!precisaConfirmar) return irParaOApp();
-        avisar('Conta criada! Enviamos um link de confirmação para o seu e-mail. Confirme e depois entre.', true);
+        mostrarConfirmar(el.email.value, 'criada');
         return;
       }
       if (modo === 'recuperar') {
@@ -114,9 +210,13 @@
       await GS.auth.definirSenha(el.senha.value);
       irParaOApp();
     } catch (err) {
+      // tocou em "Criar conta" de novo logo depois: a conta já existe e o e-mail já foi
+      if (modo === 'criar' && err.codigo === 'over_email_send_rate_limit') return mostrarConfirmar(el.email.value, 'enviado', err.segundos);
+      if (modo === 'entrar' && err.codigo === 'email_not_confirmed') return mostrarConfirmar(el.email.value, 'pendente');
       avisar(err.message);
     } finally {
       el.enviar.disabled = false;
+      el.enviar.textContent = TEXTOS[modo].botao;
     }
   }
 
