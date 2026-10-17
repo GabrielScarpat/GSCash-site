@@ -128,7 +128,7 @@
         </div>`;
 
     const contas = `
-        <div class="adm-card adm-cheia"><h2>Contas</h2><p class="sub">Escolha um grupo para ver quem procurar</p>
+        <div class="adm-card adm-cheia" id="cartaoContas"><h2>Contas</h2><p class="sub">Escolha um grupo para ver quem procurar</p>
           <div class="adm-grupos" id="gruposContas" role="group" aria-label="Grupos de contas"></div>
           <p class="adm-dica" id="dicaContas"></p>
           <label class="adm-busca">${ic('lupa')}<input type="search" id="buscaContas" placeholder="Buscar por e-mail" aria-label="Buscar por e-mail" autocomplete="off" spellcheck="false" value="${esc(busca)}"></label>
@@ -148,6 +148,8 @@
         <div class="adm-kpi"><small>${ic('pix')}Compras</small><b>${d.compras}</b><span class="var">${moeda(d.receita)} recebidos</span></div>
         <div class="adm-kpi"><small>${ic('raio')}Usaram nos últimos 7 dias</small><b>${d.ativos_7d}</b><span class="var cinza">lançaram pelo menos 1 gasto</span></div>
       </div>
+
+      ${todas ? '<div class="adm-card" id="procurarHoje" aria-label="Para procurar hoje"></div>' : ''}
 
       <div class="adm-duas">
         <div class="adm-card"><h2>Contas novas por dia</h2>
@@ -173,8 +175,44 @@
     desenharBarras();
     if (todas) {
       if (!celular.matches && !todas.some(c => c.id === selId)) selId = null;
+      desenharProcurar();
       desenharContas();
     }
+  }
+
+  /* ---------- Para procurar hoje ----------
+     Os grupos (do mais urgente para o menos) com gente que ainda não foi contatada:
+     conta sem estado ou marcada "A contatar". Quem for marcado como contatado sai daqui. */
+
+  const SUBS = {
+    vence: 'Renovação', acaba: 'Ainda sem licença', muito: '30 ou mais lançamentos',
+    acabou: 'Teste acabou, sem licença', pararam: 'Usavam e pararam', nada: 'Travaram no começo',
+  };
+  const naoContatada = c => !c.estado || c.estado === 'a_contatar';
+
+  function desenharProcurar() {
+    const el = $('#procurarHoje');
+    if (!el) return;
+    const blocos = PRIORIDADE.map(g => ({ g, lista: todas.filter(c => c.grupos.includes(g) && naoContatada(c)) })).filter(b => b.lista.length);
+    const nomeGrupo = g => GRUPOS.find(x => x[0] === g)[1];
+    el.innerHTML = `<h2>Para procurar hoje</h2><p class="sub">Quem ainda não foi contatado, do grupo mais urgente para o menos</p>
+      ${blocos.length ? `<div class="proc-lista">${blocos.map(({ g, lista }) => `
+        <div class="proc-grupo"><div class="proc-nome"><b><span class="proc-n">${lista.length}</span>${esc(nomeGrupo(g))}</b><small>${esc(SUBS[g])}</small></div>
+          <div class="proc-nomes">${lista.slice(0, 3).map(c => `<button type="button" class="proc-conta" data-abrir="${esc(c.id)}" data-no-grupo="${g}" title="Abrir a ficha de ${esc(c.email)}">${esc(c.email)}</button>`).join('')}
+            ${lista.length > 3 ? `<span class="proc-resto">e mais ${lista.length - 3}</span>` : ''}</div>
+          <button type="button" class="proc-mais" data-ver-grupo="${g}">Ver todos</button></div>`).join('')}</div>`
+        : '<p class="proc-vazio">Tudo em dia: ninguém para procurar agora.</p>'}`;
+  }
+
+  // leva para a lista de Contas, já no grupo (e, se pedido, com a ficha de uma conta aberta)
+  function irParaContas(g, id) {
+    grupo = g;
+    busca = '';
+    const caixa = $('#buscaContas');
+    if (caixa) caixa.value = '';
+    selId = id || null;
+    desenharContas();
+    $('#cartaoContas').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   /* ---------- Contas: grupos, lista e ficha ---------- */
@@ -282,6 +320,10 @@
 
   // cliques e digitação nas contas
   $('#corpo').addEventListener('click', e => {
+    const abrir = e.target.closest('[data-abrir]');
+    if (abrir) return irParaContas(abrir.dataset.noGrupo, abrir.dataset.abrir);
+    const verGrupo = e.target.closest('[data-ver-grupo]');
+    if (verGrupo) return irParaContas(verGrupo.dataset.verGrupo, null);
     const g = e.target.closest('[data-grupo]');
     if (g) {
       grupo = g.dataset.grupo;
@@ -306,6 +348,7 @@
       c.estado = c.estado === estado.dataset.estado ? null : estado.dataset.estado;   // tocar de novo tira o estado
       c.nota = ($('#notaConta') || {}).value ?? c.nota;
       desenharFicha();
+      desenharProcurar();
       salvarContato(c);
       return;
     }
