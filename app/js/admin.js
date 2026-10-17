@@ -12,6 +12,7 @@
     pessoa: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
     relogio: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
     raio: '<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>',
+    lupa: '<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>',
     pix: '<path d="m12 3 4 4-4 4-4-4z"/><path d="m12 13 4 4-4 4-4-4z"/><path d="M3 12l4-4M3 12l4 4M21 12l-4-4M21 12l-4 4"/>',
     cadeado: '<rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
   };
@@ -38,10 +39,18 @@
 
   let dias = 30;
   let dados = null;
+  let todas = null;       // todas as contas (a lista de "Últimos cadastros" mostra só as 15 mais novas)
+  let verTodas = false;   // a lista completa está aberta
+  let busca = '';
 
   async function carregar() {
     $('#conteudo').classList.add('carregando');
-    const { data, error } = await GS.supabase.rpc('painel_admin', { p_dias: dias });
+    // a lista completa vem junto; se ela falhar, o painel funciona sem o botão "Ver todas"
+    const [{ data, error }, completa] = await Promise.all([
+      GS.supabase.rpc('painel_admin', { p_dias: dias }),
+      GS.supabase.rpc('painel_admin_contas').then(r => (r.error ? null : r.data), () => null),
+    ]);
+    todas = completa;
     $('#conteudo').classList.remove('carregando');
     if (error) {
       const semAcesso = /sem acesso/i.test(error.message || '');
@@ -66,6 +75,23 @@
       if (c.situacao === 'teste') return `<span class="selo info">Teste · ${plural(c.dias_teste, 'dia', 'dias')}</span>`;
       return '<span class="selo erro">Teste acabou</span>';
     };
+    const linhaConta = c => `<tr><td class="muted">${quando(c.criado_em)}</td><td>${esc(c.email)}${c.provedor === 'google' ? ' <span class="muted">· Google</span>' : ''}</td>
+      <td class="r num">${c.lancamentos}</td><td>${situacao(c)}</td></tr>`;
+    linhaDaLista = linhaConta;
+    const cabecalhoTabela = '<thead><tr><th>Quando</th><th>Conta</th><th class="r">Lançamentos</th><th>Situação</th></tr></thead>';
+    const temMais = todas && todas.length > d.cadastros.length;
+    const cartaoUltimos = `
+        <div class="adm-card"><div class="adm-cab-card"><div><h2>Últimos cadastros</h2><p class="sub">Para você saber quem chegou e mandar um oi</p></div>
+          ${temMais ? `<button type="button" class="adm-botao" data-ver-todas>Ver todas as ${todas.length} contas</button>` : ''}</div>
+          ${d.cadastros.length ? `<div class="adm-tabela"><table>${cabecalhoTabela}<tbody>${d.cadastros.map(linhaConta).join('')}</tbody></table></div>` : '<p class="sub">Ninguém ainda.</p>'}
+        </div>`;
+    const cartaoTodas = `
+        <div class="adm-card adm-cheia"><div class="adm-cab-card"><div><h2>Todas as contas</h2><p class="sub">Da mais nova para a mais antiga (a sua não entra)</p></div>
+          <button type="button" class="adm-botao" data-ver-ultimas>Mostrar só as últimas</button></div>
+          <label class="adm-busca">${ic('lupa')}<input type="search" id="buscaContas" placeholder="Buscar por e-mail" aria-label="Buscar por e-mail" autocomplete="off" spellcheck="false" value="${esc(busca)}"></label>
+          <div class="adm-rolagem"><table>${cabecalhoTabela}<tbody id="listaContas"></tbody></table></div>
+          <div class="adm-rodape-lista" id="rodapeContas"></div>
+        </div>`;
     const etapa = (rotulo, n, extra = '') => `
       <div class="adm-etapa"><div class="l"><span>${rotulo}</span><b>${n}</b></div>
         <div class="barra"><span style="width:${pct(n, f.criaram)}%"></span></div>
@@ -98,20 +124,29 @@
       </div>
 
       <div class="adm-duas">
-        <div class="adm-card"><h2>Últimos cadastros</h2><p class="sub">Para você saber quem chegou e mandar um oi</p>
-          ${d.cadastros.length ? `<div class="adm-tabela"><table><thead><tr><th>Quando</th><th>Conta</th><th class="r">Lançamentos</th><th>Situação</th></tr></thead><tbody>
-            ${d.cadastros.map(c => `<tr><td class="muted">${quando(c.criado_em)}</td><td>${esc(c.email)}${c.provedor === 'google' ? ' <span class="muted">· Google</span>' : ''}</td>
-              <td class="r num">${c.lancamentos}</td><td>${situacao(c)}</td></tr>`).join('')}
-          </tbody></table></div>` : '<p class="sub">Ninguém ainda.</p>'}
-        </div>
+        ${verTodas && todas ? cartaoTodas : `${cartaoUltimos}
         <div class="adm-card"><h2>Pagamentos</h2><p class="sub">Pix pelo Mercado Pago</p>
           ${d.pagamentos.length ? `<div class="adm-tabela"><table><thead><tr><th>Quando</th><th>Conta</th><th class="r">Valor</th></tr></thead><tbody>
             ${d.pagamentos.map(p => `<tr><td class="muted">${quando(p.pago_em)}</td><td>${esc(p.email)}</td><td class="r num">${moeda(p.valor)}</td></tr>`).join('')}
           </tbody></table></div>` : '<p class="sub">Nenhum pagamento ainda.</p>'}
           <p class="sub adm-nao-pagos">Pix gerados e não pagos ${nomePeriodo}: ${d.pix_nao_pagos} (a pessoa chegou até o QR code)</p>
-        </div>
+        </div>`}
       </div>`;
     desenharBarras();
+    if (verTodas && todas) desenharLista();
+  }
+
+  // linhas da lista completa, já filtradas pela busca (só mexe na tabela, para a digitação não perder o foco)
+  let linhaDaLista = null;
+  function desenharLista() {
+    const termo = busca.trim().toLowerCase();
+    const lista = termo ? todas.filter(c => String(c.email).toLowerCase().includes(termo)) : todas;
+    $('#listaContas').innerHTML = lista.length
+      ? lista.map(linhaDaLista).join('')
+      : '<tr><td colspan="4" class="muted adm-vazio">Nenhuma conta com esse e-mail.</td></tr>';
+    $('#rodapeContas').innerHTML = termo
+      ? `<span>${lista.length} de ${plural(todas.length, 'conta', 'contas')}</span>`
+      : `<span>${plural(todas.length, 'conta', 'contas')}</span><span>Role a lista para ver as mais antigas</span>`;
   }
 
   function desenharBarras() {
@@ -127,6 +162,20 @@
     const meio = lista[Math.floor(lista.length / 2)];
     $('[data-eixo]').innerHTML = lista.length ? `<span>${dataCurta(lista[0].dia)}</span><span>${dataCurta(meio.dia)}</span><span>${dataCurta(lista[lista.length - 1].dia)}</span>` : '';
   }
+
+  // ver todas as contas / voltar às últimas
+  $('#corpo').addEventListener('click', e => {
+    if (e.target.closest('[data-ver-todas]') || e.target.closest('[data-ver-ultimas]')) {
+      verTodas = !!e.target.closest('[data-ver-todas]');
+      desenhar();
+      if (verTodas) $('#buscaContas').focus();
+    }
+  });
+  $('#corpo').addEventListener('input', e => {
+    if (e.target.id !== 'buscaContas') return;
+    busca = e.target.value;
+    desenharLista();
+  });
 
   // marcar/desmarcar divulgação no dia
   $('#corpo').addEventListener('click', async e => {
