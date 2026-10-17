@@ -15,7 +15,7 @@
   const BASE = window.GS_TOUR_BASE || 'https://gscash.com.br/';
   const VIDEO = BASE + 'tour.mp4';
   const CAPA = BASE + 'tour-capa.jpg';
-  const DURACAO = '1:08';
+  const DURACAO = '1:03';
 
   const PLAY = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>';
 
