@@ -99,7 +99,10 @@
 
   function filtrar() {
     const termo = GS.normalizar(estado.busca.trim());
-    const termoValor = estado.busca.trim().replace(/[R$\s.]/g, '').replace(',', '.');
+    // busca por valor: "R$ 1.234,5", "1.234,5 €", "$1,234.5" -> "1234.5" (a vírgula e o ponto dependem da moeda)
+    const decimal = GS.numero(0).includes(',') ? ',' : '.';
+    const termoValor = estado.busca.trim().replace(/R\$|US\$|[$€¥\s]/g, '')
+      .split(decimal === ',' ? '.' : ',').join('').replace(decimal, '.');
 
     return ctx.transacoes.filter(t => {
       if (estado.categoria !== 'todas' && t.categoriaId !== estado.categoria && t.subcategoriaId !== estado.categoria) return false;

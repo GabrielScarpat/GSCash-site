@@ -7,16 +7,42 @@ window.GS = window.GS || {};
 (function () {
   /* ---------- Formatação ---------- */
 
-  const fmtMoeda = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
-  const fmtMoedaInteira = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
-  const fmtNumero = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  // moedas que a pessoa pode escolher (Configurações). Só muda o símbolo e o formato:
+  // os valores não são convertidos. Fora o real, ponto nos centavos e vírgula no milhar
+  // (€1,234.56, $1,234.56); o iene não tem centavos.
+  // Por dentro tudo continua em centavos (no iene, ¥1 = 100), então trocar de moeda não mexe no banco.
+  // A licença do GSCASH é sempre em real (licenca.js tem a formatação própria).
+  GS.MOEDAS = {
+    BRL: { nome: 'Real brasileiro', simbolo: 'R$', sigla: 'R$', local: 'pt-BR', casas: 2 },
+    EUR: { nome: 'Euro', simbolo: '€', sigla: '€', local: 'en-IE', casas: 2 },
+    USD: { nome: 'Dólar americano', simbolo: '$', sigla: 'US$', local: 'en-US', casas: 2 },
+    JPY: { nome: 'Iene japonês', simbolo: '¥', sigla: '¥', local: 'en-US', casas: 0 },
+  };
+
+  let fmtMoeda, fmtMoedaInteira, fmtNumero, MASCARA;
+
+  // troca a moeda de todo o app (chamada ao carregar as preferências e nas Configurações)
+  GS.definirMoeda = codigo => {
+    if (!GS.MOEDAS[codigo]) codigo = 'BRL';
+    const m = GS.MOEDAS[codigo];
+    GS.codigoMoeda = codigo;
+    fmtMoeda = new Intl.NumberFormat(m.local, { style: 'currency', currency: codigo, minimumFractionDigits: m.casas, maximumFractionDigits: m.casas });
+    fmtMoedaInteira = new Intl.NumberFormat(m.local, { style: 'currency', currency: codigo, maximumFractionDigits: 0 });
+    fmtNumero = new Intl.NumberFormat(m.local, { minimumFractionDigits: m.casas, maximumFractionDigits: m.casas });
+    MASCARA = `${m.simbolo} •••••`;
+  };
+  GS.moedaAtual = () => GS.MOEDAS[GS.codigoMoeda];
+  GS.definirMoeda('BRL');
 
   // valores chegam em centavos
   // GS.oculto = true troca todos os valores exibidos por "R$ •••••" (botão de olho do Painel)
   GS.oculto = false;
-  const MASCARA = 'R$ •••••';
   GS.moeda = centavos => (GS.oculto ? MASCARA : fmtMoeda.format((centavos || 0) / 100));
   GS.moedaInteira = centavos => (GS.oculto ? MASCARA : fmtMoedaInteira.format(Math.trunc((centavos || 0) / 100)));
+  // mesmo com os valores ocultos (relatório em PDF, prévia da importação)
+  GS.moedaVisivel = centavos => fmtMoeda.format((centavos || 0) / 100);
+  GS.moedaAbs = centavos => fmtMoeda.format(Math.abs(centavos || 0) / 100);
+  // só o número, sem símbolo (campos de valor)
   GS.numero = centavos => fmtNumero.format((centavos || 0) / 100);
   GS.pct = (parte, total) => (total > 0 ? Math.round((parte / total) * 100) : 0) + '%';
 
@@ -98,6 +124,7 @@ window.GS = window.GS || {};
     sino: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
     play: '<path d="M8 5.5v13l11-6.5z"/>',
     logout: '<path d="m16 17 5-5-5-5"/><path d="M21 12H9"/><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>',
+    engrenagem: '<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>',
     key: '<path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"/><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/>',
 
     // categorias

@@ -15,8 +15,7 @@ window.GS = window.GS || {};
   const { icone, esc } = GS;
 
   // o relatório mostra os valores mesmo com "Ocultar valores" ligado no Painel
-  const fmtMoeda = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
-  const moeda = centavos => fmtMoeda.format((centavos || 0) / 100);
+  const moeda = GS.moedaVisivel;
   const pct = (parte, total) => (total > 0 ? Math.round((parte / total) * 100) : 0);
 
   const LINHAS_POR_FOLHA = 30;  // lançamentos por folha na lista

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex">
+  <title>Configurações · GSCASH</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <!-- app instalável no celular (tela inicial, tela cheia) -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#F3EFE4">
+  <link rel="apple-touch-icon" href="icones/apple-touch-icon.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="GSCASH">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="stylesheet" href="css/fonts.css?v=f7480ea">
+  <link rel="stylesheet" href="css/estilos.css?v=f7480ea">
+  <script src="js/vendor/supabase.js?v=f7480ea"></script>
+  <script src="js/supabase.js?v=f7480ea"></script>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <a href="index.html" class="logo"><span class="logo-mark"></span>GSCASH</a>
+    <ul class="nav-links">
+      <li><a href="index.html" data-nav="painel">Painel</a></li>
+      <li><a href="transacoes.html" data-nav="transacoes">Transações</a></li>
+      <li><a href="carteiras.html" data-nav="carteiras">Carteiras</a></li>
+      <li><a href="faturas.html" data-nav="faturas">Faturas</a></li>
+      <li><a href="categorias.html" data-nav="categorias">Categorias</a></li>
+    </ul>
+    <div class="topbar-acoes">
+      <button type="button" class="btn btn-outline" data-acao="transferir" title="Transferir entre contas"><span data-icon="transfer"></span><span class="rotulo">Transferir</span></button>
+      <button type="button" class="btn btn-primary" data-acao="novo-gasto"><span data-icon="plus"></span>Novo gasto</button>
+    </div>
+  </div>
+</header>
+
+<main class="page">
+  <div class="container stack">
+
+    <a href="index.html" class="cfg-voltar"><span data-icon="chevron-left"></span>Painel</a>
+    <div class="page-head">
+      <h1 class="page-title">Configurações</h1>
+    </div>
+
+    <section class="card">
+      <div class="card-head">
+        <h2 class="card-title">Moeda</h2>
+        <span class="card-sub" id="moedaAtual"></span>
+      </div>
+      <p class="cfg-texto">Em qual moeda você registra seus gastos. Vale para todo o app, neste e nos outros aparelhos.</p>
+      <div class="cfg-lista" id="moedas" role="radiogroup" aria-label="Moeda do app"></div>
+      <div class="cfg-confirmar" id="confirmarMoeda" role="status" hidden>
+        <span class="txt"><b data-titulo></b><small data-exemplo></small></span>
+        <button type="button" class="btn btn-outline" data-cancelar>Cancelar</button>
+        <button type="button" class="btn btn-primary" data-confirmar><span data-icon="check"></span>Confirmar troca</button>
+      </div>
+      <div class="cfg-nota"><span data-icon="alert"></span><span>Os valores não são convertidos: trocar de real para euro faz R$ 50,00 aparecer como €50.00. A licença do GSCASH continua custando R$ 50, pago em real.</span></div>
+    </section>
+
+    <section class="card" id="cardSeguranca" hidden>
+      <div class="card-head">
+        <h2 class="card-title">Segurança</h2>
+      </div>
+      <div class="cfg-linha" id="duasEtapas"></div>
+    </section>
+
+  </div>
+</main>
+
+<script src="js/data.js?v=f7480ea"></script>
+<script src="js/core.js?v=f7480ea"></script>
+<script src="js/components.js?v=f7480ea"></script>
+<script src="js/widgets.js?v=f7480ea"></script>
+<script src="js/carteira-form.js?v=f7480ea"></script>
+<script src="js/boas-vindas.js?v=f7480ea"></script>
+<script src="js/transacao-form.js?v=f7480ea"></script>
+<script src="js/transferencia-form.js?v=f7480ea"></script>
+<script src="js/licenca.js?v=f7480ea"></script>
+<script src="js/compra-apple.js?v=f7480ea"></script>
+<script src="js/baixar.js?v=f7480ea"></script>
+<script src="js/atualizacao.js?v=f7480ea"></script>
+<script src="js/instalar.js?v=f7480ea"></script>
+<script src="js/lembrete.js?v=f7480ea"></script>
+<script src="js/importar.js?v=f7480ea"></script>
+<script src="js/excluir-conta.js?v=f7480ea"></script>
+<script src="js/duas-etapas.js?v=f7480ea"></script>
+<script src="js/configuracoes.js?v=f7480ea"></script>
+</body>
+</html>

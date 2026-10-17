@@ -1,5 +1,5 @@
 /* =========================================================
-   GSCASH — verificação em duas etapas (item no menu da conta)
+   GSCASH — verificação em duas etapas (Configurações › Segurança)
    Ligar: o que é → QR code (no celular, botão que abre o autenticador) → código de 6 dígitos
           → 8 códigos de recuperação para guardar.
    Já ligada: estado, gerar novos códigos e desligar (os dois pedem o código do celular antes).
@@ -100,7 +100,7 @@ window.GS = window.GS || {};
     setTimeout(() => URL.revokeObjectURL(a.href), 4000);
   }
 
-  // a sessão mudou (ligou ou desligou): o menu da conta lê daqui se está ligada
+  // a sessão mudou (ligou ou desligou): as Configurações leem daqui se está ligada
   async function atualizarUsuario() {
     const sessao = await GS.auth.sessao();
     if (sessao) GS.usuario = sessao.user;
@@ -311,7 +311,7 @@ window.GS = window.GS || {};
     if (sessionStorage.getItem('gscash:2fa-desligada') && !/entrar\.html$/i.test(location.pathname)) {
       sessionStorage.removeItem('gscash:2fa-desligada');
       window.addEventListener('load', () => setTimeout(() => {
-        if (GS.toast) GS.toast('Verificação em duas etapas desligada. Ligue de novo pelo menu da conta, com o celular novo.');
+        if (GS.toast) GS.toast('Verificação em duas etapas desligada. Ligue de novo em Configurações, com o celular novo.');
       }, 600));
     }
   } catch (e) { /* sem sessionStorage: segue sem o aviso */ }

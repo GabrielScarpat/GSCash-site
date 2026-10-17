@@ -413,7 +413,7 @@ window.GS = window.GS || {};
         ${GS.instalar && GS.instalar.disponivel() ? `<button type="button" class="conta-item instalar" data-instalar>${GS.icone('download')}Instalar o app no celular</button>` : ''}
         ${GS.importar ? `<button type="button" class="conta-item" data-importar>${GS.icone('subir')}Importar extrato ou planilha</button>` : ''}
         ${GS.lembrete && GS.lembrete.visivel() ? `<button type="button" class="conta-item lembrete" data-lembrete>${GS.icone('sino')}Lembrete diário</button>` : ''}
-        ${GS.duasEtapas ? `<button type="button" class="conta-item" data-duas-etapas>${GS.icone('escudo')}Verificação em duas etapas${GS.duasEtapas.ligada() ? '<span class="conta-selo ligada">Ligada</span>' : '<span class="conta-selo">Desligada</span>'}</button>` : ''}
+        <a class="conta-item" href="configuracoes.html">${GS.icone('engrenagem')}Configurações</a>
         <button type="button" class="conta-item" data-acao="trocar">${GS.icone('transfer')}Trocar de conta</button>
         <button type="button" class="conta-item sair" data-acao="sair">${GS.icone('logout')}Sair da conta</button>
         <p class="conta-nota">Seus dados ficam salvos na sua conta. Ao sair, o GSCASH volta para a tela de entrada.</p>
@@ -460,11 +460,6 @@ window.GS = window.GS || {};
         if (e.target.closest('[data-lembrete]')) {
           fechar();
           GS.lembrete.abrir();
-          return;
-        }
-        if (e.target.closest('[data-duas-etapas]')) {
-          fechar();
-          GS.duasEtapas.abrir();
           return;
         }
         const b = e.target.closest('[data-acao]');

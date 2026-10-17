@@ -1,0 +1,64 @@
+/* =========================================================
+   GSCASH — Configurações (js/configuracoes.js)
+   ========================================================= */
+
+.cfg-voltar { display: none; }
+.cfg-texto { margin: -4px 0 14px; color: var(--muted); font-size: 14px; line-height: 1.5; }
+
+/* moedas: cartões que funcionam como opções de rádio */
+.cfg-lista { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.cfg-moeda {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 14px 16px;
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  text-align: left;
+}
+.cfg-moeda:hover { border-color: #CFC8B6; }
+.cfg-moeda:focus-visible { outline: none; border-color: var(--primary); }
+.cfg-moeda .simb { display: grid; place-items: center; flex: none; width: 44px; height: 44px; border-radius: 12px; background: var(--surface-2); color: var(--text-2); font-size: 15px; font-weight: 700; }
+.cfg-moeda .txt, .cfg-linha .txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.cfg-moeda .txt b, .cfg-linha .txt b { font-size: 15px; font-weight: 600; }
+.cfg-moeda .txt small, .cfg-linha .txt small { color: var(--muted); font-size: 13px; line-height: 1.45; }
+.cfg-moeda .marca { display: grid; place-items: center; flex: none; width: 22px; height: 22px; margin-left: auto; border: 1.5px solid #CFC8B6; border-radius: 50%; }
+.cfg-moeda .marca svg { width: 14px; height: 14px; opacity: 0; }
+.cfg-moeda.on { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(29, 58, 94, .10); }
+.cfg-moeda.on .simb { background: var(--primary); color: var(--bg); }
+.cfg-moeda.on .marca { background: var(--primary); border-color: var(--primary); color: var(--bg); }
+.cfg-moeda.on .marca svg { opacity: 1; }
+.cfg-moeda .atual { margin-left: auto; padding: 2px 8px; border-radius: 99px; background: var(--chip); color: var(--muted); font-size: 11.5px; font-weight: 600; white-space: nowrap; }
+.cfg-moeda .atual + .marca { margin-left: 0; }
+
+/* a troca só vale depois de confirmar */
+.cfg-confirmar { display: flex; align-items: center; gap: 14px; margin-top: 14px; padding: 14px 16px; border: 1.5px solid var(--primary); border-radius: 14px; background: var(--primary-soft); }
+.cfg-confirmar[hidden] { display: none; }
+.cfg-confirmar .txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; margin-right: auto; }
+.cfg-confirmar .txt b { color: var(--primary); font-size: 15px; font-weight: 600; }
+.cfg-confirmar .txt small { color: var(--text-2); font-size: 13px; }
+.cfg-confirmar .btn { flex: none; }
+
+.cfg-nota { display: flex; gap: 10px; margin-top: 16px; padding: 12px 14px; border-radius: 12px; background: var(--surface-2); color: var(--text-2); font-size: 13.5px; line-height: 1.5; }
+.cfg-nota svg { flex: none; width: 18px; height: 18px; margin-top: 1px; color: var(--muted); }
+
+/* segurança: uma linha com ícone, texto, selo e botão (o selo vem de duas-etapas.css) */
+.cfg-linha { display: flex; align-items: center; gap: 14px; }
+.cfg-icone { display: grid; place-items: center; flex: none; width: 44px; height: 44px; border-radius: 12px; background: var(--primary-soft); color: var(--primary); }
+.cfg-icone svg { width: 22px; height: 22px; }
+.cfg-linha .conta-selo { margin-left: auto; }
+.cfg-linha .btn { flex: none; }
+
+@media (max-width: 640px) {
+  .cfg-voltar { display: inline-flex; align-items: center; gap: 4px; margin-bottom: -8px; color: var(--text-2); font-size: 14px; }
+  .cfg-voltar svg { width: 18px; height: 18px; }
+  .cfg-lista { grid-template-columns: 1fr; }
+  .cfg-confirmar { flex-wrap: wrap; }
+  .cfg-confirmar .txt { flex-basis: 100%; }
+  .cfg-confirmar .btn { flex: 1; }
+  .cfg-linha { flex-wrap: wrap; }
+  .cfg-linha .txt { flex: 1; }
+  .cfg-linha .btn { width: 100%; }
+}

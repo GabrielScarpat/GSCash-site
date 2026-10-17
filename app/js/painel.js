@@ -254,8 +254,9 @@
     if (GS.oculto) return '•••';
     const reais = centavos / 100;
     if (reais === 0) return '0';
-    if (reais >= 1000) return `${(reais / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} mil`;
-    return reais.toLocaleString('pt-BR', { maximumFractionDigits: 0 });
+    const local = GS.moedaAtual().local;
+    if (reais >= 1000) return `${(reais / 1000).toLocaleString(local, { maximumFractionDigits: 1 })} mil`;
+    return reais.toLocaleString(local, { maximumFractionDigits: 0 });
   }
 
   function pintarGrafico() {

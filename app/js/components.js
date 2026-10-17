@@ -497,11 +497,18 @@ window.GS = window.GS || {};
     menuAberto = fechar;
   };
 
-  /* ---------- Campo de valor (R$) ----------
-     Digita só números; o valor é guardado em centavos. */
+  /* ---------- Campo de valor (R$, €, $ ou ¥) ----------
+     Digita só números; o valor é guardado em centavos.
+     O símbolo escrito no HTML (R$) é trocado pelo da moeda escolhida.
+     No iene não há centavos: cada dígito é um iene inteiro. */
 
   GS.campoMoeda = function (input, centavos = 0) {
     let valor = Math.max(0, Math.round(centavos || 0));
+    const moeda = GS.moedaAtual();
+    const porDigito = moeda.casas ? 1 : 100;
+    const simbolo = input.parentElement.querySelector('.prefix, .prefixo');
+    if (simbolo) simbolo.textContent = moeda.simbolo;
+    input.placeholder = GS.numero(0);
     const pintar = () => {
       input.value = valor ? GS.numero(valor) : '';
       input.classList.toggle('zerado', !valor);
@@ -518,8 +525,8 @@ window.GS = window.GS || {};
     input.setAttribute('inputmode', 'numeric');
     input.setAttribute('autocomplete', 'off');
     input.addEventListener('input', () => {
-      const digitos = input.value.replace(/\D/g, '').slice(0, 11);
-      valor = Number(digitos || 0);
+      const digitos = input.value.replace(/\D/g, '').slice(0, moeda.casas ? 11 : 9);
+      valor = Number(digitos || 0) * porDigito;
       pintar();
       cursorNoFim();
     });
@@ -877,9 +884,9 @@ window.GS = window.GS || {};
     document.querySelectorAll('[data-acao="transferir"]').forEach(b =>
       b.addEventListener('click', () => GS.abrirFormTransferencia()));
 
-    // carrega as preferências (ex.: valores ocultos) e a licença antes do primeiro desenho
+    // carrega as preferências (ex.: valores ocultos, moeda) e a licença antes do primeiro desenho
     const preparar = Promise.all([
-      GS.api.obterPreferencias().then(p => { GS.oculto = !!p.ocultarValores; }),
+      GS.api.obterPreferencias().then(p => { GS.oculto = !!p.ocultarValores; GS.definirMoeda(p.moeda); }),
       GS.licenca && GS.licenca.pronta,
     ]).catch(() => {});
 

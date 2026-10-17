@@ -24,7 +24,7 @@ window.GS = window.GS || {};
       return /[;"\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
     };
     const valor = c => (c / 100).toFixed(2).replace('.', ',');
-    const linhas = [['Data', 'Tipo', 'Título', 'Descrição', 'Categoria', 'Subcategoria', 'Carteira', 'Destino', 'Forma', 'Parcelas', 'Valor (R$)']];
+    const linhas = [['Data', 'Tipo', 'Título', 'Descrição', 'Categoria', 'Subcategoria', 'Carteira', 'Destino', 'Forma', 'Parcelas', `Valor (${GS.moedaAtual().sigla})`]];
     [...transacoes].sort((a, b) => (a.data < b.data ? -1 : a.data > b.data ? 1 : 0)).forEach(t => {
       const c = cat.get(t.categoriaId);
       const sub = c && (c.subcategorias || []).find(s => s.id === t.subcategoriaId);
