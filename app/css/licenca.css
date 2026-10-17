@@ -181,3 +181,4 @@ details.pix-dobra[open] .pix-qr { margin-top: 12px; }
 .cartao-carregando { display: flex; align-items: center; justify-content: center; gap: 12px; min-height: 280px; color: var(--muted); font-size: 14px; }
 .cartao-recusado .ic { background: #F4DCD6; color: var(--danger); }
 .cartao-analise .ic { background: #F6E6CF; color: #9A5B12; }
+.desafio-quadro { display: block; width: 100%; height: 440px; max-height: 60vh; border: 1px solid var(--line, #e3e0d8); border-radius: 10px; background: #fff; }

@@ -432,12 +432,38 @@ window.GS = window.GS || {};
         if (fechado) return;
         if (r.status === 'aprovado') return mostrarPronto(r, 'cartao');
         if (r.status === 'analise') return mostrarAnalise(r.id);
+        if (r.status === 'desafio') return mostrarDesafio(r);
         return mostrarRecusado(r.motivo);
       } catch (e) {
         volta();
         voltar.disabled = false;
         GS.toast(e.message, 'erro');
       }
+    }
+
+    // 3DS: o banco do cartão pede uma confirmação (senha ou app do banco) numa página dele, aqui dentro.
+    // O resultado chega pelo mesmo vigiar() do Pix: o servidor pergunta ao Mercado Pago.
+    function mostrarDesafio(d) {
+      desmontar();
+      pagAtual = { id: d.id, forma: 'cartao' };
+      titulo('Confirme no seu banco');
+      modal.body.innerHTML = `
+        <div class="desafio-3ds">
+          <iframe name="desafio3ds" title="Confirmação do banco" class="desafio-quadro"></iframe>
+          <form method="POST" target="desafio3ds" id="desafio3dsForm"></form>
+        </div>
+        <div class="compra-seguro">${icone('lock')}A confirmação é feita no site do seu banco</div>`;
+      const form = modal.body.querySelector('#desafio3dsForm');
+      form.action = d.url;
+      const campo = document.createElement('input');
+      campo.type = 'hidden';
+      campo.name = 'creq';
+      campo.value = d.creq;
+      form.appendChild(campo);
+      form.submit();
+      rodape('<button type="button" class="btn btn-outline" data-fechar>Cancelar</button>', true);
+      clearTimeout(espera);
+      espera = setTimeout(vigiar, 4000);
     }
 
     // às vezes o Mercado Pago confere o pagamento antes de aprovar: a licença ativa sozinha depois
