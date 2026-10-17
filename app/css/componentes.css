@@ -479,22 +479,28 @@
 .menu button svg { width: 16px; height: 16px; }
 .menu button.danger { color: var(--danger); }
 
-/* ---------- Selo de carteira oculta (Carteiras e Painel) ---------- */
+/* ---------- Selos de status (Faturas, Carteiras, Painel, Categorias, Configurações, admin) ----------
+   Contorno fino na cor, fundo leve e cantos suaves; sem ícone. Todos têm a mesma
+   largura mínima, então numa lista eles ficam alinhados em coluna. */
 
-.selo-oculta {
+.selo {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  justify-content: center;
+  min-width: 76px;
   height: 24px;
-  padding: 0 9px;
-  border-radius: 99px;
-  background: var(--chip);
-  color: var(--text-2);
+  padding: 0 8px;
+  border: 1px solid;
+  border-radius: 6px;
   font-size: 12.5px;
   font-weight: 600;
   white-space: nowrap;
 }
-.selo-oculta svg { width: 14px; height: 14px; }
+.selo.ok     { color: var(--success); border-color: rgba(46, 125, 50, .45); background: rgba(46, 125, 50, .06); }
+.selo.info   { color: var(--primary); border-color: rgba(29, 58, 94, .40); background: rgba(29, 58, 94, .05); }
+.selo.alerta { color: #9A5B12; border-color: rgba(154, 91, 18, .45); background: rgba(201, 130, 27, .07); }
+.selo.erro   { color: var(--danger); border-color: rgba(194, 57, 43, .45); background: rgba(194, 57, 43, .06); }
+.selo.neutro { color: var(--text-2); border-color: var(--border-strong); background: rgba(0, 0, 0, .02); }
 
 /* ---------- Toast ---------- */
 
@@ -711,6 +717,23 @@ main.carregando .card::after {
 }
 
 .modal.tour { max-width: 780px; }
+
+/* moeda na primeira vez (js/boas-vindas.js) */
+.bv-moeda { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border); }
+.bv-titulo { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 4px 12px; margin-bottom: 10px; }
+.bv-titulo b { font-size: 15px; font-weight: 600; }
+.bv-titulo small { color: var(--muted); font-size: 13px; }
+.bv-lista { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.bv-op { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 12px; background: var(--surface); text-align: left; }
+.bv-op:hover { border-color: #CFC8B6; }
+.bv-op:focus-visible { outline: none; border-color: var(--primary); }
+.bv-op .simb { display: grid; place-items: center; flex: none; width: 34px; height: 34px; border-radius: 9px; background: var(--surface-2); color: var(--text-2); font-size: 13px; font-weight: 700; }
+.bv-op .txt { display: flex; flex-direction: column; min-width: 0; }
+.bv-op .txt b { font-size: 13.5px; font-weight: 600; }
+.bv-op .txt small { color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bv-op.on { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(29, 58, 94, .10); }
+.bv-op.on .simb { background: var(--primary); color: var(--bg); }
+@media (max-width: 640px) { .bv-lista { grid-template-columns: 1fr 1fr; } }
 .tour-texto { margin: 0 0 16px; color: var(--text-2); }
 .tour-video { position: relative; aspect-ratio: 16 / 9; border-radius: 14px; overflow: hidden; background: var(--primary); }
 .tour-video video { width: 100%; height: 100%; display: block; background: #000; }
@@ -738,6 +761,12 @@ main.carregando .card::after {
 .modal-foot.tour-pe { justify-content: space-between; align-items: center; gap: 12px; }
 .modal-foot.tour-pe small { color: var(--muted); }
 .tour-botoes { display: flex; gap: 10px; }
+/* celular: a frase ocupa a linha inteira em cima e os botões dividem a de baixo */
+@media (max-width: 640px) {
+  .modal-foot.tour-pe { grid-template-columns: 1fr; }
+  .modal-foot.tour-pe small { text-align: center; }
+  .tour-botoes .btn { flex: 1; }
+}
 
 .card.primeiros-passos { display: grid; grid-template-columns: minmax(0, .95fr) minmax(0, 1.2fr); gap: 26px; align-items: center; }
 .passos-video { aspect-ratio: 16 / 9; height: auto; border-radius: 14px; }

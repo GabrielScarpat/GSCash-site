@@ -430,9 +430,9 @@
     });
 
     const item = (it, i) => {
-      const selo = !it.sua ? '<span class="selo-pac nova">Nova</span>'
-        : it.completa ? '<span class="selo-pac tem">Você já tem tudo</span>'
-        : `<span class="selo-pac junta">Junta com a sua · +${it.faltam.length}</span>`;
+      const selo = !it.sua ? '<span class="selo ok">Nova</span>'
+        : it.completa ? '<span class="selo neutro">Você já tem tudo</span>'
+        : `<span class="selo info">Junta com a sua · +${it.faltam.length}</span>`;
       const chips = it.subcategorias.map(s => it.faltam.includes(s)
         ? `<span class="pac-sub ${it.sua ? 'mais' : ''}">${it.sua ? '+ ' : ''}${esc(s)}</span>`
         : `<span class="pac-sub ja">${esc(s)}</span>`).join('');

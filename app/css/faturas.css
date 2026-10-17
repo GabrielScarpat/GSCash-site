@@ -52,22 +52,7 @@
   font-weight: 600;
 }
 
-/* selos de status */
-.badge {
-  display: inline-flex;
-  align-items: center;
-  height: 26px;
-  padding: 0 10px;
-  border-radius: 99px;
-  font-size: 13px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-.badge.aberta { background: var(--primary-soft); color: var(--primary); }
-.badge.fechada { background: #F6E6CF; color: #9A5B12; }
-.badge.paga { background: #DCEBDC; color: var(--success); }
-.badge.vencida { background: #F4DCD6; color: var(--danger); }
-.badge.futura { background: var(--chip); color: var(--text-2); }
+/* selos de status: .selo, em componentes.css */
 
 /* seletor de cartões */
 .card-pills { display: flex; gap: 8px; flex-wrap: wrap; }

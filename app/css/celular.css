@@ -136,6 +136,7 @@
     border: 28px solid rgba(243, 239, 228, .06); pointer-events: none; }
   .saldo-card .label, .saldo-card .muted { color: rgba(243, 239, 228, .72); }
   .saldo-card .big-value { color: #F3EFE4; }
+  .saldo-card .selo { color: rgba(243, 239, 228, .85); border-color: rgba(243, 239, 228, .3); background: rgba(243, 239, 228, .06); }
   .saldo-card .previsto { flex-wrap: wrap; gap: 10px 12px; border-top-color: rgba(243, 239, 228, .14); }
   .saldo-card .previsto .tile { background: rgba(243, 239, 228, .12); color: #F3EFE4; }
   .saldo-card .previsto small, .saldo-card .previsto .dif { color: rgba(243, 239, 228, .72); }
@@ -277,7 +278,7 @@
 .convite-fechar { position: absolute; top: -9px; right: -9px; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 99px;
   background: var(--surface); border: 1px solid var(--border-strong); color: var(--text-2); }
 .convite-fechar svg { width: 15px; height: 15px; }
-.conta-item:is(.instalar, .lembrete) { background: var(--primary-soft); color: var(--primary); font-weight: 600; }
+.conta-item.instalar { background: var(--primary-soft); color: var(--primary); font-weight: 600; }
 
 .instalar-passos { display: grid; gap: 10px; }
 .instalar-passo { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px; background: var(--surface-2);

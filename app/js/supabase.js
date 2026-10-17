@@ -412,7 +412,6 @@ window.GS = window.GS || {};
         ${GS.abrirTour ? `<button type="button" class="conta-item" data-tour>${GS.icone('play')}Ver o tour do GSCASH (1 min)</button>` : ''}
         ${GS.instalar && GS.instalar.disponivel() ? `<button type="button" class="conta-item instalar" data-instalar>${GS.icone('download')}Instalar o app no celular</button>` : ''}
         ${GS.importar ? `<button type="button" class="conta-item" data-importar>${GS.icone('subir')}Importar extrato ou planilha</button>` : ''}
-        ${GS.lembrete && GS.lembrete.visivel() ? `<button type="button" class="conta-item lembrete" data-lembrete>${GS.icone('sino')}Lembrete diário</button>` : ''}
         <a class="conta-item" href="configuracoes.html">${GS.icone('engrenagem')}Configurações</a>
         <button type="button" class="conta-item" data-acao="trocar">${GS.icone('transfer')}Trocar de conta</button>
         <button type="button" class="conta-item sair" data-acao="sair">${GS.icone('logout')}Sair da conta</button>
@@ -455,11 +454,6 @@ window.GS = window.GS || {};
         if (e.target.closest('[data-importar]')) {
           fechar();
           GS.importar.abrir();
-          return;
-        }
-        if (e.target.closest('[data-lembrete]')) {
-          fechar();
-          GS.lembrete.abrir();
           return;
         }
         const b = e.target.closest('[data-acao]');

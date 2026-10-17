@@ -81,7 +81,7 @@
           ${widgets.tileTingido(c.cor, tipo.icone, 'lg')}
           <div class="wallet-id">
             <h2 class="wallet-name">${esc(c.nome)}</h2>
-            <p class="wallet-type">${tipo.nome}${c.oculta ? `<span class="selo-oculta">${icone('eye-off')}Oculta</span>` : ''}</p>
+            <p class="wallet-type">${tipo.nome}${c.oculta ? '<span class="selo neutro">Oculta</span>' : ''}</p>
           </div>
           <button type="button" class="icon-btn kebab" data-menu="${c.id}" aria-label="Opções de ${esc(c.nome)}">${icone('more')}</button>
         </header>

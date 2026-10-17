@@ -191,10 +191,6 @@ a.sub-item:hover .sub-nome { color: var(--primary); text-decoration: underline; 
 .pac-linha { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .pac-nome { font-size: 16px; font-weight: 600; }
 
-.selo-pac { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 99px; font-size: 12.5px; font-weight: 600; }
-.selo-pac.nova { background: #DCEBDC; color: var(--success); }
-.selo-pac.junta { background: var(--primary-soft); color: var(--primary); }
-.selo-pac.tem { background: var(--chip); color: var(--muted); }
 
 .pac-subs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .pac-sub { display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border-radius: 99px; background: var(--chip); color: var(--text-2); font-size: 13.5px; }

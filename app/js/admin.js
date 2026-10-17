@@ -61,10 +61,10 @@
     const f = d.funil;
     const nomePeriodo = dias ? `nos últimos ${dias} dias` : 'desde o início';
     const situacao = c => {
-      if (c.situacao === 'ativa') return `<span class="st ativa">${c.comprou ? 'Comprou' : 'Licença ativa'}</span>`;
-      if (c.situacao === 'vencida') return '<span class="st acabou">Licença vencida</span>';
-      if (c.situacao === 'teste') return `<span class="st teste">Teste · ${plural(c.dias_teste, 'dia', 'dias')}</span>`;
-      return '<span class="st acabou">Teste acabou</span>';
+      if (c.situacao === 'ativa') return `<span class="selo ok">${c.comprou ? 'Comprou' : 'Licença ativa'}</span>`;
+      if (c.situacao === 'vencida') return '<span class="selo erro">Licença vencida</span>';
+      if (c.situacao === 'teste') return `<span class="selo info">Teste · ${plural(c.dias_teste, 'dia', 'dias')}</span>`;
+      return '<span class="selo erro">Teste acabou</span>';
     };
     const etapa = (rotulo, n, extra = '') => `
       <div class="adm-etapa"><div class="l"><span>${rotulo}</span><b>${n}</b></div>

@@ -13,7 +13,8 @@
   let ctx = null;
 
   const nomeMes = chave => GS.mesAnoDeIso(chave).split(' ')[0].toLowerCase();
-  const badge = status => `<span class="badge ${status}">${GS.faturas.STATUS[status]}</span>`;
+  const COR_STATUS = { aberta: 'info', fechada: 'alerta', paga: 'ok', vencida: 'erro', futura: 'neutro' };
+  const badge = status => `<span class="selo ${COR_STATUS[status]}">${GS.faturas.STATUS[status]}</span>`;
 
   /* ---------- Desenho ---------- */
 

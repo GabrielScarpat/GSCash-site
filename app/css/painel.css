@@ -147,7 +147,7 @@
 .previsto { display: flex; align-items: center; gap: 14px; margin-top: auto; padding-top: 18px; border-top: 1px solid var(--border); }
 .saldo-card .muted { margin-bottom: 18px; }
 .saldo-sub { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
-.saldo-sub .selo-oculta { height: 22px; }
+.saldo-sub .selo { height: 22px; }
 .previsto .tile { background: var(--primary-soft); color: var(--primary); }
 .previsto small { display: block; color: var(--muted); font-size: 14px; }
 .previsto strong { font-size: 22px; font-weight: 700; letter-spacing: -.02em; }

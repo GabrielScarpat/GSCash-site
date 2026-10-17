@@ -30,8 +30,8 @@
 .cfg-moeda.on .simb { background: var(--primary); color: var(--bg); }
 .cfg-moeda.on .marca { background: var(--primary); border-color: var(--primary); color: var(--bg); }
 .cfg-moeda.on .marca svg { opacity: 1; }
-.cfg-moeda .atual { margin-left: auto; padding: 2px 8px; border-radius: 99px; background: var(--chip); color: var(--muted); font-size: 11.5px; font-weight: 600; white-space: nowrap; }
-.cfg-moeda .atual + .marca { margin-left: 0; }
+.cfg-moeda .selo { margin-left: auto; }
+.cfg-moeda .selo + .marca { margin-left: 0; }
 
 /* a troca só vale depois de confirmar */
 .cfg-confirmar { display: flex; align-items: center; gap: 14px; margin-top: 14px; padding: 14px 16px; border: 1.5px solid var(--primary); border-radius: 14px; background: var(--primary-soft); }
@@ -44,12 +44,16 @@
 .cfg-nota { display: flex; gap: 10px; margin-top: 16px; padding: 12px 14px; border-radius: 12px; background: var(--surface-2); color: var(--text-2); font-size: 13.5px; line-height: 1.5; }
 .cfg-nota svg { flex: none; width: 18px; height: 18px; margin-top: 1px; color: var(--muted); }
 
-/* segurança: uma linha com ícone, texto, selo e botão (o selo vem de duas-etapas.css) */
+/* notificações e segurança: uma linha com ícone, texto e, à direita, o selo "Ligada" em cima
+   de um botão pequeno, os dois da mesma largura, ou a chave liga/desliga (vem de faturas.css) */
 .cfg-linha { display: flex; align-items: center; gap: 14px; }
 .cfg-icone { display: grid; place-items: center; flex: none; width: 44px; height: 44px; border-radius: 12px; background: var(--primary-soft); color: var(--primary); }
 .cfg-icone svg { width: 22px; height: 22px; }
-.cfg-linha .conta-selo { margin-left: auto; }
-.cfg-linha .btn { flex: none; }
+.cfg-linha .txt { margin-right: auto; }
+.cfg-linha .switch { flex: none; }
+.cfg-acoes { display: flex; flex-direction: column; gap: 6px; flex: none; width: 96px; }
+.cfg-acoes .btn { height: 30px; padding: 0 10px; border-radius: 8px; font-size: 13px; }
+.cfg-linha .switch:disabled { opacity: .6; }
 
 @media (max-width: 640px) {
   .cfg-voltar { display: inline-flex; align-items: center; gap: 4px; margin-bottom: -8px; color: var(--text-2); font-size: 14px; }
@@ -60,5 +64,4 @@
   .cfg-confirmar .btn { flex: 1; }
   .cfg-linha { flex-wrap: wrap; }
   .cfg-linha .txt { flex: 1; }
-  .cfg-linha .btn { width: 100%; }
 }

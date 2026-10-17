@@ -5,7 +5,8 @@
 
    O vídeo fica no site (gscash.com.br), não dentro do app: o
    instalador não cresce e dá para trocar o vídeo sem versão nova.
-   Preferências usadas: boasVindasVista, primeirosPassosDispensado.
+   Na primeira vez, a janela também pergunta a moeda do app.
+   Preferências usadas: boasVindasVista, primeirosPassosDispensado, moeda.
    ========================================================= */
 
 (function () {
@@ -27,6 +28,59 @@
     </button>`;
   }
 
+  /* ---------- Moeda na primeira vez ---------- */
+
+  const PAISES_EURO = ['AT', 'BE', 'HR', 'CY', 'EE', 'FI', 'FR', 'DE', 'GR', 'IE', 'IT', 'LV', 'LT', 'LU', 'MT', 'NL', 'PT', 'SK', 'SI', 'ES'];
+  const LINGUAS_EURO = ['de', 'fr', 'it', 'nl', 'fi', 'el', 'sk', 'sl', 'et', 'lv', 'lt'];
+
+  // palpite pela língua do navegador: pt-BR -> real, en-US -> dólar, ja -> iene, Europa -> euro
+  function moedaProvavel() {
+    if (GS.codigoMoeda !== 'BRL') return GS.codigoMoeda;   // já escolheu antes
+    const [lingua, pais] = (navigator.language || 'pt-BR').split('-');
+    const P = (pais || '').toUpperCase();
+    if (PAISES_EURO.includes(P) || (!P && LINGUAS_EURO.includes(lingua))) return 'EUR';
+    if (lingua === 'ja') return 'JPY';
+    if (P === 'US' || (lingua === 'en' && !P)) return 'USD';
+    return 'BRL';
+  }
+
+  const NOME_CURTO = { BRL: 'Real', EUR: 'Euro', USD: 'Dólar', JPY: 'Iene' };
+
+  function escolhaDeMoeda() {
+    let escolhida = moedaProvavel();
+    const bloco = GS.el('div', 'bv-moeda');
+    const desenhar = () => {
+      bloco.innerHTML = `
+        <div class="bv-titulo"><b>Em qual moeda você registra seus gastos?</b><small>Dá para trocar depois em Configurações.</small></div>
+        <div class="bv-lista" role="radiogroup" aria-label="Moeda do app">
+          ${Object.entries(GS.MOEDAS).map(([codigo, m]) => `
+            <button type="button" class="bv-op${codigo === escolhida ? ' on' : ''}" role="radio" aria-checked="${codigo === escolhida}" data-moeda="${codigo}">
+              <span class="simb" aria-hidden="true">${esc(m.sigla)}</span>
+              <span class="txt"><b>${NOME_CURTO[codigo]}</b><small class="num">${esc(GS.formatarEm(codigo, 123456))}</small></span>
+            </button>`).join('')}
+        </div>`;
+    };
+    bloco.addEventListener('click', e => {
+      const b = e.target.closest('[data-moeda]');
+      if (b) { escolhida = b.dataset.moeda; desenhar(); }
+    });
+    desenhar();
+    return {
+      el: bloco,
+      // vale ao fechar a janela (Começar a usar, Ver depois ou o X)
+      async aplicar() {
+        if (escolhida === GS.codigoMoeda) return;
+        GS.definirMoeda(escolhida);
+        document.dispatchEvent(new Event('gs:dados'));   // redesenha a tela com a moeda nova
+        try {
+          await GS.api.salvarPreferencia('moeda', escolhida);
+        } catch (err) {
+          GS.toast(err.message, 'erro');
+        }
+      },
+    };
+  }
+
   /* ---------- Janela do tour ---------- */
 
   GS.abrirTour = function ({ primeiraVez = false } = {}) {
@@ -34,6 +88,8 @@
     corpo.innerHTML = `
       <p class="tour-texto">Veja em 1 minuto como anotar seus gastos e entender para onde vai o seu dinheiro.</p>
       <div class="tour-video">${capa('tour-capa')}</div>`;
+    const moeda = primeiraVez ? escolhaDeMoeda() : null;
+    if (moeda) corpo.append(moeda.el);
 
     const modal = GS.abrirModal({
       titulo: primeiraVez ? 'Bem-vindo ao GSCASH!' : 'Tour do GSCASH',
@@ -48,6 +104,7 @@
       aoFechar: () => {
         corpo.querySelector('video')?.pause();
         if (primeiraVez) GS.api.salvarPreferencia('boasVindasVista', true).catch(() => {});
+        if (moeda) moeda.aplicar();
       },
     });
 

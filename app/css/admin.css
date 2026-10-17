@@ -4,7 +4,7 @@ body.admin { padding: 0 0 48px; }
 .admin svg.i { width: 18px; height: 18px; flex-shrink: 0; }
 .adm-topo { display: flex; align-items: center; gap: 10px; height: 64px; padding: 0 32px; border-bottom: 1px solid var(--border); background: var(--surface); }
 .adm-marca { color: var(--primary); font-size: 18px; font-weight: 700; letter-spacing: .04em; text-decoration: none; }
-.adm-selo { display: inline-flex; align-items: center; height: 24px; margin-left: 4px; padding: 0 10px; border-radius: 99px; background: #F6E6CF; color: #6E400C; font-size: 12px; font-weight: 700; }
+.adm-selo { margin-left: 4px; }
 .adm-voltar { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; color: var(--text-2); font-size: 14px; text-decoration: none; }
 .adm-voltar:hover { color: var(--text); }
 
@@ -58,10 +58,6 @@ body.admin { padding: 0 0 48px; }
 .adm-tabela tr:last-child td { border-bottom: 0; }
 .adm-tabela .r { text-align: right; }
 .adm-tabela .muted { color: var(--muted); }
-.st { display: inline-flex; align-items: center; height: 24px; padding: 0 10px; border-radius: 99px; font-size: 12px; font-weight: 600; }
-.st.teste { background: var(--primary-soft); color: var(--primary); }
-.st.ativa { background: #DCEBDC; color: var(--success); }
-.st.acabou { background: #F4DCD6; color: #7E2318; }
 
 .adm-aviso { display: flex; align-items: center; gap: 14px; }
 .adm-aviso svg { width: 26px; height: 26px; color: var(--primary); }

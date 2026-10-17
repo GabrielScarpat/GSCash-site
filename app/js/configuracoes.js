@@ -3,6 +3,8 @@
    · Moeda do app: só troca o símbolo e o formato, sem converter
      os valores. Clicar numa moeda só marca; a troca vale ao
      confirmar e fica salva nas preferências da conta.
+   · Lembrete diário: chave liga/desliga, vale só para este aparelho.
+     Não aparece no programa para Windows (lá não chega notificação).
    · Verificação em duas etapas: só aparece aqui (não fica no menu da conta).
    ========================================================= */
 
@@ -14,14 +16,7 @@
 
   let escolhida = null;   // moeda marcada e ainda não confirmada (null = a atual)
 
-  // formata na moeda pedida usando o mesmo formatador do resto do app, por isso troca a moeda por um instante
-  function formatar(codigo, centavos) {
-    const atual = GS.codigoMoeda;
-    GS.definirMoeda(codigo);
-    const texto = GS.moedaVisivel(centavos);
-    GS.definirMoeda(atual);
-    return texto;
-  }
+  const formatar = GS.formatarEm;
 
   function desenharMoedas() {
     const atual = GS.codigoMoeda;
@@ -32,7 +27,7 @@
       return `<button type="button" class="cfg-moeda${on ? ' on' : ''}" role="radio" aria-checked="${on}" data-moeda="${codigo}">
         <span class="simb" aria-hidden="true">${esc(m.sigla)}</span>
         <span class="txt"><b>${esc(m.nome)}</b><small class="num">${esc(formatar(codigo, 123456))}</small></span>
-        ${codigo === atual ? '<span class="atual">Atual</span>' : ''}
+        ${codigo === atual ? '<span class="selo info">Em uso</span>' : ''}
         <span class="marca" aria-hidden="true">${icone('check')}</span>
       </button>`;
     }).join('');
@@ -77,6 +72,53 @@
     }
   });
 
+  /* ---------- Lembrete diário ---------- */
+
+  const TEXTO_LEMBRETE = 'Todo dia às 19h, se você ainda não lançou nada no dia.';
+
+  async function desenharLembrete() {
+    if (!GS.lembrete || !GS.lembrete.visivel()) return;
+    $('cardNotificacoes').hidden = false;
+    const titulo = sub => `<span class="cfg-icone">${icone('sino')}</span>
+      <span class="txt"><b>Lembrete diário</b><small>${esc(sub)}</small></span>`;
+    // iPhone pelo Safari: só funciona com o app instalado na tela inicial
+    if (!GS.lembrete.suportado) {
+      $('lembrete').innerHTML = titulo('No iPhone, funciona com o GSCASH instalado na tela inicial.')
+        + '<button type="button" class="btn btn-outline" data-instalar>Como instalar</button>';
+      return;
+    }
+    const ligado = await GS.lembrete.ligado().catch(() => false);
+    $('lembrete').innerHTML = titulo(ligado ? `${TEXTO_LEMBRETE} Ligado neste aparelho.` : TEXTO_LEMBRETE)
+      + `<button type="button" class="switch${ligado ? ' on' : ''}" role="switch" aria-checked="${ligado}" aria-label="Lembrete diário" data-chave></button>`;
+  }
+
+  $('lembrete').addEventListener('click', async e => {
+    if (e.target.closest('[data-instalar]')) return GS.instalar && GS.instalar.abrir();
+    const chave = e.target.closest('[data-chave]');
+    if (!chave || chave.disabled) return;
+    const ligar = !chave.classList.contains('on');
+    chave.disabled = true;
+    chave.classList.toggle('on', ligar);   // responde na hora; volta se não der certo
+    try {
+      await GS.lembrete.definir(ligar);
+    } catch (err) {
+      GS.toast(err.message || 'Não foi possível mudar o lembrete agora.', 'erro');
+    }
+    await desenharLembrete();
+    // notificações bloqueadas: a janela explica; ao fechar, a chave mostra o estado certo
+    if (document.querySelector('.modal-backdrop')) vigiarJanela(desenharLembrete);
+  });
+
+  // redesenha quando a janela aberta (lembrete, duas etapas) fecha
+  function vigiarJanela(redesenhar) {
+    const vigia = new MutationObserver(() => {
+      if (document.querySelector('.modal-backdrop')) return;
+      vigia.disconnect();
+      redesenhar();
+    });
+    setTimeout(() => vigia.observe(document.body, { childList: true }), 300);
+  }
+
   /* ---------- Verificação em duas etapas ---------- */
 
   async function desenharDuasEtapas() {
@@ -93,25 +135,22 @@
       <span class="cfg-icone">${icone('escudo')}</span>
       <span class="txt"><b>Verificação em duas etapas</b>
         <small>Além da senha, o GSCASH pede um código do app autenticador do celular ao entrar.</small></span>
-      <span class="conta-selo${ligada ? ' ligada' : ''}">${ligada ? 'Ligada' : 'Desligada'}</span>
-      <button type="button" class="btn btn-outline" data-duas-etapas>${ligada ? 'Gerenciar' : 'Ligar'}</button>`;
+      <span class="cfg-acoes">
+        ${ligada ? '<span class="selo ok">Ligada</span>' : ''}
+        <button type="button" class="btn btn-outline" data-duas-etapas>${ligada ? 'Gerenciar' : 'Ligar'}</button>
+      </span>`;
   }
 
   $('duasEtapas').addEventListener('click', e => {
     if (!e.target.closest('[data-duas-etapas]')) return;
     GS.duasEtapas.abrir();
     // ao fechar a janela, mostra se ficou ligada ou desligada
-    const vigia = new MutationObserver(() => {
-      if (document.querySelector('.modal-backdrop')) return;
-      vigia.disconnect();
-      desenharDuasEtapas();
-    });
-    setTimeout(() => vigia.observe(document.body, { childList: true }), 300);
+    vigiarJanela(desenharDuasEtapas);
   });
 
   async function desenhar() {
     desenharMoedas();
-    await desenharDuasEtapas();
+    await Promise.all([desenharLembrete(), desenharDuasEtapas()]);
   }
 
   GS.iniciarPagina('configuracoes', desenhar);

@@ -1,8 +1,9 @@
 /* =========================================================
    GSCASH — lembrete diário às 19h (notificação no celular ou no navegador)
    Quem manda é o servidor (Edge Function "lembrete"): às 19h de Brasília, se a
-   pessoa ainda não lançou nada no dia. Aqui ficam a janela "Lembrete diário"
-   (menu da conta), o convite no Painel do app instalado e o service worker (sw.js).
+   pessoa ainda não lançou nada no dia. Aqui ficam a chave em Configurações ›
+   Notificações, a janela "Lembrete diário", o convite no Painel do app instalado
+   e o service worker (sw.js).
    · iPhone: a Apple só deixa o GSCASH instalado na tela inicial receber notificação.
    · Programa para Windows: fica de fora (o navegador embutido não recebe notificação).
    ========================================================= */
@@ -144,6 +145,7 @@ window.GS = window.GS || {};
   /* ---------- janela "Lembrete diário" ---------- */
 
   const EXPLICA = 'Todo dia às 19h, uma notificação lembra você de lançar os gastos. Nos dias em que você já lançou algo, ela não chega.';
+  const AVISO_LIGADO = () => (GS.nativo ? 'Lembrete ligado: todo dia às 19h.' : 'Lembrete ligado. Mandamos uma notificação de teste.');
 
   async function abrirJanela() {
     const modal = GS.abrirModal({ titulo: 'Lembrete diário', corpo: '' });
@@ -185,7 +187,7 @@ window.GS = window.GS || {};
           gravar(CONVITE_VISTO, '1');
           document.querySelector('.convite-lembrete')?.remove();
           ligadoTela();
-          GS.toast(GS.nativo ? 'Lembrete ligado: todo dia às 19h.' : 'Lembrete ligado. Mandamos uma notificação de teste.');
+          GS.toast(AVISO_LIGADO());
         } catch (err) {
           console.error('Falha ao ligar o lembrete', err);
           desligadoTela();
@@ -251,6 +253,26 @@ window.GS = window.GS || {};
     document.readyState === 'complete' ? setTimeout(abrirNovo, 600) : window.addEventListener('load', () => setTimeout(abrirNovo, 600), { once: true });
   }
 
-  GS.lembrete = { visivel, abrir: abrirJanela };
+  /* ---------- chave em Configurações ----------
+     Liga ou desliga direto (o navegador ou o iPhone pedem a permissão na hora).
+     Se as notificações estiverem bloqueadas, abre a janela que explica como liberar.
+     Devolve se ficou ligado. */
+
+  async function definir(ligar) {
+    if (!ligar) {
+      await motor.desligar();
+      GS.toast('Lembrete desligado neste aparelho.');
+      return false;
+    }
+    if (await motor.negado() || !(await motor.ligar())) {
+      abrirJanela();
+      return false;
+    }
+    gravar(CONVITE_VISTO, '1');
+    GS.toast(AVISO_LIGADO());
+    return true;
+  }
+
+  GS.lembrete = { visivel, suportado, abrir: abrirJanela, ligado: () => motor.ligado(), definir };
   convite();
 })();

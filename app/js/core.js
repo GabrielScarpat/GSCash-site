@@ -34,6 +34,15 @@ window.GS = window.GS || {};
   GS.moedaAtual = () => GS.MOEDAS[GS.codigoMoeda];
   GS.definirMoeda('BRL');
 
+  // formata numa moeda que não é a atual (exemplos nas Configurações e nas boas-vindas)
+  GS.formatarEm = (codigo, centavos) => {
+    const atual = GS.codigoMoeda;
+    GS.definirMoeda(codigo);
+    const texto = GS.moedaVisivel(centavos);
+    GS.definirMoeda(atual);
+    return texto;
+  };
+
   // valores chegam em centavos
   // GS.oculto = true troca todos os valores exibidos por "R$ •••••" (botão de olho do Painel)
   GS.oculto = false;

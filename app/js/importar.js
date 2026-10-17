@@ -61,7 +61,7 @@ window.GS = window.GS || {};
     return ponto > virgula ? '.' : ',';
   }
 
-  // "R$ -1.234,56", "(12,00)", "123,45 D", -12.5 -> centavos com sinal (negativo = saída)
+  // "R$ -1.234,56", "(12,00)", "123,45 D", -12.5, "¥1,500" -> centavos com sinal (negativo = saída)
   function centavos(v, decimal = ',') {
     if (typeof v === 'number') return Number.isFinite(v) ? Math.round(v * 100) : null;
     let s = String(v ?? '').trim();
@@ -69,7 +69,12 @@ window.GS = window.GS || {};
     const negativo = /^\(.*\)$/.test(s) || /[-−]/.test(s) || /\sD$/i.test(s);
     s = s.replace(/[^\d.,]/g, '');
     if (!/\d/.test(s)) return null;
-    const numero = decimal === ',' ? s.replace(/\./g, '').replace(',', '.') : s.replace(/,/g, '');
+    // separador que aparece mais de uma vez, ou com 3 dígitos depois, é de milhar, não de centavos:
+    // valores sem centavos (iene) como "1,500" e "1,500,000" são 1500 e 1500000, não 1,50
+    const partes = s.split(decimal);
+    const soMilhar = partes.length > 2 || (partes.length === 2 && partes[1].length === 3);
+    const numero = soMilhar ? s.replace(/[.,]/g, '')
+      : decimal === ',' ? s.replace(/\./g, '').replace(',', '.') : s.replace(/,/g, '');
     const n = Number(numero);
     return Number.isFinite(n) ? Math.round(n * 100) * (negativo ? -1 : 1) : null;
   }

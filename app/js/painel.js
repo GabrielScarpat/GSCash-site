@@ -183,7 +183,7 @@
 
     $('saldoTotal').textContent = GS.moeda(atual);
     $('saldoSub').innerHTML = 'em ' + GS.plural(visiveis.length, 'carteira', 'carteiras') + (ocultas.length
-      ? ` · <span class="selo-oculta" title="Fora do saldo: ${esc(ocultas.map(c => c.nome).join(', '))}">${icone('eye-off')}${GS.plural(ocultas.length, 'oculta', 'ocultas')}</span>`
+      ? ` · <span class="selo neutro" title="Fora do saldo: ${esc(ocultas.map(c => c.nome).join(', '))}">${GS.plural(ocultas.length, 'oculta', 'ocultas')}</span>`
       : '');
     $('previstoRotulo').textContent = `Previsto para ${fimMes.getDate()} de ${GS.mesAno(fimMes).split(' ')[0].toLowerCase()}`;
     $('previsto').textContent = GS.moeda(previsto);
