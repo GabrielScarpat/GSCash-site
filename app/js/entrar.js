@@ -11,6 +11,7 @@
     campoEmail: $('campoEmail'), campoSenha: $('campoSenha'), email: $('email'), senha: $('senha'),
     rotuloSenha: $('rotuloSenha'), esqueci: $('esqueci'), aviso: $('aviso'), enviar: $('enviar'),
     google: $('google'), blocoGoogle: $('blocoGoogle'), voltar: $('voltar'),
+    voltarEscolha: $('voltarEscolha'), cancelarAdicionar: $('cancelarAdicionar'),
   };
 
   const TEXTOS = {
@@ -21,6 +22,17 @@
   };
 
   let modo = 'entrar';
+
+  /* ---------- Várias contas ----------
+     entrar.html?adicionar=1  : chegou pelo menu da conta ("Adicionar outra conta"); a conta em uso continua guardada
+     entrar.html?reentrar=EMAIL : a sessão guardada dessa conta não vale mais; pede a senha só dela
+     Sem nada na barra e com contas guardadas: atalhos "Continuar como…". */
+  const params = new URLSearchParams(location.search);
+  const emOutraConta = params.has('adicionar') || !!params.get('reentrar');
+  let semAbas = emOutraConta;   // sem "Criar conta": a pessoa já tem a conta
+  let contexto = null;          // { titulo, sub }: textos do modo "entrar" quando ele não é o de sempre
+  let temContas = false;
+  let temSessao = false;
 
   function avisar(texto, ok) {
     el.aviso.textContent = texto || '';
@@ -34,7 +46,7 @@
     const abaAtiva = novo === 'criar' ? 'criar' : 'entrar';
     const soAbas = novo === 'entrar' || novo === 'criar';
 
-    el.abas.classList.toggle('hidden', !soAbas);
+    el.abas.classList.toggle('hidden', !soAbas || semAbas);
     el.abas.querySelectorAll('button').forEach(b => {
       const ativa = b.dataset.aba === abaAtiva;
       b.classList.toggle('ativa', ativa);
@@ -53,11 +65,24 @@
       el.senha.placeholder = t.senha;
       el.senha.autocomplete = t.auto;
     }
+    if (novo === 'entrar' && contexto) {
+      el.titulo.textContent = contexto.titulo;
+      el.sub.textContent = contexto.sub;
+    }
+    atualizarVoltas();
     el.rotuloSenha.textContent = novo === 'novasenha' ? 'Nova senha' : 'Senha';
     // a regra da senha fica sempre à vista quando a pessoa está criando uma
     $('regraSenha').classList.toggle('hidden', novo !== 'criar' && novo !== 'novasenha');
     pintarRegra();
     avisar('');
+  }
+
+  // links de saída do formulário: voltar ao app (quem está entrado e veio adicionar) ou às contas guardadas
+  function atualizarVoltas() {
+    const noForm = modo === 'entrar' || modo === 'criar';
+    const veioDoApp = emOutraConta && temSessao;
+    el.cancelarAdicionar.classList.toggle('hidden', !(noForm && veioDoApp));
+    el.voltarEscolha.classList.toggle('hidden', !(noForm && temContas && !veioDoApp));
   }
 
   // "Pelo menos 8 caracteres": cinza enquanto falta, verde quando a senha atende
@@ -88,6 +113,114 @@
 
   const irParaOApp = () => location.replace('index.html');
 
+  /* ---------- Atalhos "Continuar como…" ---------- */
+
+  function avisarEscolha(texto, ok) {
+    const a = $('escolhaAviso');
+    a.textContent = texto || '';
+    a.hidden = !texto;
+    a.classList.toggle('ok', !!ok);
+  }
+
+  function desenharEscolha(lista) {
+    $('escolhaLista').replaceChildren(...lista.map(c => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'escolha-conta';
+      b.dataset.id = c.id;
+      const mini = document.createElement('span');
+      mini.className = 'conta-mini';
+      mini.setAttribute('aria-hidden', 'true');
+      mini.textContent = c.inicial;
+      const nomes = document.createElement('span');
+      nomes.className = 'conta-nomes';
+      const l1 = document.createElement('span');
+      l1.className = 'l1';
+      const nome = document.createElement('b');
+      nome.textContent = GS.nomeDaConta(c);
+      l1.append(nome);
+      const mail = document.createElement('small');
+      mail.textContent = c.email;
+      nomes.append(l1, mail);
+      const seta = document.createElement('span');
+      seta.className = 'seta';
+      seta.innerHTML = GS.contasIcones.seta;
+      b.append(mini, nomes, seta);
+      b.setAttribute('aria-label', `Continuar como ${GS.nomeDaConta(c)} (${c.email})`);
+      return b;
+    }));
+  }
+
+  // lista de contas guardadas; sem nenhuma, o formulário de sempre
+  async function mostrarEscolha(lista) {
+    lista = lista || await GS.contas.listar().catch(() => []);
+    temContas = lista.length > 0;
+    contexto = null;
+    semAbas = false;
+    if (!temContas) {
+      mostrarSo('formulario');
+      trocarModo('entrar');
+      return;
+    }
+    desenharEscolha(lista);
+    avisarEscolha('');
+    mostrarSo('escolha');
+    $('escolhaLista').querySelector('button').focus();
+  }
+
+  // a sessão guardada dessa conta não vale mais (ou a pessoa quer entrar de novo nela): pede a senha só dela
+  function pedirSenha(email) {
+    semAbas = true;
+    contexto = { titulo: 'Digite a senha da conta', sub: `Para continuar como ${email}, precisamos da senha de novo (ela pode ter sido trocada em outro aparelho).` };
+    mostrarSo('formulario');
+    trocarModo('entrar');
+    el.email.value = email;
+    el.senha.value = '';
+    el.senha.focus();
+  }
+
+  async function continuarComo(id) {
+    const botoes = $('escolhaLista').querySelectorAll('button');
+    botoes.forEach(b => { b.disabled = true; });
+    avisarEscolha('');
+    try {
+      await GS.contas.trocar(id);
+      await seguir();
+    } catch (err) {
+      botoes.forEach(b => { b.disabled = false; });
+      if (err.codigo === 'precisa_senha') return pedirSenha(err.email);
+      avisarEscolha(err.message);
+    }
+  }
+
+  $('escolhaLista').addEventListener('click', e => {
+    const b = e.target.closest('button[data-id]');
+    if (b) continuarComo(b.dataset.id);
+  });
+
+  // "Entrar com outra conta": o formulário de sempre (com "Criar conta")
+  function formularioDeOutraConta() {
+    contexto = null;
+    semAbas = false;
+    mostrarSo('formulario');
+    trocarModo('entrar');
+    el.email.value = '';
+    el.senha.value = '';
+    el.email.focus();
+  }
+  $('escolhaOutra').addEventListener('click', formularioDeOutraConta);
+  el.voltarEscolha.addEventListener('click', () => mostrarEscolha());
+  el.cancelarAdicionar.addEventListener('click', () => irParaOApp());
+  $('escolhaGerir').addEventListener('click', () => GS.contas.abrirGerenciar({
+    aoAdicionar: formularioDeOutraConta,
+    // saiu de uma conta pela janela: a lista de trás acompanha (sem nenhuma, volta ao formulário)
+    aoMudar: async () => {
+      const lista = await GS.contas.listar().catch(() => []);
+      temContas = lista.length > 0;
+      if (temContas) desenharEscolha(lista); else { mostrarSo('formulario'); trocarModo('entrar'); }
+    },
+  }));
+
   /* ---------- Verificação em duas etapas ----------
      Depois da senha (ou do Google/Apple) quem ligou a verificação ainda precisa do código
      do app autenticador. Vale igual no navegador, no programa para Windows e no iPhone:
@@ -100,8 +233,8 @@
   }
 
   function mostrarSo(id) {
-    ['formulario', 'confirmar', 'duasEtapas', 'recuperacao'].forEach(x => $(x).classList.toggle('hidden', x !== id));
-    el.abas.classList.toggle('hidden', id !== 'formulario');
+    ['escolha', 'formulario', 'confirmar', 'duasEtapas', 'recuperacao'].forEach(x => $(x).classList.toggle('hidden', x !== id));
+    el.abas.classList.toggle('hidden', id !== 'formulario' || semAbas);
   }
 
   function avisarEm(id, texto) {
@@ -158,12 +291,15 @@
 
   $('duasEntrar').addEventListener('click', () => conferirCodigo(campoDuas.valor()));
 
-  // desiste do código: sai desta sessão pela metade e volta ao formulário
+  // desiste do código: sai desta sessão pela metade (as contas já guardadas continuam) e volta
   $('duasOutraConta').addEventListener('click', async () => {
     await GS.supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+    temSessao = false;
+    el.senha.value = '';
+    const lista = await GS.contas.listar().catch(() => []);
+    if (lista.length) return mostrarEscolha(lista);
     mostrarSo('formulario');
     trocarModo('entrar');
-    el.senha.value = '';
     el.email.focus();
   });
 
@@ -385,31 +521,23 @@
     if (e.persisted && espera) { fimEspera(); avisar(''); }
   });
 
-  // acabou de sair pelo menu da conta: confirma de qual conta saiu (e, se for troca, pede a outra)
-  let saiuDe = null;
-  let trocar = false;
+  // acabou de sair pelo menu da conta (Gerenciar contas): confirma de qual conta saiu
+  let mensagemInicial = null;
   try {
-    saiuDe = sessionStorage.getItem('gscash:saiu');
-    trocar = sessionStorage.getItem('gscash:trocar') === '1';
+    const saiuDe = sessionStorage.getItem('gscash:saiu');
+    const saiuDeTodas = sessionStorage.getItem('gscash:saiu-todas') === '1';
     sessionStorage.removeItem('gscash:saiu');
-    sessionStorage.removeItem('gscash:trocar');
+    sessionStorage.removeItem('gscash:saiu-todas');
+    if (saiuDeTodas) mensagemInicial = 'Você saiu de todas as contas.';
+    else if (saiuDe !== null) mensagemInicial = saiuDe ? `Você saiu da conta ${saiuDe}.` : 'Você saiu da sua conta.';
   } catch (e) { /* sem sessionStorage: segue sem a confirmação */ }
-  if (trocar) {
-    el.titulo.textContent = 'Entrar com outra conta';
-    el.sub.textContent = 'Use o e-mail e a senha da outra conta.';
-  }
   // acabou de excluir a conta (js/excluir-conta.js)
   try {
     if (sessionStorage.getItem('gscash:excluida')) {
       sessionStorage.removeItem('gscash:excluida');
-      saiuDe = null;
-      setTimeout(() => avisar('Sua conta foi excluída. Seus dados foram apagados. Obrigado por ter usado o GSCASH.', true), 0);
+      mensagemInicial = 'Sua conta foi excluída. Seus dados foram apagados. Obrigado por ter usado o GSCASH.';
     }
   } catch (e) { /* segue */ }
-  if (saiuDe !== null) {
-    avisar(saiuDe ? `Você saiu da conta ${saiuDe}.` : 'Você saiu da sua conta.', true);
-    (trocar ? el.email : el.enviar).focus();
-  }
 
   // "Prefere instalar no computador? Baixar para Windows" (só no navegador, e só com a 2.0 publicada)
   const linkBaixar = GS.baixar.linkHtml();
@@ -418,8 +546,7 @@
     $('baixarLinha').hidden = false;
   }
 
-  // "Começar grátis" da página inicial do site (→ entrar.html#criar): abre em "Criar conta"
-  if (location.hash === '#criar') trocarModo('criar');
+  // "Começar grátis" da página inicial do site (→ entrar.html#criar): abre em "Criar conta" (no fim deste arquivo)
 
   // veio pelo link "recuperar senha" do e-mail: pede a nova senha em vez de entrar direto
   const veioDoLinkDeSenha = /type=recovery/.test(location.hash);
@@ -427,8 +554,35 @@
     if (evento === 'PASSWORD_RECOVERY') trocarModo('novasenha');
   });
 
-  // quem já está logado vai direto para o app
-  GS.auth.sessao().then(sessao => {
-    if (sessao && !veioDoLinkDeSenha) seguir();
-  });
+  // Quem já está logado vai direto para o app. Sem login e com contas guardadas, atalhos
+  // "Continuar como…". Até decidir, nada aparece (senão o formulário piscaria antes da lista).
+  mostrarSo('');
+  (async () => {
+    const sessao = await GS.auth.sessao().catch(() => null);
+    temSessao = !!sessao;
+    if (sessao && !emOutraConta && !veioDoLinkDeSenha) return seguir();
+
+    const lista = await GS.contas.listar().catch(() => []);
+    temContas = lista.length > 0;
+    const email = params.get('reentrar');
+    if (params.has('adicionar')) {
+      contexto = {
+        titulo: 'Adicionar outra conta',
+        sub: sessao && sessao.user.email ? `Você continua conectado como ${sessao.user.email}. Entre com a outra conta para guardá-la neste aparelho.` : 'Entre com a outra conta para guardá-la neste aparelho.',
+      };
+    }
+    if (email) {
+      pedirSenha(email);
+    } else if (!params.has('adicionar') && !sessao && temContas && !veioDoLinkDeSenha && location.hash !== '#criar') {
+      mostrarEscolha(lista);
+    } else {
+      mostrarSo('formulario');
+      // (o link de nova senha do e-mail já pode ter pedido 'novasenha' enquanto isto carregava)
+      trocarModo(modo === 'novasenha' ? 'novasenha' : location.hash === '#criar' && !emOutraConta ? 'criar' : 'entrar');
+    }
+    if (mensagemInicial) {
+      if ($('escolha').classList.contains('hidden')) avisar(mensagemInicial, true);
+      else avisarEscolha(mensagemInicial, true);
+    }
+  })();
 })();

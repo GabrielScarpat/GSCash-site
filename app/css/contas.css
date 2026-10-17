@@ -1,0 +1,100 @@
+/* GSCASH — várias contas no mesmo aparelho.
+   Carregado por js/supabase.js em todas as páginas: menu da conta, janela "Gerenciar
+   contas" e os atalhos "Continuar como…" da tela de entrar. */
+
+/* ---------- peças em comum ---------- */
+
+.conta-mini {
+  width: 34px; height: 34px; flex: none; border-radius: 50%; display: grid; place-items: center;
+  background: var(--chip); color: var(--text); font-weight: 700; font-size: 15px;
+}
+.conta-mini.atual { background: var(--primary); color: var(--bg); }
+.conta-nomes { flex: 1; min-width: 0; display: block; line-height: 1.3; text-align: left; }
+.conta-nomes .l1 { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.conta-nomes b { display: block; min-width: 0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.conta-nomes small { display: block; color: var(--muted); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ---------- menu da conta (js/supabase.js) ---------- */
+
+.conta-pop { max-height: calc(100vh - 80px); max-height: calc(100dvh - 80px); overflow-y: auto; overscroll-behavior: contain; }
+.conta-pop .conta-topo.enxuto { flex-direction: row; align-items: center; gap: 12px; padding: 0 14px 12px; text-align: left; }
+.conta-pop .conta-topo.enxuto .conta-av { width: 44px; height: 44px; margin: 0; flex: none; font-size: 19px; }
+.conta-pop .conta-topo.enxuto div:last-child { min-width: 0; }
+.conta-pop .conta-topo.enxuto strong { display: block; font-size: 15px; word-break: break-word; }
+.conta-pop .conta-topo.enxuto span { display: block; color: var(--muted); font-size: 12.5px; word-break: break-all; }
+.conta-pop hr.entre { margin-top: 6px; }
+.conta-sec { margin: 8px 14px 2px; color: var(--muted); font-size: 12px; font-weight: 600; letter-spacing: .02em; }
+.conta-outra {
+  width: 100%; display: flex; align-items: center; gap: 12px; padding: 9px 14px;
+  border-radius: 10px; font-size: 14.5px; text-align: left;
+}
+.conta-outra:hover, .conta-outra:focus-visible { background: var(--surface-2); outline: none; }
+.conta-outra:disabled { opacity: .6; cursor: default; }
+
+/* ---------- janela "Gerenciar contas" ---------- */
+
+.gerir-fundo {
+  position: fixed; inset: 0; z-index: 110; display: grid; place-items: center; padding: 16px;
+  background: rgba(28, 26, 20, .42);
+}
+.gerir {
+  width: 100%; max-width: 420px; max-height: calc(100vh - 32px); max-height: calc(100dvh - 32px); overflow-y: auto;
+  padding: 20px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 18px; box-shadow: var(--shadow-modal);
+}
+.gerir-topo { display: flex; align-items: center; justify-content: space-between; }
+.gerir-topo h2 { margin: 0; font-size: 18px; }
+.gerir-fechar { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 10px; color: var(--muted); }
+.gerir-fechar:hover { background: var(--surface-2); }
+.gerir-fechar svg { width: 18px; height: 18px; }
+.gerir-sub { margin: 2px 0 12px; color: var(--muted); font-size: 13.5px; }
+.gerir-vazio { margin: 0 0 4px; padding: 14px; border-radius: 14px; background: var(--surface-2); color: var(--muted); font-size: 14px; text-align: center; }
+.gerir-lista { display: grid; grid-template-columns: minmax(0, 1fr); border: 1px solid var(--border); border-radius: 14px; background: var(--surface-2); }
+.gerir-linha { display: flex; align-items: center; gap: 12px; padding: 11px 12px; }
+.gerir-linha + .gerir-linha { border-top: 1px solid var(--border); }
+.gerir-selo {
+  flex: none; display: inline-flex; align-items: center; height: 20px; padding: 0 7px; border: 1px solid var(--border-strong);
+  border-radius: 6px; background: rgba(0, 0, 0, .02); color: var(--text-2); font-size: 11.5px; font-weight: 600;
+}
+.gerir-sair {
+  flex: none; height: 34px; padding: 0 14px; border: 1px solid var(--border-strong); border-radius: 10px;
+  background: var(--surface); font-weight: 500; font-size: 13.5px;
+}
+.gerir-sair:hover:not(:disabled) { color: var(--danger); border-color: rgba(194, 57, 43, .45); }
+.gerir-sair:disabled, .gerir-mais:disabled, .gerir-todas:disabled { opacity: .6; cursor: default; }
+.gerir-erro { margin: 12px 0 0; padding: 10px 12px; border-radius: var(--radius-sm); background: var(--danger-soft); color: var(--danger); font-size: 13.5px; }
+.gerir-mais {
+  width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 14px; padding: 11px;
+  border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--surface); font-weight: 500;
+}
+.gerir-mais:hover:not(:disabled) { background: var(--surface-2); }
+.gerir-mais svg { width: 18px; height: 18px; }
+.gerir-todas {
+  width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 10px; padding: 11px;
+  border-radius: var(--radius-sm); color: var(--danger); font-weight: 500;
+}
+.gerir-todas:hover:not(:disabled) { background: var(--danger-soft); }
+.gerir-todas svg { width: 18px; height: 18px; }
+.gerir button:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+/* celular: a janela sobe da parte de baixo, como as outras folhas do app */
+@media (max-width: 640px) {
+  .gerir-fundo { align-items: end; padding: 0; }
+  .gerir { max-width: none; border-radius: 22px 22px 0 0; border-bottom: 0; padding-bottom: calc(26px + env(safe-area-inset-bottom)); }
+}
+
+/* ---------- tela de entrar: "Continuar como…" (js/entrar.js) ---------- */
+
+.escolha { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; margin-top: 14px; }
+.escolha-conta {
+  width: 100%; min-width: 0; display: flex; align-items: center; gap: 14px; padding: 12px;
+  border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--surface); text-align: left;
+}
+.escolha-conta:hover:not(:disabled), .escolha-conta:focus-visible { background: var(--surface-2); outline: none; border-color: var(--primary); }
+.escolha-conta:disabled { opacity: .6; cursor: default; }
+.escolha-conta .conta-mini { width: 40px; height: 40px; font-size: 17px; }
+.escolha-conta .conta-nomes b { font-size: 15px; }
+.escolha-conta .seta { flex: none; display: grid; place-items: center; color: var(--muted); }
+.escolha-conta .seta svg { width: 18px; height: 18px; }
+.escolha-rod { margin-top: 14px; }
+.escolha-rod .entrar-google svg { width: 18px; height: 18px; }

@@ -14,10 +14,10 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="GSCASH">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <link rel="stylesheet" href="css/fonts.css?v=d04c87b">
-  <link rel="stylesheet" href="css/base.css?v=d04c87b">
-  <link rel="stylesheet" href="css/entrar.css?v=d04c87b">
-  <link rel="stylesheet" href="css/duas-etapas.css?v=d04c87b">
+  <link rel="stylesheet" href="css/fonts.css?v=8181dbe">
+  <link rel="stylesheet" href="css/base.css?v=8181dbe">
+  <link rel="stylesheet" href="css/entrar.css?v=8181dbe">
+  <link rel="stylesheet" href="css/duas-etapas.css?v=8181dbe">
 </head>
 <body class="entrar-pagina">
 
@@ -35,6 +35,18 @@
       <button type="button" role="tab" class="ativa" data-aba="entrar" aria-selected="true">Entrar</button>
       <button type="button" role="tab" data-aba="criar" aria-selected="false">Criar conta</button>
     </div>
+
+    <!-- aparelho com contas já entradas: atalhos "Continuar como…" (js/entrar.js) -->
+    <section class="hidden" id="escolha" aria-live="polite">
+      <h1>Continuar como…</h1>
+      <p class="entrar-sub">Toque na conta para entrar sem digitar a senha.</p>
+      <p class="entrar-aviso" id="escolhaAviso" role="alert" hidden></p>
+      <div class="escolha" id="escolhaLista"></div>
+      <div class="escolha-rod">
+        <button type="button" class="entrar-google" id="escolhaOutra"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>Entrar com outra conta</button>
+        <button type="button" class="entrar-link centro" id="escolhaGerir">Gerenciar contas</button>
+      </div>
+    </section>
 
     <form id="formulario" novalidate>
       <h1 id="titulo">Bem-vindo de volta</h1>
@@ -70,6 +82,8 @@
         </button>
       </div>
       <button type="button" class="entrar-link centro hidden" id="voltar">Voltar para o login</button>
+      <button type="button" class="entrar-link centro hidden" id="voltarEscolha">Voltar para as contas guardadas</button>
+      <button type="button" class="entrar-link centro hidden" id="cancelarAdicionar">Cancelar e voltar ao GSCASH</button>
     </form>
 
     <!-- depois de criar a conta: em vez do formulário, o que fazer agora (js/entrar.js) -->
@@ -119,10 +133,10 @@
   <p class="entrar-rodape">Seus dados ficam guardados na nuvem, só você tem acesso. <a href="https://gscash.com.br/privacidade.html" target="_blank" rel="noopener">Política de privacidade</a></p>
 </div>
 
-<script src="js/vendor/supabase.js?v=d04c87b"></script>
-<script src="js/supabase.js?v=d04c87b"></script>
-<script src="js/baixar.js?v=d04c87b"></script>
-<script src="js/duas-etapas.js?v=d04c87b"></script>
-<script src="js/entrar.js?v=d04c87b"></script>
+<script src="js/vendor/supabase.js?v=8181dbe"></script>
+<script src="js/supabase.js?v=8181dbe"></script>
+<script src="js/baixar.js?v=8181dbe"></script>
+<script src="js/duas-etapas.js?v=8181dbe"></script>
+<script src="js/entrar.js?v=8181dbe"></script>
 </body>
 </html>

@@ -350,6 +350,22 @@ window.GS = window.GS || {};
     return local;
   }
 
+  // os dados antigos do aparelho são oferecidos a uma conta só (a primeira conta nova que aparecer)
+  const CHAVE_LEGADO = 'gscash:legado-oferecido';
+  async function legadoJaOferecido() {
+    try {
+      return noDesktop ? !!(await (await apiDesktop()).sessao_ler(CHAVE_LEGADO)) : !!localStorage.getItem(CHAVE_LEGADO);
+    } catch (e) {
+      return false;
+    }
+  }
+  async function marcarLegadoOferecido() {
+    try {
+      if (noDesktop) await (await apiDesktop()).sessao_gravar(CHAVE_LEGADO, '1');
+      else localStorage.setItem(CHAVE_LEGADO, '1');
+    } catch (e) { /* sem onde guardar: pode oferecer de novo */ }
+  }
+
   // o banco é mais rígido que o localStorage: ajusta o que o app antigo deixava passar
   function sanear(db) {
     const carteiras = new Set(db.carteiras.map(c => c.id));
@@ -585,8 +601,10 @@ window.GS = window.GS || {};
           return new Promise(() => {});
         }
 
-        // conta nova: oferece trazer os dados que estavam neste aparelho
-        const local = await lerDadosLocais();
+        // conta nova: oferece trazer os dados que estavam neste aparelho. Só uma vez por aparelho:
+        // com várias contas, uma segunda conta nova não pode receber de novo os dados da primeira.
+        const local = await legadoJaOferecido() ? null : await lerDadosLocais();
+        if (local && (local.transacoes.length || local.carteiras.length)) await marcarLegadoOferecido();
         const quer = local && (local.transacoes.length || local.carteiras.length) && confirm(
           `Encontramos neste aparelho ${local.transacoes.length} lançamentos e ${local.carteiras.length} carteiras do GSCASH.\n\n` +
           'OK = importar para a sua conta\nCancelar = começar do zero');

@@ -141,6 +141,7 @@ window.GS = window.GS || {};
         localStorage.removeItem('gscash:instalado');
       } catch (e) { /* segue */ }
       await GS.supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+      await GS.contas.esquecer(GS.usuario.id).catch(() => {});   // some também da lista de contas do aparelho
       location.replace('entrar.html');
     }
 

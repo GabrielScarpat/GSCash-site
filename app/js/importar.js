@@ -892,7 +892,7 @@ window.GS = window.GS || {};
           };
         });
         const criadas = await GS.api.importarTransacoes(lista);
-        try { localStorage.setItem(CONVITE, 'importou'); } catch (e) { /* segue */ }
+        GS.daConta.gravar(CONVITE, 'importou');
         document.querySelector('.convite-importar')?.remove();
         modal.fechar();
         GS.notificarMudanca();
@@ -930,7 +930,8 @@ window.GS = window.GS || {};
     const lugar = document.querySelector('main .container');
     const passos = document.getElementById('primeirosPassos');
     if (!lugar || !passos) return;  // só no Painel
-    try { if (localStorage.getItem(CONVITE)) return; } catch (e) { return; }
+    await GS.usuarioPronto;
+    if (GS.daConta.ler(CONVITE)) return;
     await GS.licenca?.pronta;
     await new Promise(r => setTimeout(r, 900));  // os outros convites aparecem primeiro
     // primeiros passos à mostra já oferecem importar
@@ -948,7 +949,7 @@ window.GS = window.GS || {};
       <button type="button" class="convite-fechar" aria-label="Agora não">${icone('x')}</button>`;
     el.querySelector('[data-importar-convite]').addEventListener('click', abrir);
     el.querySelector('.convite-fechar').addEventListener('click', () => {
-      try { localStorage.setItem(CONVITE, 'fechou'); } catch (e) { /* segue */ }
+      GS.daConta.gravar(CONVITE, 'fechou');
       el.remove();
     });
     lugar.prepend(el);

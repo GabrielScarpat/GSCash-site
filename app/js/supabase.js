@@ -165,6 +165,199 @@ window.GS = window.GS || {};
     if (!ligados[provedor]) throw new Error(`O login com ${NOMES[provedor]} ainda não está disponível. Use e-mail e senha.`);
   }
 
+  /* ---------- Várias contas no mesmo aparelho ----------
+     O supabase-js guarda uma sessão só (a da conta em uso). Aqui fica uma lista com a sessão
+     de cada conta já logada: toda vez que o supabase-js entra ou renova uma sessão, a cópia
+     da lista é atualizada (onAuthStateChange, mais abaixo). Trocar de conta é entregar a
+     sessão guardada da outra ao supabase-js (setSession): sem senha e sem código.
+     Só entra na lista a sessão que já passou pela verificação em duas etapas (aal2), então
+     voltar a uma conta guardada nunca pede o código de novo.
+     A lista fica onde a sessão já ficava: localStorage, ou o arquivo do app de computador. */
+
+  const CHAVE_CONTAS = 'gscash:contas';
+  const armazemContas = noDesktop ? armazenamentoDesktop : {
+    getItem: async chave => { try { return localStorage.getItem(chave); } catch (e) { return null; } },
+    setItem: async (chave, valor) => { try { localStorage.setItem(chave, valor); } catch (e) { /* sem armazenamento: não guarda */ } },
+  };
+
+  // as leituras e gravações da lista entram numa fila: duas ao mesmo tempo não se atropelam
+  let filaContas = Promise.resolve();
+  function naFila(passo) {
+    const p = filaContas.then(passo);
+    filaContas = p.catch(() => {});
+    return p;
+  }
+  async function lerContas() {
+    try {
+      const r = JSON.parse(await armazemContas.getItem(CHAVE_CONTAS));
+      if (r && typeof r.contas === 'object') return r;
+    } catch (e) { /* ainda não existe */ }
+    return { contas: {} };
+  }
+  const mexerContas = alterar => naFila(async () => {
+    const r = await lerContas();
+    const saida = await alterar(r);
+    await armazemContas.setItem(CHAVE_CONTAS, JSON.stringify(r));
+    return saida;
+  });
+
+  function lerJwt(token) {
+    try {
+      const b64 = String(token).split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+      return JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(b64), c => c.charCodeAt(0))));
+    } catch (e) {
+      return {};
+    }
+  }
+
+  // sessão que já pode ser guardada: sem duas etapas ligadas, ou já confirmada com o código
+  function sessaoCompleta(sessao) {
+    const ligada = ((sessao.user && sessao.user.factors) || []).some(f => f.status === 'verified');
+    return !ligada || lerJwt(sessao.access_token).aal === 'aal2';
+  }
+
+  function dadosDaConta(usuario) {
+    const email = usuario.email || '';
+    const meta = usuario.user_metadata || {};
+    const nome = String(meta.full_name || meta.name || '').trim();
+    return { id: usuario.id, email, nome, inicial: ((nome || email).trim()[0] || '?').toUpperCase() };
+  }
+
+  const erroSemSenha = conta => Object.assign(new Error(`Digite a senha de ${conta.email} para continuar.`), { codigo: 'precisa_senha', email: conta.email });
+
+  // sessão de uma conta guardada que a pessoa mandou sair: encerra no servidor, sem mexer na conta em uso
+  async function revogarSessao(sessao) {
+    const descartavel = window.supabase.createClient(SUPABASE_URL, SUPABASE_CHAVE, {
+      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, storageKey: 'gscash-descartavel' },
+    });
+    const { error } = await descartavel.auth.setSession({ access_token: sessao.access_token, refresh_token: sessao.refresh_token });
+    if (!error) await descartavel.auth.signOut({ scope: 'local' });
+  }
+  const revogarSemEsperar = sessao => (sessao
+    ? Promise.race([revogarSessao(sessao).catch(() => {}), new Promise(r => setTimeout(r, 4000))])
+    : Promise.resolve());
+
+  const contas = GS.contas = {
+    // true enquanto troca ou sai: os avisos do supabase-js não redirecionam a página no meio do caminho
+    ocupado: false,
+
+    // contas deste aparelho, da usada há menos tempo para a mais antiga
+    async listar() {
+      const r = await naFila(lerContas);
+      return Object.values(r.contas).sort((a, b) => (b.uso || 0) - (a.uso || 0))
+        .map(c => ({ id: c.id, email: c.email, nome: c.nome, inicial: c.inicial, semSessao: !c.sessao }));
+    },
+
+    // guarda (ou renova) a sessão de uma conta; usar: ela passa a ser a mais recente
+    registrar(sessao, { usar = false } = {}) {
+      if (!sessao || !sessao.user || !sessaoCompleta(sessao)) return Promise.resolve();
+      const d = dadosDaConta(sessao.user);
+      return mexerContas(r => {
+        const antes = r.contas[d.id];
+        r.contas[d.id] = {
+          ...d,
+          uso: usar || !antes ? Date.now() : antes.uso,
+          sessao: { access_token: sessao.access_token, refresh_token: sessao.refresh_token, expires_at: sessao.expires_at },
+        };
+      });
+    },
+
+    async registrarAtual() {
+      await contas.registrar(await GS.auth.sessao());
+    },
+
+    esquecer(id) {
+      return mexerContas(r => { delete r.contas[id]; });
+    },
+
+    // passa a usar outra conta guardada. Sem senha. Se a sessão dela não vale mais,
+    // o erro tem codigo 'precisa_senha' (e o e-mail) e a conta de antes continua em uso.
+    async trocar(id) {
+      const antes = await GS.auth.sessao();
+      if (antes && antes.user.id === id) return;
+      const conta = (await naFila(lerContas)).contas[id];
+      if (!conta) throw new Error('Essa conta não está mais neste aparelho.');
+      if (!conta.sessao) throw erroSemSenha(conta);
+
+      contas.ocupado = true;
+      try {
+        await contas.registrar(antes);   // guarda a sessão mais nova da conta que fica para trás
+        let resp;
+        try {
+          resp = await cliente.auth.setSession({ access_token: conta.sessao.access_token, refresh_token: conta.sessao.refresh_token });
+        } catch (e) {
+          resp = { error: e };
+        }
+        const e = resp.error;
+        if (e || !resp.data || !resp.data.session) {
+          // sem internet a sessão guardada continua boa; qualquer outro erro é sessão vencida ou encerrada
+          const semRede = e && (e.name === 'AuthRetryableFetchError' || e.status === 0 || e.status >= 500 || /failed to fetch|network/i.test(e.message || ''));
+          if (!semRede) await mexerContas(r => { if (r.contas[id]) r.contas[id].sessao = null; });
+          // o supabase-js derruba a sessão em uso ao receber a recusa: devolve a de antes
+          if (antes && !(await GS.auth.sessao())) {
+            await cliente.auth.setSession({ access_token: antes.access_token, refresh_token: antes.refresh_token }).catch(() => {});
+          }
+          throw semRede ? erroDe(e) : erroSemSenha(conta);
+        }
+        await contas.registrar(resp.data.session, { usar: true });
+        // nada da conta anterior fica para a próxima: a cópia dos dados da aba e o aviso de boas-vindas
+        try {
+          sessionStorage.removeItem('gscash:copia');
+          sessionStorage.setItem('gscash:trocou', conta.nome || conta.email);
+        } catch (err) { /* sem sessionStorage: só não mostra o aviso */ }
+      } finally {
+        contas.ocupado = false;
+      }
+    },
+
+    // sai de uma conta deste aparelho; as outras continuam entradas.
+    // Se for a conta em uso, a página vai para a tela de entrar (com as outras para escolher).
+    async sair(id) {
+      const atual = await GS.auth.sessao();
+      if (atual && atual.user.id === id) {
+        const email = atual.user.email || '';
+        contas.ocupado = true;
+        try {
+          // só esta sessão é encerrada; outros aparelhos e as outras contas seguem como estão
+          await executar(cliente.auth.signOut({ scope: 'local' }));
+        } catch (e) {
+          contas.ocupado = false;
+          throw e;
+        }
+        await contas.esquecer(id);
+        try {
+          sessionStorage.removeItem('gscash:copia');
+          sessionStorage.setItem('gscash:saiu', email);
+        } catch (e) { /* sem sessionStorage: só não mostra a confirmação */ }
+        location.replace('entrar.html');
+        return new Promise(() => {});
+      }
+      const conta = (await naFila(lerContas)).contas[id];
+      await contas.esquecer(id);
+      await revogarSemEsperar(conta && conta.sessao);
+    },
+
+    async sairDeTodas() {
+      const todas = Object.values((await naFila(lerContas)).contas);
+      const atual = await GS.auth.sessao();
+      contas.ocupado = true;
+      try {
+        if (atual) await executar(cliente.auth.signOut({ scope: 'local' }));
+      } catch (e) {
+        contas.ocupado = false;
+        throw e;
+      }
+      await Promise.all(todas.filter(c => !atual || c.id !== atual.user.id).map(c => revogarSemEsperar(c.sessao)));
+      await mexerContas(r => { r.contas = {}; });
+      try {
+        sessionStorage.removeItem('gscash:copia');
+        sessionStorage.setItem('gscash:saiu-todas', '1');
+      } catch (e) { /* segue */ }
+      location.replace('entrar.html');
+      return new Promise(() => {});
+    },
+  };
+
   GS.auth = {
     // sessão atual (ou null)
     async sessao() {
@@ -275,6 +468,8 @@ window.GS = window.GS || {};
         const id = fatorId || ((await GS.auth.duasEtapas.fator()) || {}).id;
         if (!id) throw new Error('A verificação em duas etapas não está ligada nesta conta.');
         await executar(cliente.auth.mfa.challengeAndVerify({ factorId: id, code: String(codigo).trim() }));
+        // só agora a sessão vale como aal2 e pode ficar guardada entre as contas do aparelho
+        await contas.registrarAtual();
       },
 
       // passo 1 de ligar: cria a verificação (ainda sem valer) e devolve o QR code e a chave
@@ -319,19 +514,131 @@ window.GS = window.GS || {};
         if (!r || !r.ok) throw new Error((r && r.erro) || 'Não foi possível usar o código.');
         // a sessão guardada ainda lembra da verificação: renova para ela saber que foi desligada
         await executar(cliente.auth.refreshSession());
+        await contas.registrarAtual();
       },
     },
+  };
 
-    // trocar: a tela de entrada pede a outra conta; nos dois casos ela confirma de qual conta saiu
-    async sair({ trocar = false } = {}) {
-      try {
-        sessionStorage.removeItem('gscash:copia');   // a cópia dos dados desta aba (data.js)
-        sessionStorage.setItem('gscash:saiu', (GS.usuario && GS.usuario.email) || '');
-        if (trocar) sessionStorage.setItem('gscash:trocar', '1');
-      } catch (e) { /* sem sessionStorage: só não mostra a confirmação */ }
-      await executar(cliente.auth.signOut());
+  /* ---------- Contas: avisos do supabase-js e janela "Gerenciar contas" ---------- */
+
+  // estilo das contas (menu, janela "Gerenciar contas" e atalhos da tela de entrar)
+  const estilo = document.createElement('link');
+  estilo.rel = 'stylesheet';
+  estilo.href = 'css/contas.css';
+  document.head.append(estilo);
+
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const svg = d => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+  const ICONES = {
+    x: svg('<path d="M18 6 6 18"/><path d="m6 6 12 12"/>'),
+    mais: svg('<path d="M5 12h14"/><path d="M12 5v14"/>'),
+    sair: svg('<path d="m16 17 5-5-5-5"/><path d="M21 12H9"/><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>'),
+    pessoas: svg('<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>'),
+    seta: svg('<path d="m9 18 6-6-6-6"/>'),
+  };
+  GS.contasIcones = ICONES;
+  // nome para mostrar: o do perfil ou, sem ele, o começo do e-mail
+  const nomeDe = GS.nomeDaConta = c => c.nome || (c.email.split('@')[0] || c.email).replace(/^./, l => l.toUpperCase());
+
+  // um aviso de outra aba, ou da sessão que acabou
+  cliente.auth.onAuthStateChange((evento, sessao) => {
+    // toda sessão entrada ou renovada fica guardada na lista de contas (sem esperar nada do supabase-js aqui)
+    if (sessao && evento !== 'SIGNED_OUT') contas.registrar(sessao, { usar: evento === 'SIGNED_IN' }).catch(() => {});
+    if (naTelaDeLogin || contas.ocupado) return;
+    if (evento === 'SIGNED_OUT') {
       location.replace('entrar.html');
-    },
+    } else if (sessao && GS.usuario && sessao.user.id !== GS.usuario.id) {
+      // outra aba trocou de conta: esta acompanha, recarregando tudo da conta nova
+      location.replace('index.html');
+    }
+  });
+
+  // Janela "Gerenciar contas": sair de uma conta ou de todas, adicionar outra.
+  // aoMudar: avisa quando a lista mudou; aoAdicionar: no lugar de ir para a tela de entrar
+  contas.abrirGerenciar = async function ({ aoMudar, aoAdicionar } = {}) {
+    if (document.querySelector('.gerir-fundo')) return;
+    const fundo = document.createElement('div');
+    fundo.className = 'gerir-fundo';
+    const janela = document.createElement('div');
+    janela.className = 'gerir';
+    janela.setAttribute('role', 'dialog');
+    janela.setAttribute('aria-modal', 'true');
+    janela.setAttribute('aria-label', 'Gerenciar contas');
+    fundo.append(janela);
+    document.body.append(fundo);
+
+    const voltarFoco = document.activeElement;
+    const tecla = e => { if (e.key === 'Escape') { e.stopPropagation(); fechar(); } };
+    function fechar() {
+      fundo.remove();
+      document.removeEventListener('keydown', tecla, true);
+      if (voltarFoco && voltarFoco.focus && document.contains(voltarFoco)) voltarFoco.focus();
+    }
+    document.addEventListener('keydown', tecla, true);
+    fundo.addEventListener('mousedown', e => { if (e.target === fundo) fechar(); });
+
+    let confirmando = false;
+    let relogio = null;
+
+    async function desenhar(erro) {
+      const atual = await GS.auth.sessao();
+      const atualId = atual && atual.user.id;
+      const lista = await contas.listar();
+      janela.innerHTML = `
+        <div class="gerir-topo"><h2>Gerenciar contas</h2><button type="button" class="gerir-fechar" data-fechar aria-label="Fechar">${ICONES.x}</button></div>
+        <p class="gerir-sub">Contas guardadas neste aparelho.</p>
+        ${lista.length ? `<div class="gerir-lista">${lista.map(c => `
+          <div class="gerir-linha">
+            <span class="conta-mini${c.id === atualId ? ' atual' : ''}" aria-hidden="true">${esc(c.inicial)}</span>
+            <span class="conta-nomes"><span class="l1"><b>${esc(nomeDe(c))}</b>${c.id === atualId ? '<span class="gerir-selo">Atual</span>' : ''}</span><small>${esc(c.email)}</small></span>
+            <button type="button" class="gerir-sair" data-sair="${esc(c.id)}" aria-label="Sair da conta ${esc(c.email)}">Sair</button>
+          </div>`).join('')}</div>` : '<p class="gerir-vazio">Nenhuma conta guardada.</p>'}
+        <p class="gerir-erro" role="alert"${erro ? '' : ' hidden'}>${esc(erro || '')}</p>
+        <button type="button" class="gerir-mais" data-adicionar>${ICONES.mais}Adicionar outra conta</button>
+        ${lista.length ? `<button type="button" class="gerir-todas" data-todas>${ICONES.sair}<span>Sair de todas as contas</span></button>` : ''}`;
+      const primeiro = janela.querySelector('.gerir-sair, .gerir-mais');
+      if (primeiro) primeiro.focus();
+    }
+
+    janela.addEventListener('click', async e => {
+      if (e.target.closest('[data-fechar]')) return fechar();
+      if (e.target.closest('[data-adicionar]')) {
+        fechar();
+        if (aoAdicionar) aoAdicionar(); else location.href = 'entrar.html?adicionar=1';
+        return;
+      }
+      const todas = e.target.closest('[data-todas]');
+      if (todas) {
+        if (!confirmando) {
+          confirmando = true;
+          todas.querySelector('span').textContent = 'Toque de novo para sair de todas';
+          clearTimeout(relogio);
+          relogio = setTimeout(() => { confirmando = false; const t = janela.querySelector('[data-todas] span'); if (t) t.textContent = 'Sair de todas as contas'; }, 4000);
+          return;
+        }
+        janela.querySelectorAll('button').forEach(b => { b.disabled = true; });
+        try {
+          await contas.sairDeTodas();
+        } catch (err) {
+          confirmando = false;
+          desenhar(err.message);
+        }
+        return;
+      }
+      const sair = e.target.closest('[data-sair]');
+      if (sair) {
+        janela.querySelectorAll('button').forEach(b => { b.disabled = true; });
+        try {
+          await contas.sair(sair.dataset.sair);   // se for a conta em uso, a página sai daqui
+          if (aoMudar) await aoMudar();
+          await desenhar();
+        } catch (err) {
+          desenhar(err.message);
+        }
+      }
+    });
+
+    await desenhar();
   };
 
   /* ---------- Proteção das páginas ---------- */
@@ -350,16 +657,43 @@ window.GS = window.GS || {};
     }
     GS.usuario = sessao.user;
     raiz.style.visibility = '';
+    // contas que já estavam entradas antes das várias contas passam a constar na lista
+    contas.registrar(sessao).catch(() => {});
     return sessao.user;
   }).catch(() => {
     location.replace('entrar.html');
     return null;
   });
+  GS.usuarioPronto = logado;
 
-  // saiu em outra aba, ou a sessão expirou
-  cliente.auth.onAuthStateChange(evento => {
-    if (evento === 'SIGNED_OUT') location.replace('entrar.html');
-  });
+  // Preferências do aparelho que pertencem a uma conta (convite já visto, lembrete ligado):
+  // ficam separadas por conta, para uma não decidir pela outra. O que já estava guardado sem
+  // conta (antes das várias contas) passa para a primeira conta que o ler.
+  GS.daConta = {
+    chave: base => `${base}:${GS.usuario.id}`,
+    ler(base) {
+      if (!GS.usuario) return null;
+      try {
+        const chave = GS.daConta.chave(base);
+        let v = localStorage.getItem(chave);
+        if (v === null) {
+          const antigo = localStorage.getItem(base);
+          if (antigo !== null) {
+            localStorage.setItem(chave, antigo);
+            localStorage.removeItem(base);
+            v = antigo;
+          }
+        }
+        return v;
+      } catch (e) {
+        return null;
+      }
+    },
+    gravar(base, valor) {
+      if (!GS.usuario) return;
+      try { localStorage.setItem(GS.daConta.chave(base), valor); } catch (e) { /* sem localStorage: segue */ }
+    },
+  };
 
   /* ---------- Menu da conta (inicial no topo, como no Google) ---------- */
 
@@ -371,11 +705,18 @@ window.GS = window.GS || {};
   Promise.all([logado, paginaCarregada]).then(([usuario]) => {
     const acoes = document.querySelector('.topbar-acoes');
     if (!usuario || !acoes || !GS.icone) return;
+
+    // acabou de trocar de conta (ou voltou da tela de entrar com outra): confirma em qual está
+    try {
+      const para = sessionStorage.getItem('gscash:trocou');
+      if (para) {
+        sessionStorage.removeItem('gscash:trocou');
+        if (GS.toast) GS.toast(`Agora você está em ${para}.`);
+      }
+    } catch (e) { /* sem sessionStorage: segue sem o aviso */ }
+
     const email = usuario.email || '';
-    const meta = usuario.user_metadata || {};
-    const nomeCompleto = String(meta.full_name || meta.name || '').trim();
-    const inicial = ((nomeCompleto || email).trim()[0] || '?').toUpperCase();
-    const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const { nome: nomeCompleto, inicial } = dadosDaConta(usuario);
 
     const botao = document.createElement('button');
     botao.type = 'button';
@@ -395,27 +736,40 @@ window.GS = window.GS || {};
     acoes.append(ola);
 
     let fechar = null;
+    let abrindo = false;
 
-    function abrir() {
+    async function abrir() {
+      if (abrindo) return;
+      abrindo = true;
+      // a conta em uso entra na lista antes de montar o menu (as outras vêm da lista guardada)
+      await contas.registrarAtual().catch(() => {});
+      const outras = (await contas.listar().catch(() => [])).filter(c => c.id !== usuario.id);
+      abrindo = false;
+
       const cartao = document.createElement('div');
       cartao.className = 'conta-pop';
       cartao.setAttribute('role', 'dialog');
       cartao.setAttribute('aria-label', 'Sua conta');
       cartao.innerHTML = `
-        <div class="conta-topo">
+        <div class="conta-topo enxuto">
           <div class="conta-av" aria-hidden="true">${esc(inicial)}</div>
-          <small>Conectado como</small>
-          <strong>${esc(email)}</strong>
+          <div><strong>${esc(nomeCompleto || email)}</strong>${nomeCompleto ? `<span>${esc(email)}</span>` : ''}</div>
         </div>
         <hr>
+        ${outras.length ? `<div class="conta-sec">Outras contas neste aparelho</div>${outras.map(c => `
+          <button type="button" class="conta-outra" data-trocar="${esc(c.id)}">
+            <span class="conta-mini" aria-hidden="true">${esc(c.inicial)}</span>
+            <span class="conta-nomes"><span class="l1"><b>${esc(nomeDe(c))}</b></span><small>${esc(c.email)}</small></span>
+          </button>`).join('')}` : ''}
+        <button type="button" class="conta-item" data-adicionar>${GS.icone('plus')}Adicionar outra conta</button>
+        <button type="button" class="conta-item" data-gerir>${ICONES.pessoas}Gerenciar contas</button>
+        <hr class="entre">
         ${email === DONO ? `<a class="conta-item" href="admin.html">${GS.icone('painel')}Painel do GSCASH</a>` : ''}
         ${GS.abrirTour ? `<button type="button" class="conta-item" data-tour>${GS.icone('play')}Ver o tour do GSCASH (1 min)</button>` : ''}
         ${GS.instalar && GS.instalar.disponivel() ? `<button type="button" class="conta-item instalar" data-instalar>${GS.icone('download')}Instalar o app no celular</button>` : ''}
         ${GS.importar ? `<button type="button" class="conta-item" data-importar>${GS.icone('subir')}Importar extrato ou planilha</button>` : ''}
         <a class="conta-item" href="configuracoes.html">${GS.icone('engrenagem')}Configurações</a>
-        <button type="button" class="conta-item" data-acao="trocar">${GS.icone('transfer')}Trocar de conta</button>
-        <button type="button" class="conta-item sair" data-acao="sair">${GS.icone('logout')}Sair da conta</button>
-        <p class="conta-nota">Seus dados ficam salvos na sua conta. Ao sair, o GSCASH volta para a tela de entrada.</p>
+        <p class="conta-nota">Seus dados ficam salvos na sua conta. Para sair, use Gerenciar contas.</p>
         ${GS.excluirConta ? '<button type="button" class="conta-excluir" data-excluir-conta>Excluir minha conta</button>' : ''}`;
       document.body.append(cartao);
 
@@ -456,12 +810,27 @@ window.GS = window.GS || {};
           GS.importar.abrir();
           return;
         }
-        const b = e.target.closest('[data-acao]');
-        if (!b) return;
+        if (e.target.closest('[data-adicionar]')) {
+          location.href = 'entrar.html?adicionar=1';
+          return;
+        }
+        if (e.target.closest('[data-gerir]')) {
+          fechar();
+          contas.abrirGerenciar();
+          return;
+        }
+        const alvo = e.target.closest('[data-trocar]');
+        if (!alvo) return;
         cartao.querySelectorAll('button').forEach(x => { x.disabled = true; });
         try {
-          await GS.auth.sair({ trocar: b.dataset.acao === 'trocar' });
+          await contas.trocar(alvo.dataset.trocar);
+          location.replace('index.html');   // recarrega tudo (painel, licença, moeda, dados) já na conta nova
         } catch (err) {
+          if (err.codigo === 'precisa_senha') {
+            // a sessão guardada dessa conta não vale mais: só ela pede a senha
+            location.href = 'entrar.html?reentrar=' + encodeURIComponent(err.email);
+            return;
+          }
           cartao.querySelectorAll('button').forEach(x => { x.disabled = false; });
           if (GS.toast) GS.toast(err.message, 'erro'); else alert(err.message);
         }
@@ -471,7 +840,7 @@ window.GS = window.GS || {};
       document.addEventListener('keydown', tecla, true);
       window.addEventListener('resize', fechar);
       botao.setAttribute('aria-expanded', 'true');
-      cartao.querySelector('.conta-item').focus();
+      (cartao.querySelector('.conta-outra') || cartao.querySelector('.conta-item')).focus();
     }
 
     botao.addEventListener('click', () => (fechar ? fechar() : abrir()));

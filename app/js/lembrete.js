@@ -24,8 +24,9 @@ window.GS = window.GS || {};
   const visivel = () => !GS.noDesktop && (suportado || (ehIos && !instalado()));
 
   const CONVITE_VISTO = 'gscash:lembrete-convite';
-  const ler = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
-  const gravar = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* segue */ } };
+  // o convite e o lembrete do iPhone são de cada conta (js/supabase.js: GS.daConta)
+  const ler = k => GS.daConta.ler(k);
+  const gravar = (k, v) => GS.daConta.gravar(k, v);
 
   // o service worker só recebe notificações (não guarda nada em cache)
   const registro = pushDaWeb ? navigator.serviceWorker.register('sw.js').catch(e => { console.warn('sw.js', e); return null; }) : Promise.resolve(null);
@@ -123,7 +124,13 @@ window.GS = window.GS || {};
 
   const naWeb = {
     async negado() { return Notification.permission === 'denied'; },
-    async ligado() { return !!(await inscricaoAtual()); },
+    async ligado() {
+      const sub = await inscricaoAtual();
+      if (!sub) return false;
+      // o aparelho avisa uma conta só: se outra conta ligou o lembrete aqui, para esta ele está desligado
+      const { data, error } = await GS.supabase.from('lembretes').select('endpoint').eq('endpoint', sub.endpoint).maybeSingle();
+      return error ? true : !!data;
+    },
     ligar,
     desligar,
   };
@@ -132,7 +139,7 @@ window.GS = window.GS || {};
 
   if (GS.nativo) {
     const refazer = () => agendarNoApp().catch(e => console.warn('lembrete: agendar', e));
-    refazer();
+    GS.usuarioPronto.then(refazer);
     // saiu do app (talvez depois de lançar algo): tira o lembrete de hoje se não precisa mais
     document.addEventListener('visibilitychange', () => { if (document.hidden) refazer(); });
     // tocou na notificação: abre direto o Novo gasto
@@ -223,6 +230,7 @@ window.GS = window.GS || {};
   /* ---------- convite no Painel (uma vez, só no app instalado) ---------- */
 
   async function convite() {
+    await GS.usuarioPronto;
     if (!suportado || !(GS.nativo || instalado()) || ler(CONVITE_VISTO)) return;
     const lugar = document.querySelector('main .container');
     if (!lugar || !document.getElementById('primeirosPassos')) return;  // só no Painel
