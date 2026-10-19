@@ -125,6 +125,7 @@
     const temCarteira = ctx.carteiras.length > 0;
     const temCartao = GS.faturas.cartoes(ctx.carteiras).length > 0;
     const temLancamento = ctx.transacoes.some(t => t.tipo === 'despesa' || t.tipo === 'receita');
+    const temReceita = ctx.transacoes.some(t => t.tipo === 'receita');
 
     if (prefs.primeirosPassosDispensado || (temCarteira && temLancamento)) {
       alvo.classList.add('hidden');
@@ -137,6 +138,8 @@
       { feito: temCartao, titulo: 'Tem cartão de crédito? Configure', dica: 'Limite, dia de fechamento e de vencimento. Pode pular.', botao: 'Configurar', acao: 'cartao' },
       { feito: temLancamento, titulo: 'Lance seus gastos', dica: 'Um por um, ou traga o mês inteiro do extrato do banco ou da sua planilha.', botao: 'Novo gasto', acao: 'gasto', primario: true,
         extra: GS.importar && !GS.somenteLeitura ? { botao: 'Importar extrato', acao: 'importar', icone: 'subir' } : null },
+      // opcional, como o do cartão: muita gente não sabia que dava para lançar a renda
+      { feito: temReceita, titulo: 'Registre o que você recebe', dica: 'Salário, freela, Pix recebido. Se cai todo mês, lance uma vez e marque para repetir.', botao: 'Nova receita', acao: 'receita', primario: true },
     ];
     const feitos = passos.filter(p => p.feito).length;
 
@@ -145,8 +148,8 @@
       ${capa('passos-video')}
       <div class="passos-lado">
         <h2 class="passos-titulo">Seus primeiros passos</h2>
-        <p class="passos-sub">${feitos} de 3 concluído${feitos === 1 ? '' : 's'} · leva uns dois minutos</p>
-        <div class="bar passos-barra"><span style="width:${(feitos / 3) * 100}%"></span></div>
+        <p class="passos-sub">${feitos} de ${passos.length} concluído${feitos === 1 ? '' : 's'} · leva uns dois minutos</p>
+        <div class="bar passos-barra"><span style="width:${(feitos / passos.length) * 100}%"></span></div>
         <ol class="passos-lista">
           ${passos.map((p, i) => `
             <li class="passo ${p.feito ? 'feito' : ''}">
@@ -165,6 +168,7 @@
       if (b.dataset.passo === 'carteira') GS.abrirFormCarteira(null, { quantas: ctx.carteiras.length });
       if (b.dataset.passo === 'cartao') location.href = 'faturas.html?configurar=1';
       if (b.dataset.passo === 'gasto') GS.abrirFormTransacao();
+      if (b.dataset.passo === 'receita') GS.abrirFormTransacao(null, { tipo: 'receita' });
       if (b.dataset.passo === 'importar') GS.importar.abrir();
     }));
     alvo.querySelector('[data-pular]').addEventListener('click', async () => {

@@ -67,7 +67,7 @@ window.GS = window.GS || {};
       <div class="field">
         <span class="field-label">Tipo</span>
         <div class="toggle" role="group" aria-label="Tipo">
-          <button type="button" data-tipo="despesa">${icone('arrow-down')}Despesa</button>
+          <button type="button" data-tipo="despesa">${icone('arrow-down')}Gasto</button>
           <button type="button" data-tipo="receita">${icone('arrow-up')}Receita</button>
         </div>
       </div>
@@ -81,6 +81,7 @@ window.GS = window.GS || {};
         <label for="txTitulo" data-rotulo-titulo>Título</label>
         <div class="input" data-wrap="titulo"><input id="txTitulo" maxlength="80" placeholder="Ex.: Almoço, Uber, Mercado" value="${esc(tituloInicial)}" autofocus></div>
         <span class="field-hint hidden" data-dica-titulo></span>
+        <span class="field-hint hidden" data-dica-receita>Recebe todo mês? Em <b>Mais opções</b>, marque <b>Repetir</b> e lance o ano inteiro de uma vez.</span>
       </div>
 
       <div class="field">
@@ -257,6 +258,9 @@ window.GS = window.GS || {};
         ? (receita ? 'Editar receita' : 'Editar gasto')
         : (receita ? 'Nova receita' : 'Novo gasto');
       if (!editando) modal.foot.querySelector('[data-rotulo-salvar]').textContent = receita ? 'Salvar receita' : 'Salvar gasto';
+      // receita: exemplos de renda e a dica de repetir o salário (quem só via "gasto" não sabia que dava)
+      $('#txTitulo').placeholder = receita ? 'Ex.: Salário, freela, Pix recebido' : 'Ex.: Almoço, Uber, Mercado';
+      $('[data-dica-receita]').classList.toggle('hidden', !receita || editando);
     }
     corpo.querySelectorAll('[data-tipo]').forEach(b => b.addEventListener('click', () => {
       if (tipo === b.dataset.tipo) return;
