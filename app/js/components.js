@@ -925,8 +925,11 @@ window.GS = window.GS || {};
     });
 
     document.addEventListener('gs:dados', rodar);
-    // outra aba alterou os dados
-    window.addEventListener('storage', e => { if (e.key && e.key.startsWith('gscash')) location.reload(); });
+    // Antes os dados ficavam no localStorage, e outra aba que mexesse neles fazia esta recarregar.
+    // Hoje eles ficam no banco, e o localStorage só guarda coisas do aparelho (lista de contas,
+    // convites vistos), regravadas a cada abertura: recarregar por elas fazia duas abas abertas
+    // se recarregarem uma à outra sem parar. Troca de conta em outra aba já chega por
+    // onAuthStateChange (js/supabase.js).
     rodar();
   };
 })();
