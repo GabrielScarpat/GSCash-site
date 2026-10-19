@@ -139,7 +139,7 @@
             <p>Lance um gasto agora ou traga tudo de uma vez: extrato do banco (OFX, CSV ou PDF), fatura do cartão ou sua planilha.</p>
             <div class="acoes">
               <button type="button" class="btn btn-outline" data-vazio-importar>${GS.icone('subir')}Importar extrato ou planilha</button>
-              <button type="button" class="btn btn-primary" data-vazio-novo>${GS.icone('plus')}Novo gasto</button>
+              <button type="button" class="btn btn-primary" data-vazio-novo>${GS.icone('plus')}Nova transação</button>
             </div>
           </div>`;
         $('lista').querySelector('[data-vazio-importar]').addEventListener('click', () => GS.importar.abrir());
@@ -149,7 +149,7 @@
       }
       $('lista').innerHTML = widgets.vazio(
         'Nenhuma transação encontrada',
-        temFiltro ? 'Tente mudar os filtros ou a busca.' : 'Registre um gasto pelo botão "Novo gasto".'
+        temFiltro ? 'Tente mudar os filtros ou a busca.' : 'Registre um gasto ou uma receita pelo botão "Nova transação".'
       );
       $('rodapeLista').innerHTML = '';
       return;

@@ -178,7 +178,7 @@
     if (!b) return;
     const cart = ctx.carteira.get(b.dataset.menu);
     GS.abrirMenu(b, [
-      { rotulo: 'Novo gasto aqui', icone: 'plus', escrita: true, acao: () => GS.abrirFormTransacao(null, { carteiraId: cart.id }) },
+      { rotulo: 'Nova transação aqui', icone: 'plus', escrita: true, acao: () => GS.abrirFormTransacao(null, { carteiraId: cart.id }) },
       { rotulo: 'Transferir daqui', icone: 'transfer', escrita: true, acao: () => GS.abrirFormTransferencia(null, { origemId: cart.id }) },
       { rotulo: 'Saldo inicial', icone: 'wallet', escrita: true, acao: () => abrirSaldoInicial(cart) },
       {

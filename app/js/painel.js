@@ -374,7 +374,7 @@
     const maior = grupos[0] ? grupos[0].total : 0;
 
     if (!grupos.length) {
-      $('porCategoria').innerHTML = widgets.vazio('Nenhum gasto neste período', 'Use o botão "Novo gasto" para registrar.');
+      $('porCategoria').innerHTML = widgets.vazio('Nenhum gasto neste período', 'Use o botão "Nova transação" para registrar.');
       $('distribuicao').innerHTML = widgets.vazio('Sem dados para o gráfico');
       return;
     }

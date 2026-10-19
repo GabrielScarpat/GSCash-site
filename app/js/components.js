@@ -799,10 +799,10 @@ window.GS = window.GS || {};
   };
 
   /* ---------- Página ----------
-     Marca o link ativo, liga o botão "Novo gasto" e
+     Marca o link ativo, liga o botão "Nova transação" e
      redesenha a tela sempre que os dados mudam.      */
 
-  /* ---------- Celular: abas embaixo (vidro, com a "gota" na aba ativa) e "Novo gasto" flutuante ----------
+  /* ---------- Celular: abas embaixo (vidro, com a "gota" na aba ativa) e "Nova transação" flutuante ----------
      Feitas a partir dos links do menu do topo; o CSS (celular.css) só mostra em telas estreitas. */
 
   const ICONE_ABA = { painel: 'painel', transacoes: 'list', carteiras: 'carteira', faturas: 'cartao', categorias: 'etiqueta' };
@@ -820,8 +820,8 @@ window.GS = window.GS || {};
     const fab = el('button', 'fab-novo', icone('plus'));
     fab.type = 'button';
     fab.dataset.acao = 'novo-gasto';
-    fab.setAttribute('aria-label', 'Novo gasto');
-    fab.title = 'Novo gasto';
+    fab.setAttribute('aria-label', 'Nova transação');
+    fab.title = 'Nova transação';
     document.body.append(barra, fab);
 
     // a gota fica embaixo da aba aberta. A passagem de uma aba para outra é feita pelo navegador

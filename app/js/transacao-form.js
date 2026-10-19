@@ -1,6 +1,6 @@
 /* =========================================================
    GSCASH — modal "Novo gasto" / "Nova receita" (e "Editar …")
-   Disponível em todas as telas pelo botão "Novo gasto".
+   Disponível em todas as telas pelo botão "Nova transação".
    ========================================================= */
 
 window.GS = window.GS || {};
