@@ -54,6 +54,10 @@
 .cfg-acoes { display: flex; flex-direction: column; gap: 6px; flex: none; width: 96px; }
 .cfg-acoes .btn { height: 30px; padding: 0 10px; border-radius: 8px; font-size: 13px; }
 .cfg-linha .switch:disabled { opacity: .6; }
+.cfg-linha .txt small { text-wrap: pretty; }
+.cfg-botao { flex: none; }
+.cfg-avatar { display: grid; place-items: center; flex: none; width: 44px; height: 44px; border-radius: 50%; background: var(--primary); color: var(--bg); font-size: 18px; font-weight: 600; }
+.cfg-linha .txt b { overflow-wrap: anywhere; }
 
 @media (max-width: 640px) {
   .cfg-voltar { display: inline-flex; align-items: center; gap: 4px; margin-bottom: -8px; color: var(--text-2); font-size: 14px; }
@@ -64,4 +68,5 @@
   .cfg-confirmar .btn { flex: 1; }
   .cfg-linha { flex-wrap: wrap; }
   .cfg-linha .txt { flex: 1; }
+  .cfg-botao { flex: 1 0 100%; margin-left: 0; }
 }

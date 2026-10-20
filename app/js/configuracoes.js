@@ -6,6 +6,8 @@
    · Lembrete diário: chave liga/desliga, vale só para este aparelho.
      Não aparece no programa para Windows (lá não chega notificação).
    · Verificação em duas etapas: só aparece aqui (não fica no menu da conta).
+   · Aplicativo: baixar para Windows (computador) ou instalar no celular.
+   · Conta: Sair da conta (as outras contas do aparelho continuam entradas).
    ========================================================= */
 
 (function () {
@@ -148,9 +150,71 @@
     vigiarJanela(desenharDuasEtapas);
   });
 
+  /* ---------- Aplicativo (baixar para Windows ou instalar no celular) ---------- */
+
+  // No computador com Windows, pelo navegador: baixar o instalador. No celular, pelo navegador:
+  // instalar com ícone na tela inicial. No programa para Windows, no app do iPhone, no que já
+  // foi instalado e em Mac/Linux não há o que oferecer: o cartão nem aparece.
+  function desenharAplicativo() {
+    const linha = (nome, titulo, sub, acao) => `<span class="cfg-icone">${icone(nome)}</span>
+      <span class="txt"><b>${esc(titulo)}</b><small>${esc(sub)}</small></span>${acao}`;
+    let html = '';
+    if (GS.baixar && GS.baixar.disponivel()) {
+      html = linha('computador', 'GSCASH para Windows', 'Abre direto da área de trabalho, com a mesma conta e os mesmos dados.',
+        `<a class="btn btn-outline cfg-botao" href="${GS.baixar.url}" data-baixar>${icone('download')}Baixar</a>`);
+    } else if (GS.instalar && GS.instalar.disponivel()) {
+      html = linha('celular', 'Instalar no celular', 'Ícone na tela inicial, abre em tela cheia, como um app.',
+        '<button type="button" class="btn btn-outline cfg-botao" data-instalar-app>Instalar</button>');
+    }
+    $('cardApp').hidden = !html;
+    $('aplicativo').innerHTML = html;
+  }
+
+  $('aplicativo').addEventListener('click', e => {
+    if (e.target.closest('[data-instalar-app]')) GS.instalar.abrir();
+  });
+  // instalou pelo convite do navegador: o cartão some
+  window.addEventListener('appinstalled', desenharAplicativo);
+
+  /* ---------- Conta (sair) ---------- */
+
+  // Sai só da conta em uso, do mesmo jeito que "Sair" em Gerenciar contas: as outras contas
+  // guardadas neste aparelho continuam entradas e aparecem na tela de entrar para escolher.
+  async function desenharConta() {
+    if (!GS.contas || !GS.auth) return;
+    if (!GS.usuario) {
+      const sessao = await GS.auth.sessao();
+      if (!sessao) return;
+      GS.usuario = sessao.user;
+    }
+    const { id, email, inicial } = GS.dadosDaConta(GS.usuario);
+    const outras = (await GS.contas.listar().catch(() => [])).filter(c => c.id !== id);
+    const sub = outras.length
+      ? 'Sai só desta conta. As outras contas deste aparelho continuam entradas.'
+      : 'Você entra de novo quando quiser, com e-mail e senha ou com o Google.';
+    $('cardConta').hidden = false;
+    $('conta').innerHTML = `
+      <span class="cfg-avatar" aria-hidden="true">${esc(inicial)}</span>
+      <span class="txt"><b>${esc(email)}</b><small>${esc(sub)}</small></span>
+      <button type="button" class="btn btn-outline cfg-botao" data-sair>${icone('logout')}Sair da conta</button>`;
+  }
+
+  $('conta').addEventListener('click', async e => {
+    const botao = e.target.closest('[data-sair]');
+    if (!botao || botao.disabled) return;
+    botao.disabled = true;
+    try {
+      await GS.contas.sair(GS.usuario.id);   // a página vai para a tela de entrar daqui
+    } catch (err) {
+      botao.disabled = false;
+      GS.toast(err.message || 'Não foi possível sair agora.', 'erro');
+    }
+  });
+
   async function desenhar() {
     desenharMoedas();
-    await Promise.all([desenharLembrete(), desenharDuasEtapas()]);
+    desenharAplicativo();
+    await Promise.all([desenharLembrete(), desenharDuasEtapas(), desenharConta()]);
   }
 
   GS.iniciarPagina('configuracoes', desenhar);

@@ -97,5 +97,9 @@ window.GS = window.GS || {};
   // link pronto para pôr na página (vazio dentro do programa)
   const linkHtml = () => (noPrograma || !INSTALADOR_PRONTO ? '' : `<a class="link-btn" href="${URL_INSTALADOR}" data-baixar>${ICONE_BAIXAR}Baixar para Windows</a>`);
 
-  GS.baixar = { linkHtml };
+  // dentro do app logado (menu da conta e Configurações): só no Windows, pelo navegador.
+  // Em Mac, Linux e celular o convite certo é outro (ou ainda não existe), então nem aparece.
+  const disponivel = () => !noPrograma && INSTALADOR_PRONTO && plataforma() === 'Windows';
+
+  GS.baixar = { linkHtml, disponivel, url: URL_INSTALADOR };
 })();

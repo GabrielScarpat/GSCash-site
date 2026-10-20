@@ -112,6 +112,8 @@ window.GS = window.GS || {};
     eye: '<path d="M2.06 12.35a1 1 0 0 1 0-.7 10.75 10.75 0 0 1 19.88 0 1 1 0 0 1 0 .7 10.75 10.75 0 0 1-19.88 0"/><circle cx="12" cy="12" r="3"/>',
     'eye-off': '<path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c4.36 0 8.15 2.63 9.94 6.65a1 1 0 0 1 0 .7 10.6 10.6 0 0 1-1.62 2.6"/><path d="M14.08 14.16a3 3 0 0 1-4.24-4.24"/><path d="M17.48 17.5A10.56 10.56 0 0 1 12 19c-4.36 0-8.15-2.63-9.94-6.65a1 1 0 0 1 0-.7 10.7 10.7 0 0 1 4.46-5.14"/><path d="m2 2 20 20"/>',
     download: '<path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/>',
+    computador: '<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/>',
+    celular: '<rect x="6" y="2" width="12" height="20" rx="3"/><path d="M11 18h2"/>',
     file: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6"/><path d="M9 17h4"/>',
     filtro: '<path d="M3 5h18"/><path d="M6 12h12"/><path d="M10 19h4"/>',
     painel: '<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>',

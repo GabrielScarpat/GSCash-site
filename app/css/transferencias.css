@@ -28,7 +28,9 @@
   font-weight: 700;
   letter-spacing: -.03em;
   font-variant-numeric: tabular-nums;
-  text-align: center;
+  /* o número entra pela direita (centavos primeiro): o cursor fica na ponta, e não no meio do "0,00".
+     O campo já tem a largura do número (larguraValor), então o valor continua no centro da janela */
+  text-align: right;
 }
 .valor-transf input.zerado,
 .valor-transf input::placeholder { color: #B9B3A5; }

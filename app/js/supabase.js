@@ -537,6 +537,7 @@ window.GS = window.GS || {};
     seta: svg('<path d="m9 18 6-6-6-6"/>'),
   };
   GS.contasIcones = ICONES;
+  GS.dadosDaConta = dadosDaConta;
   // nome para mostrar: o do perfil ou, sem ele, o começo do e-mail
   const nomeDe = GS.nomeDaConta = c => c.nome || (c.email.split('@')[0] || c.email).replace(/^./, l => l.toUpperCase());
 
@@ -766,6 +767,7 @@ window.GS = window.GS || {};
         <hr class="entre">
         ${email === DONO ? `<a class="conta-item" href="admin.html">${GS.icone('painel')}Painel do GSCASH</a>` : ''}
         ${GS.abrirTour ? `<button type="button" class="conta-item" data-tour>${GS.icone('play')}Ver o tour do GSCASH (1 min)</button>` : ''}
+        ${GS.baixar && GS.baixar.disponivel() ? `<a class="conta-item instalar" href="${GS.baixar.url}" data-baixar>${GS.icone('download')}Baixar para Windows</a>` : ''}
         ${GS.instalar && GS.instalar.disponivel() ? `<button type="button" class="conta-item instalar" data-instalar>${GS.icone('download')}Instalar o app no celular</button>` : ''}
         ${GS.importar ? `<button type="button" class="conta-item" data-importar>${GS.icone('subir')}Importar extrato ou planilha</button>` : ''}
         <a class="conta-item" href="configuracoes.html">${GS.icone('engrenagem')}Configurações</a>
@@ -798,6 +800,11 @@ window.GS = window.GS || {};
         if (e.target.closest('[data-instalar]')) {
           fechar();
           GS.instalar.abrir();
+          return;
+        }
+        // o download em si é o link; o menu fecha logo depois, sem cortar o clique
+        if (e.target.closest('[data-baixar]')) {
+          setTimeout(() => fechar && fechar(), 0);
           return;
         }
         if (e.target.closest('[data-excluir-conta]')) {
