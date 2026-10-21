@@ -68,11 +68,28 @@
       "inLanguage": "pt-BR",
       "offers": { "@type": "Offer", "price": "50.00", "priceCurrency": "BRL" },
       "publisher": { "@id": "https://gscash.com.br/#org" }
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        { "@type": "Question", "name": "O que acontece depois dos 7 dias grátis?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Nada some. Sem a licença, o GSCASH fica só para consulta: você vê tudo o que lançou e gera relatórios, mas não lança nada novo. Ative a licença quando quiser e continue de onde parou." } },
+        { "@type": "Question", "name": "O GSCASH se conecta ao meu banco?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Não. Ele nunca pede a senha do banco nem mexe na sua conta bancária. Você lança cada gasto em poucos segundos ou importa o extrato que o banco fornece, em OFX, CSV ou planilha do Excel." } },
+        { "@type": "Question", "name": "Funciona no celular?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Sim, pelo navegador do celular, sem instalar nada. Se preferir, coloque o GSCASH na tela inicial e ele abre como um aplicativo. É a mesma conta do computador." } },
+        { "@type": "Question", "name": "Meus dados estão seguros?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Seus dados ficam guardados na sua conta, em servidores no Brasil, e cada conta só enxerga os próprios dados. A conexão é protegida e você pode ligar a verificação em duas etapas nas Configurações." } },
+        { "@type": "Question", "name": "A licença renova sozinha?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Não. A licença vale um ano e não existe cobrança automática. Para renovar, é só comprar de novo dentro do GSCASH, e o novo ano soma ao tempo que ainda restava." } },
+        { "@type": "Question", "name": "Como faço o pagamento?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Dentro do próprio GSCASH, por Pix ou cartão de crédito à vista. A licença ativa assim que o pagamento é aprovado e vale no navegador e no programa para Windows." } }
+      ]
     }
   ]
 }
 </script>
-<link rel="stylesheet" href="app/css/fonts.css?v=4eb19f8">
+<link rel="stylesheet" href="app/css/fonts.css?v=ee75a87">
 <style>
   /* página pública do GSCASH: o que é, preço e onde usar (também é a "página inicial" do login com Google) */
   :root { --bg:#F3EFE4; --surface:#FDFCF8; --surface-2:#F6F3EB; --border:#ECE7DA; --border-strong:#DDD7C7;
@@ -156,6 +173,22 @@
   .preco-caixa .acoes { margin-top:0; }
   .preco-caixa .btn { flex:1; }
   .pix { margin-top:14px; color:var(--muted); font-size:14px; }
+  .por-mes { margin:8px 0 0; color:var(--text-2); font-size:15px; }
+  .por-mes b { color:var(--text); }
+
+  /* dúvidas */
+  .duvidas { max-width:760px; margin:0 auto; background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:4px 26px; }
+  .duvidas details { border-bottom:1px solid var(--border); }
+  .duvidas details:last-child { border-bottom:0; }
+  .duvidas summary { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:20px 0; cursor:pointer; list-style:none;
+    font-size:16.5px; font-weight:600; }
+  .duvidas summary::-webkit-details-marker { display:none; }
+  .duvidas summary svg.i { color:var(--muted); transition:transform .2s; }
+  .duvidas details[open] summary svg.i { transform:rotate(180deg); }
+  .duvidas summary:hover { color:var(--primary); }
+  .duvidas p { margin:-6px 0 20px; padding-right:36px; color:var(--text-2); font-size:15.5px; }
+  .mais-duvida { margin:22px 0 0; text-align:center; color:var(--text-2); font-size:15px; }
+  .mais-duvida a { color:var(--primary); font-weight:600; }
 
   footer { border-top:1px solid var(--border-strong); padding:28px 0 40px; color:var(--muted); font-size:14px; }
   footer .faixa { display:flex; justify-content:space-between; flex-wrap:wrap; gap:12px; }
@@ -172,6 +205,8 @@
     section { padding:52px 0; }
     .lado { flex-direction:column; }
     .preco-caixa { padding:26px 20px; }
+    .duvidas { padding:4px 18px; }
+    .duvidas p { padding-right:0; }
     footer .faixa { flex-direction:column; }
   }
 </style>
@@ -187,6 +222,7 @@
     <nav>
       <a class="lk" href="#recursos">Recursos</a>
       <a class="lk" href="#preco">Preço</a>
+      <a class="lk" href="#duvidas">Dúvidas</a>
       <a class="btn btn-primario" href="app/entrar.html">Entrar</a>
     </nav>
   </div>
@@ -268,8 +304,9 @@
       <h2>Um preço só, por ano</h2>
       <p class="intro">Teste por 7 dias. Se gostar, ative a licença e continue de onde parou.</p>
       <div class="preco-caixa">
-        <span class="promo">Promoção</span>
+        <span class="promo">Promoção até 30/11</span>
         <div class="valor"><s>R$ 70</s>R$ 50<small> / ano</small></div>
+        <p class="por-mes">Dá menos de <b>R$ 4,20 por mês</b></p>
         <ul>
           <li><svg class="i" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Todos os recursos, sem limite de lançamentos</li>
           <li><svg class="i" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Vale no navegador e no programa para Windows</li>
@@ -281,6 +318,41 @@
         </div>
         <p class="pix">Pagamento por Pix ou cartão, dentro do GSCASH. A licença ativa na hora.</p>
       </div>
+    </div>
+  </section>
+
+  <!-- as mesmas perguntas estão na ficha do Google (FAQPage, no topo): mudou aqui, muda lá -->
+  <section id="duvidas" style="padding-top:0">
+    <div class="faixa">
+      <h2>Dúvidas frequentes</h2>
+      <p class="intro">O que as pessoas mais perguntam antes de começar.</p>
+      <div class="duvidas">
+        <details>
+          <summary>O que acontece depois dos 7 dias grátis?<svg class="i" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></summary>
+          <p>Nada some. Sem a licença, o GSCASH fica só para consulta: você vê tudo o que lançou e gera relatórios, mas não lança nada novo. Ative a licença quando quiser e continue de onde parou.</p>
+        </details>
+        <details>
+          <summary>O GSCASH se conecta ao meu banco?<svg class="i" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></summary>
+          <p>Não. Ele nunca pede a senha do banco nem mexe na sua conta bancária. Você lança cada gasto em poucos segundos ou importa o extrato que o banco fornece, em OFX, CSV ou planilha do Excel.</p>
+        </details>
+        <details>
+          <summary>Funciona no celular?<svg class="i" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></summary>
+          <p>Sim, pelo navegador do celular, sem instalar nada. Se preferir, coloque o GSCASH na tela inicial e ele abre como um aplicativo. É a mesma conta do computador.</p>
+        </details>
+        <details>
+          <summary>Meus dados estão seguros?<svg class="i" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></summary>
+          <p>Seus dados ficam guardados na sua conta, em servidores no Brasil, e cada conta só enxerga os próprios dados. A conexão é protegida e você pode ligar a verificação em duas etapas nas Configurações.</p>
+        </details>
+        <details>
+          <summary>A licença renova sozinha?<svg class="i" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></summary>
+          <p>Não. A licença vale um ano e não existe cobrança automática. Para renovar, é só comprar de novo dentro do GSCASH, e o novo ano soma ao tempo que ainda restava.</p>
+        </details>
+        <details>
+          <summary>Como faço o pagamento?<svg class="i" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></summary>
+          <p>Dentro do próprio GSCASH, por Pix ou cartão de crédito à vista. A licença ativa assim que o pagamento é aprovado e vale no navegador e no programa para Windows.</p>
+        </details>
+      </div>
+      <p class="mais-duvida">Ficou alguma dúvida? Escreva para <a href="mailto:suporte.gscash@gmail.com">suporte.gscash@gmail.com</a></p>
     </div>
   </section>
 </main>
@@ -295,6 +367,6 @@
   </div>
 </footer>
 
-<script src="app/js/baixar.js?v=4eb19f8"></script>
+<script src="app/js/baixar.js?v=ee75a87"></script>
 </body>
 </html>
