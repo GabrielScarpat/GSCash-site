@@ -161,14 +161,12 @@
   .tx .tile { display: grid; width: 38px; height: 38px; border-radius: 11px; flex-shrink: 0; }
   .tx .tile svg { width: 18px; height: 18px; }
   .tx-title { font-size: 15px; font-weight: 600; }
-  /* uma linha só: os pedaços encolhem com "…" no fim, com o mesmo espaço entre eles em qualquer lista */
-  .tx-meta { flex-wrap: nowrap; gap: 4px; overflow: hidden; white-space: nowrap; font-size: 12.5px; color: var(--muted); }
-  /* só o primeiro pedaço (categoria › subcategoria) encolhe; na transferência, a descrição do fim */
-  .tx-meta > * { flex-shrink: 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .tx-meta > :first-child { flex-shrink: 1; }
-  .tx-transfer .tx-meta > :first-child { flex-shrink: 0; }
-  .tx-transfer .tx-meta > :last-child { flex-shrink: 1; }
-  .tx-meta .caminho { display: block; }
+  /* duas linhas: a categoria inteira em cima; carteira, data e selos embaixo (nada é cortado com "…") */
+  .tx-meta { flex-wrap: wrap; gap: 1px 4px; font-size: 12.5px; color: var(--muted); }
+  .tx-meta > * { min-width: 0; }
+  .tx-meta > :first-child { flex-basis: 100%; }
+  .tx-meta > .sep:nth-child(2) { display: none; }
+  .tx-meta .caminho { display: inline; }
   .tx-meta .caminho svg { display: inline; vertical-align: -1px; margin: 0 1px; }
   .tx-meta .rota { display: inline-flex; align-items: center; gap: 3px; }
   .tx-meta svg { width: 11px; height: 11px; flex-shrink: 0; }
@@ -301,3 +299,12 @@
 .lembrete-aviso { display: flex; gap: 10px; padding: 12px 14px; border-radius: 12px; background: var(--primary-soft); color: var(--primary);
   font-size: 14.5px; line-height: 1.45; }
 .lembrete-aviso svg { width: 18px; height: 18px; flex-shrink: 0; margin-top: 2px; }
+
+/* celular: datas e valores nunca quebram em duas linhas */
+@media (max-width: 640px) {
+  .fat-lista button { gap: 8px; padding-left: 12px; padding-right: 12px; }
+  .fat-lista .mes { font-size: 15px; white-space: nowrap; }
+  .fat-lista .mes small { font-size: 13px; }
+  .fat-lista .v { min-width: 0; font-size: 15px; white-space: nowrap; }
+  .card-head .card-sub { white-space: nowrap; flex-shrink: 0; }
+}
