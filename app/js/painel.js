@@ -268,11 +268,15 @@
     }
 
     const W = Math.max(320, caixa.clientWidth);
-    const H = 300, ml = 60, mb = 52, mt = 12;
+    // celular: margem esquerda menor, para sobrar mais largura às barras
+    const H = 300, ml = W < 480 ? 46 : 60, mb = 52, mt = 12;
     const { max, passo } = escalaY(Math.max(...dados.map(d => Math.max(d.entrou, d.saiu))));
     const y = v => mt + (H - mt - mb) * (1 - v / max);
     const grupo = (W - ml) / dados.length;
-    const bw = Math.max(6, Math.min(34, grupo * 0.24));
+    const bw = Math.max(5, Math.min(34, grupo * 0.24));
+    // grupo estreito (12 meses no celular): os nomes dos meses não cabem todos, então aparece um sim, um não
+    // (sempre o último, que é o mês atual)
+    const passoRotulo = grupo < 40 ? 2 : 1;
 
     const barra = (x, v, cor, parcial) => {
       if (!v) return '';
@@ -295,7 +299,8 @@
       svg += barra(centro - bw - 1, d.entrou, 'var(--entrou)', d.parcial);
       svg += barra(centro + 1, d.saiu, 'var(--saiu)', d.parcial);
       svg += `<g class="mes ${d.parcial ? 'atual' : ''}" pointer-events="none">
-        <text x="${centro}" y="${H - mb + 22}" text-anchor="middle">${d.rotulo}${d.parcial && dados.length <= 6 ? ' (parcial)' : ''}</text>
+        ${(dados.length - 1 - i) % passoRotulo === 0
+          ? `<text x="${centro}" y="${H - mb + 22}" text-anchor="middle">${d.rotulo}${d.parcial && dados.length <= 6 ? ' (parcial)' : ''}</text>` : ''}
         ${dados.length <= 6 && (d.entrou || d.saiu)
           ? `<text class="sob" x="${centro}" y="${H - mb + 40}" text-anchor="middle">${sobra < 0 ? 'faltou' : 'sobrou'} ${GS.moedaInteira(Math.abs(sobra))}</text>` : ''}
       </g>`;
