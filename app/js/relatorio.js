@@ -403,5 +403,6 @@ window.GS = window.GS || {};
     });
   }
 
-  GS.relatorio = { abrir };
+  // pedaços que o relatório por categoria (js/relatorio-categorias.js) reaproveita
+  GS.relatorio = { abrir, _comum: { salvar, avisoSalvo, opcaoHtml, comparar, nomeAnterior, rodapeFolha, marca, moeda, pct } };
 })();

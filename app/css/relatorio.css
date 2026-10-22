@@ -163,3 +163,49 @@
   #relatorio-impressao .folha:last-child { break-after: auto; }
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
+
+/* ---------- Relatório por categoria (js/relatorio-categorias.js) ---------- */
+
+.rc-topo { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 8px; }
+.rc-topo .field-label { margin: 0 !important; }
+.rc-topo .link-btn { font-size: 14px; font-weight: 600; }
+.rc-arvore { border: 1px solid var(--border); border-radius: 14px; background: var(--surface); overflow: hidden; max-height: 340px; overflow-y: auto; }
+.rc-grupo { padding: 8px 12px 4px; font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); background: var(--surface-2); border-top: 1px solid var(--border); }
+.rc-grupo:first-child { border-top: 0; }
+.rc-cat { display: flex; align-items: center; border-top: 1px solid var(--border); }
+.rc-grupo + .rc-cat { border-top: 0; }
+.rc-linha, .rc-sub { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.rc-linha { flex: 1; min-width: 0; padding: 10px 4px 10px 12px; }
+.rc-linha input, .rc-sub input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.rc-linha .rel-caixa, .rc-sub .rel-caixa { margin-top: 0; }
+.rc-linha input:checked + .rel-caixa, .rc-sub input:checked + .rel-caixa { background: var(--primary); border-color: var(--primary); color: #fff; }
+.rc-linha input:focus-visible + .rel-caixa, .rc-sub input:focus-visible + .rel-caixa { outline: 2px solid var(--primary); outline-offset: 2px; }
+.rc-linha .nome { flex: 1; min-width: 0; font-weight: 500; font-size: 14.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rc-linha .valor, .rc-sub .valor { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rc-seta { flex: none; display: grid; place-items: center; width: 40px; align-self: stretch; color: var(--muted); }
+.rc-seta svg { width: 16px; height: 16px; transition: transform .15s; }
+.rc-seta.aberta svg { transform: rotate(180deg); }
+.rc-seta.vazia { pointer-events: none; }
+.rc-subs { background: var(--surface-2); padding: 2px 12px 6px 34px; border-top: 1px solid var(--border); }
+.rc-sub { padding: 6px 0; gap: 8px; font-size: 13.5px; }
+.rc-sub .nome { flex: 1; min-width: 0; color: var(--text-2); }
+.rc-resumo { margin: 8px 0 0; font-size: 13.5px; color: var(--text-2); }
+.rc-vazio { color: var(--text-2); margin: auto; }
+
+/* folha: seção de cada categoria */
+.f-cat { margin-top: 22px; }
+.f-cat h3 { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin: 0 0 8px; padding-bottom: 6px; border-bottom: 1px solid var(--border-strong); font-size: 16px; font-weight: 600; color: var(--text); }
+.f-cat h3 em { font-style: normal; font-weight: 400; font-size: 11.5px; color: var(--muted); }
+.f-cat h3 span { font-size: 11.5px; font-weight: 400; color: var(--muted); text-align: right; }
+.f-cat h3 span b.bom { color: var(--success); } .f-cat h3 span b.ruim { color: var(--danger); }
+.f-mini-grafico { display: flex; align-items: flex-end; gap: 8px; height: 56px; margin: 6px 0 4px; }
+.f-mini-grafico i { flex: 1; background: var(--primary); border-radius: 3px 3px 0 0; opacity: .6; }
+.f-mini-grafico i.atual { opacity: 1; }
+.f-mini-leg { display: flex; gap: 8px; margin-bottom: 8px; font-size: 10.5px; color: var(--muted); }
+.f-mini-leg span { flex: 1; text-align: center; }
+.f-lanc { margin-top: 8px; }
+.f-lanc td { font-size: 12px; }
+
+@media (max-width: 640px) {
+  .rel-cat .rel-previa { display: none; }
+}

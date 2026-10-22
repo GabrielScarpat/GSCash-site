@@ -527,6 +527,8 @@
 
   $('novaCategoria').addEventListener('click', () => abrirForm());
   $('baixarSugeridas').addEventListener('click', abrirSugeridas);
+  // relatório em PDF das categorias escolhidas, do mês que está na tela (js/relatorio-categorias.js)
+  $('relatorioCategorias').addEventListener('click', () => GS.relatorioCategorias.abrir(mesSel));
 
   const somarMes = n => { const [a, m] = mesSel.split('-').map(Number); return GS.isoMes(new Date(a, m - 1 + n, 1)); };
   $('mesAnterior').addEventListener('click', () => irParaMes(somarMes(-1)));
