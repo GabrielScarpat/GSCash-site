@@ -202,6 +202,15 @@
 .rc-nada { margin: 0; padding: 16px 12px; color: var(--text-2); font-size: 14px; }
 .rc-arvore mark { background: #FBE9A8; color: inherit; border-radius: 3px; padding: 0 1px; }
 .rc-aninhada { margin: 4px 0 4px 30px; }
+.rc-aviso-lista { margin: 0 0 10px; padding: 9px 12px; border-radius: 10px; background: var(--surface-2); color: var(--text-2); font-size: 13px; }
+.rc-nivel-rotulo { margin: 14px 0 6px; font-size: 14px; color: var(--text-2); }
+.rc-niveis { display: flex; max-width: 100%; border: 1px solid var(--border-strong); border-radius: 10px; overflow: hidden; background: var(--surface); }
+.rc-niveis button { flex: 1 1 auto; min-width: 0; padding: 8px 10px; font-size: 14px; border-left: 1px solid var(--border-strong); color: var(--text); }
+.rc-niveis button:first-child { border-left: 0; }
+.rc-niveis button[aria-checked="true"] { background: var(--primary); color: #fff; font-weight: 600; }
+.rc-niveis button:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }
+.rc-padrao { display: inline; }
+.rc-padrao.hidden { display: none; }
 
 /* folha: seção de cada categoria */
 .f-cat { margin-top: 22px; }
@@ -219,6 +228,13 @@
 .f-mini-grafico i.parcial { opacity: .35; }
 .f-mini-vazio { display: grid; place-items: center; height: 56px; margin: 6px 0 8px; border: 1px dashed var(--border-strong); border-radius: 8px; color: var(--muted); font-size: 11.5px; }
 .f-lanc { margin-top: 8px; }
+.f-lanc-tit { margin: 10px 0 0; font-size: 11.5px; font-weight: 600; color: var(--text-2); }
+.f-orc { margin: 2px 0 8px; }
+.f-orc .trilho { height: 7px; border-radius: 4px; background: var(--surface-2); overflow: hidden; }
+.f-orc .trilho i { display: block; height: 100%; background: var(--primary); border-radius: 4px; }
+.f-orc.passou .trilho i { background: var(--danger); }
+.f-orc small { display: block; margin-top: 4px; font-size: 11.5px; color: var(--muted); }
+.f-orc.passou small { color: var(--danger); }
 .f-lanc td { font-size: 12px; }
 
 @media (max-width: 640px) {

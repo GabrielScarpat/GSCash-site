@@ -303,7 +303,7 @@ window.GS = window.GS || {};
     const op = { comparar: true, faturas: d.temCartao, lista: n > 0 };
     const anterior = nomeAnterior(info.modo, info.anterior);
     // o detalhe por categoria vale para qualquer período do Painel (js/relatorio-categorias.js)
-    const detalhe = GS.relatorioCategorias && ctx.categorias.length ? GS.relatorioCategorias.detalhe(ctx, info, () => pintar()) : null;
+    const detalhe = GS.relatorioCategorias && ctx.categorias.length ? await GS.relatorioCategorias.detalhe(ctx, info, () => pintar()) : null;
     op.detalhar = false;
     op.detalheCat = detalhe;
     const textoDetalhe = detalhe ? 'Uma seção para cada categoria: total, evolução e lançamentos.'
@@ -322,11 +322,13 @@ window.GS = window.GS || {};
           ${d.temCartao ? opcaoHtml('faturas', 'Faturas de cartão', 'Faturas que fecham ou vencem no período.') : ''}
           ${opcaoHtml('lista', 'Lista de transações', n ? `Uma página a mais com ${n === 1 ? 'a transação' : `todas as ${n} transações`} do período.` : 'Nenhuma transação neste período.', { desativada: !n })}
           ${opcaoHtml('detalhar', 'Detalhar por categoria', textoDetalhe, { marcada: false, desativada: !detalhe })}
-          <div class="rc-aninhada hidden" data-detalhe></div>
+          <div class="rc-aninhada hidden" data-detalhe>
+            <p class="rc-aviso-lista hidden" data-aviso-lista>A lista de transações foi desmarcada: o detalhe por categoria já traz os lançamentos.</p>
+          </div>
         </div>
         <div>
           <span class="field-label">${GS.noDesktop ? 'Será salvo em' : 'Como salvar'}</span>
-          <div class="rel-destino">${GS.noDesktop
+          <div class="rel-destino"><b data-paginas></b> · ${GS.noDesktop
             ? `Documentos › GSCASH › Relatórios<br><b>${esc(d.arquivo)}.pdf</b>`
             : 'Abre a janela de impressão: escolha <b>Salvar como PDF</b>.'}</div>
         </div>
@@ -336,14 +338,24 @@ window.GS = window.GS || {};
     const previa = corpo.querySelector('.rel-previa');
     function pintar() {
       previa.innerHTML = montarFolhas(d, op);
+      const n = previa.querySelectorAll('.folha').length;
+      corpo.querySelector('[data-paginas]').textContent = GS.plural(n, 'página', 'páginas');
       const nota = corpo.querySelector('[data-nota-periodo]');
       if (nota) nota.textContent = `o mesmo selecionado no Painel${op.detalhar && detalhe ? ` · ${detalhe.nota}` : ''}`;
     }
+    const avisoLista = corpo.querySelector('[data-aviso-lista]');
     if (detalhe) corpo.querySelector('[data-detalhe]').append(detalhe.el);
     pintar();
     corpo.querySelectorAll('[data-opcao]').forEach(c => c.addEventListener('change', () => {
       op[c.dataset.opcao] = c.checked;
-      if (c.dataset.opcao === 'detalhar') corpo.querySelector('[data-detalhe]').classList.toggle('hidden', !c.checked);
+      if (c.dataset.opcao === 'detalhar') {
+        corpo.querySelector('[data-detalhe]').classList.toggle('hidden', !c.checked);
+        // o detalhe por categoria já traz os lançamentos: a lista geral não repete tudo (dá para marcar de novo)
+        const lista = corpo.querySelector('[data-opcao=lista]');
+        if (c.checked && op.lista && lista) { op.lista = false; lista.checked = false; avisoLista.classList.remove('hidden'); }
+        if (!c.checked) avisoLista.classList.add('hidden');
+      }
+      if (c.dataset.opcao === 'lista' && c.checked) avisoLista.classList.add('hidden');
       pintar();
     }));
 

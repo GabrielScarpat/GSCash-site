@@ -16,10 +16,11 @@ window.GS = window.GS || {};
 
   const SEM_SUB = '__sem';           // lançamentos da categoria que não têm subcategoria
   const MESES_GRAFICO = 6;
+  const LIMITE_MAIORES = 10;        // nível "Os 10 maiores" dos lançamentos
   // alturas aproximadas (px) para repartir o conteúdo nas folhas A4 (a folha tem 1123 px)
   const ORCAMENTO_1 = 640;           // primeira folha: cabeçalho e resumo ocupam uma parte
   const ORCAMENTO_N = 830;
-  const H = { cabecalho: 46, grafico: 104, tabHead: 30, tabLinha: 29, tabFim: 38, linhaLanc: 29, lancExtra: 15, espaco: 22 };
+  const H = { orcamento: 26, cabecalho: 46, grafico: 104, tabHead: 30, tabLinha: 29, tabFim: 38, linhaLanc: 29, lancExtra: 15, espaco: 22 };
 
   const nomeMes = iso => GS.mesAnoDeIso(iso).split(' ')[0];
 
@@ -113,7 +114,7 @@ window.GS = window.GS || {};
       }));
       const semSub = dela.some(t => !t.subcategoriaId || !c.subcategorias.some(s => s.id === t.subcategoriaId));
       if (subs.length && semSub) subs.push({ id: SEM_SUB, nome: 'Sem subcategoria', total: doMes.filter(t => !t.subcategoriaId || !c.subcategorias.some(s => s.id === t.subcategoriaId)).reduce((x, t) => x + t.valor, 0) });
-      return { id: c.id, nome: c.nome, tipo, total: GS.calc.somar(doMes), qtd: doMes.length, subs };
+      return { id: c.id, nome: c.nome, tipo, orcamento: tipo === 'despesa' && c.orcamento > 0 ? c.orcamento : 0, total: GS.calc.somar(doMes), qtd: doMes.length, subs };
     }).sort((a, b) => (a.tipo === b.tipo ? 0 : a.tipo === 'despesa' ? -1 : 1) || b.total - a.total || a.nome.localeCompare(b.nome));
   }
 
@@ -143,10 +144,18 @@ window.GS = window.GS || {};
       })).sort((x, y) => y.total - x.total);
       return { cat: c, total, anterior, barras, subs, lancamentos: mesLanc, parcial: c.subs.length ? `${escolhidas.size} de ${c.subs.length} subcategorias` : '' };
     });
-    return { per, secoes, saiuMes, entrouMes };
+    // quantas categorias existem (com movimento ou escolhidas) e quantas entraram, para os totais do cabeçalho
+    const conta = tipo => ({
+      de: cats.filter(c => c.tipo === tipo && (c.qtd > 0 || sel.has(c.id))).length,
+      n: secoes.filter(x => x.cat.tipo === tipo).length,
+    });
+    return { per, secoes, saiuMes, entrouMes, categoriasSaiu: conta('despesa'), categoriasEntrou: conta('receita') };
   }
 
   /* ---------- Folhas ---------- */
+
+  // "Saiu · 3 de 8 categorias": diz quantas categorias entraram nos totais
+  const rotuloKpi = (base, { n, de }) => !de ? base : n === de ? `${base} · ${de > 1 ? 'todas as categorias' : '1 categoria'}` : `${base} · ${n} de ${de} categorias`;
 
   // extra.embutido: as folhas entram no fim do relatório do Painel (sem a capa, numeração continua)
   function folhasDe(d, op, extra) {
@@ -167,13 +176,17 @@ window.GS = window.GS || {};
       const cmp = op.comparar ? comparar(s.total, s.anterior, nome, c.tipo === 'receita') : null;
       const maior = Math.max(...s.barras.map(b => b.total), 1);
       const comBarras = op.evolucao && s.barras.length > 0;
+      // orçamento mensal da categoria inteira (só quando o período é um mês, como no relatório do Painel)
+      const orcamento = per.modo === 'mes' && c.orcamento > 0 ? `
+        <div class="f-orc ${c.total > c.orcamento ? 'passou' : ''}"><div class="trilho"><i style="width:${Math.min(100, (c.total / c.orcamento) * 100)}%"></i></div>
+          <small>${c.total > c.orcamento ? `Passou ${moeda(c.total - c.orcamento)} do limite de ${moeda(c.orcamento)}` : `${pct(c.total, c.orcamento)}% do orçamento de ${moeda(c.orcamento)} · restam ${moeda(c.orcamento - c.total)}`}</small></div>` : '';
       const grafico = !comBarras ? '' : s.barras.every(b => !b.total) ? `<div class="f-mini-vazio">Sem movimento ${per.semMov}</div>` : `
         <div class="f-mini-grafico">${s.barras.map((b, i) => `<i class="${i === s.barras.length - 1 ? 'atual' : ''}${b.parcial ? ' parcial' : ''}" style="height:${Math.max(b.total ? 6 : 0, (b.total / maior) * 100)}%" title="${esc(moeda(b.total))}"></i>`).join('')}</div>
         <div class="f-mini-leg">${s.barras.map(b => `<span${b.futuro ? ' class="fut"' : ''}>${esc(b.rotulo)}</span>`).join('')}</div>`;
       itens.push({
-        h: H.espaco + H.cabecalho + (comBarras ? H.grafico : 0),
+        h: H.espaco + H.cabecalho + (comBarras ? H.grafico : 0) + (orcamento ? H.orcamento : 0),
         html: `<div class="f-cat"><h3>${esc(c.nome)}${s.parcial ? ` <em>${s.parcial}</em>` : ''}
-          <span>${moeda(s.total)}${base ? ` · ${pct(s.total, base)}% ${c.tipo === 'despesa' ? 'do que saiu' : 'do que entrou'}` : ''}${cmp && cmp.texto ? ` · <b class="${cmp.classe}">${cmp.texto}</b>` : ''}</span></h3>${grafico}</div>`,
+          <span>${moeda(s.total)}${base ? ` · ${pct(s.total, base)}% ${c.tipo === 'despesa' ? 'do que saiu' : 'do que entrou'}` : ''}${cmp && cmp.texto ? ` · <b class="${cmp.classe}">${cmp.texto}</b>` : ''}</span></h3>${orcamento}${grafico}</div>`,
       });
       if (!s.lancamentos.length) {
         itens.push({ h: H.tabLinha, html: `<p class="f-vazio">Sem lançamentos neste ${per.que}.</p>` });
@@ -188,10 +201,16 @@ window.GS = window.GS || {};
             <tfoot><tr><td>Total</td><td></td><td class="r">${moeda(s.total)}</td><td class="r">100%</td></tr></tfoot></table>`,
         });
       }
-      if (op.lista) {
+      const nivel = op.nivel || 'todos';
+      if (nivel !== 'nenhum') {
         const comSub = c.subs.length > 0;
         const grupo = `l${c.id}`;
-        s.lancamentos.forEach(t => {
+        let lanc = s.lancamentos;
+        if (nivel === 'maiores' && lanc.length > LIMITE_MAIORES) {
+          lanc = [...lanc].sort((x, y) => y.valor - x.valor).slice(0, LIMITE_MAIORES);
+          itens.push({ h: H.tabHead, html: `<p class="f-lanc-tit">Os ${LIMITE_MAIORES} maiores de ${GS.plural(s.lancamentos.length, 'lançamento', 'lançamentos')}</p>` });
+        }
+        lanc.forEach(t => {
           const sub = comSub ? (c.subs.find(x => x.id === (c.subs.some(y => y.id === t.subcategoriaId) ? t.subcategoriaId : SEM_SUB)) || {}).nome || '' : '';
           const desc = t.descricao ? ` <span class="f-lim">· ${esc(t.descricao)}</span>` : '';
           itens.push({
@@ -235,8 +254,8 @@ window.GS = window.GS || {};
         ${n === 0 && !emb ? `
         <div class="f-head">${marca}<div class="f-tit"><small>Relatório por categoria</small><strong>${esc(titulo)}</strong><span>${per.modo === 'mes' ? `${esc(per.rotulo)} · ` : ''}gerado em ${GS.dataMedia(hoje)}</span></div></div>
         <div class="f-kpis">
-          <div class="f-kpi"><small><i class="saiu"></i>Saiu (categorias escolhidas)</small><strong>${moeda(saiu)}</strong><span>${d.saiuMes ? `${pct(saiu, d.saiuMes)}% do que saiu no ${per.que}` : ''}</span></div>
-          <div class="f-kpi"><small><i class="entrou"></i>Entrou (categorias escolhidas)</small><strong>${moeda(entrou)}</strong><span>${d.entrouMes ? `${pct(entrou, d.entrouMes)}% do que entrou no ${per.que}` : ''}</span></div>
+          <div class="f-kpi"><small><i class="saiu"></i>${rotuloKpi('Saiu', d.categoriasSaiu)}</small><strong>${moeda(saiu)}</strong><span>${d.saiuMes ? `${pct(saiu, d.saiuMes)}% do que saiu no ${per.que}` : ''}</span></div>
+          <div class="f-kpi"><small><i class="entrou"></i>${rotuloKpi('Entrou', d.categoriasEntrou)}</small><strong>${moeda(entrou)}</strong><span>${d.entrouMes ? `${pct(entrou, d.entrouMes)}% do que entrou no ${per.que}` : ''}</span></div>
           <div class="f-kpi"><small>Lançamentos</small><strong>${lancTotal}</strong><span>${GS.plural(d.secoes.length, 'categoria', 'categorias')}</span></div>
         </div>` : `<div class="f-head p2">${marca}<div class="f-tit"><strong>${esc(titulo)} · por categoria</strong></div></div>`}
         <div class="f-sec">${corpoDe(lista)}</div>
@@ -261,6 +280,53 @@ window.GS = window.GS || {};
     const sel = new Map();
     cats.filter(c => c.qtd > 0).forEach(c => sel.set(c.id, new Set(c.subs.map(s => s.id))));
     return sel;
+  }
+
+  const ehPadrao = (cats, sel) => {
+    const com = cats.filter(c => c.qtd > 0);
+    return com.length > 0 && sel.size === com.length && com.every(c => sel.has(c.id) && sel.get(c.id).size === c.subs.length);
+  };
+
+  /* A última escolha (categorias e nível de lançamentos) fica na conta, nas preferências, e vale nas duas
+     janelas. Se a escolha era a padrão, guarda só o nível: assim o padrão acompanha cada período. */
+  const CHAVE_PREF = 'relatorioCategorias';
+  async function lerEscolha(cats, sel) {
+    let salvo = null;
+    try { salvo = (await GS.api.obterPreferencias())[CHAVE_PREF] || null; } catch (e) { /* sem preferências: usa o padrão */ }
+    const nivel = salvo && ['nenhum', 'maiores', 'todos'].includes(salvo.nivel) ? salvo.nivel : 'todos';
+    if (salvo && salvo.sel) {
+      const lembradas = new Map();
+      Object.entries(salvo.sel).forEach(([id, subs]) => {
+        const c = cats.find(x => x.id === id);
+        if (!c) return;
+        const ids = new Set((subs || []).filter(sid => c.subs.some(x => x.id === sid)));
+        if (!c.subs.length || ids.size) lembradas.set(id, ids);
+      });
+      if (lembradas.size) { sel.clear(); lembradas.forEach((v, k) => sel.set(k, v)); }
+    }
+    return nivel;
+  }
+  function guardarEscolha(cats, sel, nivel) {
+    const valor = { nivel, sel: ehPadrao(cats, sel) ? null : Object.fromEntries([...sel].map(([id, subs]) => [id, [...subs]])) };
+    GS.api.salvarPreferencia(CHAVE_PREF, valor).catch(() => { /* só uma lembrança: não atrapalha o relatório */ });
+  }
+
+  // "Lançamentos de cada categoria: Nenhum · Os 10 maiores · Todos"
+  function criarNiveis(valor, aoMudar) {
+    const el = GS.el('div', 'rc-niveis');
+    el.setAttribute('role', 'radiogroup');
+    el.setAttribute('aria-label', 'Lançamentos de cada categoria');
+    el.innerHTML = [['nenhum', 'Nenhum'], ['maiores', `Os ${LIMITE_MAIORES} maiores`], ['todos', 'Todos']].map(([id, nome]) =>
+      `<button type="button" role="radio" data-nivel="${id}" aria-checked="${id === valor}">${nome}</button>`).join('');
+    let atual = valor;
+    el.addEventListener('click', e => {
+      const b = e.target.closest('[data-nivel]');
+      if (!b || b.dataset.nivel === atual) return;
+      atual = b.dataset.nivel;
+      el.querySelectorAll('[data-nivel]').forEach(x => x.setAttribute('aria-checked', x.dataset.nivel === atual));
+      aoMudar(atual);
+    });
+    return { el, valor: () => atual };
   }
 
   function resumoHtml(ctx, per, cats, sel) {
@@ -292,10 +358,10 @@ window.GS = window.GS || {};
 
   /* A linha "Todas as categorias · Escolher quais" e, escondida atrás dela, a lista com pesquisa.
      `sel` é alterado aqui dentro; `aoMudar` roda depois de cada mudança. */
-  function criarEscolha({ cats, sel, per, resumo, aoMudar }) {
+  function criarEscolha({ cats, sel, resumo, aoMudar }) {
     const el = GS.el('div', 'rc-escolha');
     el.innerHTML = `
-      <p class="rc-frase"><span data-frase></span><button type="button" class="link-btn rc-alternar" data-alternar aria-expanded="false"><span>Escolher quais</span>${icone('chevron-down')}</button></p>
+      <p class="rc-frase"><span data-frase></span><button type="button" class="link-btn rc-alternar" data-alternar aria-expanded="false"><span>Escolher quais</span>${icone('chevron-down')}</button><span class="rc-padrao hidden" data-padrao-lugar> · <button type="button" class="link-btn" data-padrao>Voltar ao padrão</button></span></p>
       <div class="rc-painel hidden" data-painel>
         <div class="input rc-busca">${icone('search')}<input type="search" data-busca placeholder="Pesquisar categoria ou subcategoria" autocomplete="off" aria-label="Pesquisar categoria ou subcategoria"></div>
         <div class="rc-topo"><span class="rc-quem" data-quem></span>
@@ -308,10 +374,6 @@ window.GS = window.GS || {};
     let q = '';
 
     const visiveis = () => !q ? cats : cats.filter(c => norm(c.nome).includes(q) || c.subs.some(s => norm(s.nome).includes(q)));
-    const padrao = () => {
-      const com = cats.filter(c => c.qtd > 0);
-      return com.length > 0 && sel.size === com.length && com.every(c => sel.has(c.id) && sel.get(c.id).size === c.subs.length);
-    };
 
     const desenharArvore = () => {
       const lista = visiveis();
@@ -323,9 +385,11 @@ window.GS = window.GS || {};
       }).join('');
     };
     const atualizar = () => {
-      $('[data-frase]').textContent = !sel.size ? 'Nenhuma categoria escolhida · '
-        : padrao() ? `Todas as categorias com movimento no ${per.que} · `
-        : `${GS.plural(sel.size, 'categoria escolhida', 'categorias escolhidas')} · `;
+      const padrao = ehPadrao(cats, sel);
+      $('[data-frase]').textContent = !sel.size ? 'Nenhuma categoria · '
+        : padrao ? 'Todas com movimento · '
+        : `${GS.plural(sel.size, 'categoria', 'categorias')} · `;
+      $('[data-padrao-lugar]').classList.toggle('hidden', padrao);
       $('[data-resumo]').innerHTML = resumo();
     };
     const mudou = () => { desenharArvore(); atualizar(); aoMudar(); };
@@ -360,6 +424,7 @@ window.GS = window.GS || {};
       abertas.has(b.dataset.abrir) ? abertas.delete(b.dataset.abrir) : abertas.add(b.dataset.abrir);
       desenharArvore();
     });
+    $('[data-padrao]').addEventListener('click', () => { sel.clear(); selecaoInicial(cats).forEach((v, k) => sel.set(k, v)); mudou(); });
     // com uma pesquisa na tela, "Marcar todas" e "Limpar" valem só para o que está na lista
     $('[data-todas]').addEventListener('click', () => { visiveis().forEach(c => sel.set(c.id, new Set(c.subs.map(s => s.id)))); mudou(); });
     $('[data-limpar]').addEventListener('click', () => { visiveis().forEach(c => sel.delete(c.id)); mudou(); });
@@ -372,14 +437,21 @@ window.GS = window.GS || {};
   /* ---------- No relatório do Painel (js/relatorio.js) ---------- */
 
   // devolve a escolha e as folhas que entram no fim do relatório do Painel, para o período que está na tela
-  function detalhe(ctx, info, aoMudar) {
+  async function detalhe(ctx, info, aoMudar) {
     const per = periodoDoPainel(info);
     const cats = montarCategorias(ctx, per);
     const sel = selecaoInicial(cats);
-    const escolha = criarEscolha({ cats, sel, per, resumo: () => resumoHtml(ctx, per, cats, sel), aoMudar });
-    const opcoes = op => ({ evolucao: true, lista: true, comparar: !!op.comparar });
+    let nivel = await lerEscolha(cats, sel);
+    const mudou = () => { guardarEscolha(cats, sel, nivel); aoMudar(); };
+    const escolha = criarEscolha({ cats, sel, resumo: () => resumoHtml(ctx, per, cats, sel), aoMudar: mudou });
+    const niveis = criarNiveis(nivel, v => { nivel = v; mudou(); });
+    const el = GS.el('div', 'rc-detalhe');
+    el.append(escolha.el);
+    el.insertAdjacentHTML('beforeend', '<p class="rc-nivel-rotulo">Lançamentos de cada categoria</p>');
+    el.append(niveis.el);
+    const opcoes = op => ({ evolucao: true, nivel, comparar: !!op.comparar });
     return {
-      el: escolha.el,
+      el,
       nota: per.nota,
       vazio: !cats.length,
       temEscolha: () => sel.size > 0,
@@ -396,7 +468,7 @@ window.GS = window.GS || {};
     const cats = montarCategorias(ctx, per);
     if (!cats.length) { GS.toast('Cadastre uma categoria para gerar o relatório.', 'erro'); return; }
     const sel = selecaoInicial(cats);
-    const op = { evolucao: true, lista: true, comparar: false };
+    const op = { evolucao: true, nivel: await lerEscolha(cats, sel), comparar: false };
     const arquivo = `GSCASH - Categorias - ${nomeMes(mes)} ${mes.slice(0, 4)}`;
 
     const corpo = GS.el('div', 'rel-corpo');
@@ -413,12 +485,13 @@ window.GS = window.GS || {};
         <div>
           <span class="field-label">Incluir</span>
           ${opcaoHtml('evolucao', 'Evolução mês a mês', `Barras dos últimos ${MESES_GRAFICO} meses de cada categoria.`)}
-          ${opcaoHtml('lista', 'Lista de lançamentos', 'Todos os lançamentos de cada categoria escolhida, com a descrição.')}
           ${opcaoHtml('comparar', 'Comparar com o mês anterior', 'Mostra quanto subiu ou desceu.', { marcada: false })}
+          <p class="rc-nivel-rotulo">Lançamentos de cada categoria</p>
+          <div data-niveis></div>
         </div>
         <div>
           <span class="field-label">${GS.noDesktop ? 'Será salvo em' : 'Como salvar'}</span>
-          <div class="rel-destino">${GS.noDesktop
+          <div class="rel-destino"><b data-paginas></b> · ${GS.noDesktop
             ? `Documentos › GSCASH › Relatórios<br><b>${esc(arquivo)}.pdf</b>`
             : 'Abre a janela de impressão: escolha <b>Salvar como PDF</b>.'}</div>
         </div>
@@ -431,11 +504,14 @@ window.GS = window.GS || {};
     const pintar = () => {
       const tem = sel.size > 0;
       previa.innerHTML = tem ? montarFolhas(montarDados(ctx, per, cats, sel), op) : '<p class="rc-vazio">Escolha uma categoria para ver a prévia.</p>';
+      const n = previa.querySelectorAll('.folha').length;
+      corpo.querySelector('[data-paginas]').textContent = n ? GS.plural(n, 'página', 'páginas') : 'Sem páginas';
       const botao = modal && modal.foot.querySelector('[data-salvar]');
       if (botao) botao.disabled = !tem;
     };
-    const escolha = criarEscolha({ cats, sel, per, resumo: () => resumoHtml(ctx, per, cats, sel), aoMudar: pintar });
+    const escolha = criarEscolha({ cats, sel, resumo: () => resumoHtml(ctx, per, cats, sel), aoMudar: () => { guardarEscolha(cats, sel, op.nivel); pintar(); } });
     corpo.querySelector('[data-escolha]').append(escolha.el);
+    corpo.querySelector('[data-niveis]').append(criarNiveis(op.nivel, v => { op.nivel = v; guardarEscolha(cats, sel, v); pintar(); }).el);
     corpo.querySelectorAll('[data-opcao]').forEach(c => c.addEventListener('change', () => { op[c.dataset.opcao] = c.checked; pintar(); }));
 
     modal = GS.abrirModal({
