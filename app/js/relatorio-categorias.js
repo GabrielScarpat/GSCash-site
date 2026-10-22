@@ -2,8 +2,9 @@
    GSCASH — relatório por categoria em PDF (Categorias › Relatório)
 
    A pessoa escolhe categorias e subcategorias; cada categoria vira uma seção
-   (total, evolução de 6 meses, subcategorias e lançamentos). O período é o mês
-   que está na tela Categorias. A janela, a prévia, o A4 e o salvar são os do
+   (total, evolução, subcategorias e lançamentos). Na tela Categorias o período
+   é o mês que está na tela; no Painel, qualquer período (Hoje, 7 dias, 30 dias,
+   Mês, Ano ou Personalizado). A janela, a prévia, o A4 e o salvar são os do
    relatório do Painel (js/relatorio.js).
    ========================================================= */
 
@@ -22,19 +23,86 @@ window.GS = window.GS || {};
 
   const nomeMes = iso => GS.mesAnoDeIso(iso).split(' ')[0];
 
-  /* ---------- Dados ---------- */
+  /* ---------- Período e barras do gráfico ---------- */
 
   const mesesAte = (mesIso, n) => {
     const [a, m] = mesIso.split('-').map(Number);
     return Array.from({ length: n }, (_, i) => GS.isoMes(new Date(a, m - 1 - (n - 1 - i), 1)));
   };
   const fimDoMes = mesIso => { const [a, m] = mesIso.split('-').map(Number); return GS.isoData(new Date(a, m, 0)); };
+  const abrev = dt => nomeMes(GS.isoMes(dt)).slice(0, 3);
+  const abrevMin = dt => abrev(dt).toLowerCase();
+
+  /* As barras de cada categoria cobrem o período escolhido, em escala que cabe no gráfico:
+     Mês: os últimos 6 meses · até 14 dias: por dia · até ~3 meses: por semana · mais: por mês
+     (por ano acima de 36 meses). Hoje (um dia só) não tem gráfico. */
+  function barrasDo(modo, inicio, fim) {
+    const hoje = GS.isoData(GS.hoje());
+    const dias = GS.diasEntre(inicio, fim) + 1;
+    const nova = (ini, f, rotulo, parcial) => ({ ini, fim: f, rotulo, parcial: !!parcial, futuro: ini > hoje });
+    if (dias === 1) return { barras: [], escala: '' };
+    if (modo === 'mes') {
+      return { escala: `os últimos ${MESES_GRAFICO} meses`, barras: mesesAte(GS.isoMes(inicio), MESES_GRAFICO).map(j => nova(`${j}-01`, fimDoMes(j), abrev(new Date(`${j}-01T12:00`)))) };
+    }
+    const barras = [];
+    if (dias <= 14) {
+      for (let i = 0; i < dias; i++) { const d = GS.somarDias(inicio, i); barras.push(nova(GS.isoData(d), GS.isoData(d), String(d.getDate()))); }
+      return { barras, escala: 'por dia' };
+    }
+    if (dias <= 92) {
+      for (let i = 0; i < dias; i += 7) {
+        const bi = GS.somarDias(inicio, i);
+        const bf = GS.somarDias(bi, 6) > fim ? fim : GS.somarDias(bi, 6);
+        const mesmo = bi.getMonth() === bf.getMonth();
+        const rotulo = bi.getDate() === bf.getDate() && mesmo ? `${bi.getDate()} ${abrevMin(bi)}` : mesmo ? `${bi.getDate()}–${bf.getDate()} ${abrevMin(bf)}` : `${bi.getDate()} ${abrevMin(bi)}`;
+        barras.push(nova(GS.isoData(bi), GS.isoData(bf), rotulo, GS.diasEntre(bi, bf) < 6));
+      }
+      return { barras, escala: 'por semana' };
+    }
+    const meses = (fim.getFullYear() - inicio.getFullYear()) * 12 + fim.getMonth() - inicio.getMonth() + 1;
+    const porAno = meses > 36;
+    const passo = porAno ? 12 : 1;
+    const mostrarAno = !porAno && inicio.getFullYear() !== fim.getFullYear();
+    for (let k = 0; k < (porAno ? fim.getFullYear() - inicio.getFullYear() + 1 : meses); k += 1) {
+      const bi0 = porAno ? new Date(inicio.getFullYear() + k, 0, 1) : new Date(inicio.getFullYear(), inicio.getMonth() + k * passo, 1);
+      const bf0 = porAno ? new Date(bi0.getFullYear(), 11, 31) : new Date(bi0.getFullYear(), bi0.getMonth() + 1, 0);
+      const bi = bi0 < inicio ? inicio : bi0, bf = bf0 > fim ? fim : bf0;
+      const rotulo = porAno ? String(bi0.getFullYear()) : `${abrev(bi0)}${mostrarAno ? `/${String(bi0.getFullYear()).slice(2)}` : ''}`;
+      barras.push(nova(GS.isoData(bi), GS.isoData(bf), rotulo, bi > bi0 || bf < bf0));
+    }
+    return { barras, escala: porAno ? 'por ano' : 'por mês' };
+  }
+
+  // o período do relatório: datas, textos, período anterior (para comparar) e barras do gráfico
+  function montarPeriodo({ modo, inicio, fim, anterior, rotulo }) {
+    const { barras, escala } = barrasDo(modo, inicio, fim);
+    const mes = modo === 'mes';
+    return {
+      modo, ini: GS.isoData(inicio), fim: GS.isoData(fim), rotulo, barras, escala,
+      titulo: mes ? `${nomeMes(GS.isoMes(inicio))} de ${inicio.getFullYear()}` : rotulo,
+      que: mes ? 'mês' : 'período',
+      semMov: mes ? `nos últimos ${MESES_GRAFICO} meses` : 'neste período',
+      nomeAnt: nomeAnterior(modo, anterior),
+      antes: { ini: GS.isoData(anterior.inicio), fim: GS.isoData(anterior.fim) },
+      nota: !barras.length ? 'sem gráfico (é um dia só)' : mes ? `gráfico dos últimos ${MESES_GRAFICO} meses` : `gráfico ${escala}`,
+    };
+  }
+  function periodoDoMes(mes) {
+    const [a, m] = mes.split('-').map(Number);
+    return montarPeriodo({
+      modo: 'mes', inicio: new Date(a, m - 1, 1), fim: new Date(a, m, 0),
+      anterior: { inicio: new Date(a, m - 2, 1), fim: new Date(a, m - 1, 0) }, rotulo: GS.mesAnoDeIso(mes),
+    });
+  }
+  // info é a do relatório do Painel (js/relatorio.js)
+  const periodoDoPainel = info => montarPeriodo({ modo: info.modo, inicio: info.periodo.inicio, fim: info.periodo.fim, anterior: info.anterior, rotulo: info.rotulo });
+
+  /* ---------- Dados ---------- */
 
   // por categoria: o que existe (subcategorias com valor) para a lista de escolha
-  function montarCategorias(ctx, mes) {
-    const ini = `${mes}-01`, fim = fimDoMes(mes);
-    const janela = mesesAte(mes, MESES_GRAFICO);
-    const desde = `${janela[0]}-01`;
+  function montarCategorias(ctx, per) {
+    const ini = per.ini, fim = per.fim;
+    const desde = per.barras.length && per.barras[0].ini < ini ? per.barras[0].ini : ini;
     const dosMeses = ctx.transacoes.filter(t => (t.tipo === 'despesa' || t.tipo === 'receita') && t.data >= desde && t.data <= fim);
     return ctx.categorias.map(c => {
       const tipo = c.tipo === 'receita' ? 'receita' : 'despesa';
@@ -57,11 +125,8 @@ window.GS = window.GS || {};
     return subs.has(sid);
   };
 
-  function montarDados(ctx, mes, cats, sel) {
-    const ini = `${mes}-01`, fim = fimDoMes(mes);
-    const janela = mesesAte(mes, MESES_GRAFICO);
-    const [a, m] = mes.split('-').map(Number);
-    const antes = GS.isoMes(new Date(a, m - 2, 1));
+  function montarDados(ctx, per, cats, sel) {
+    const ini = per.ini, fim = per.fim;
     const doMesTodas = ctx.transacoes.filter(t => t.data >= ini && t.data <= fim);
     const saiuMes = GS.calc.somar(doMesTodas.filter(t => t.tipo === 'despesa'));
     const entrouMes = GS.calc.somar(doMesTodas.filter(t => t.tipo === 'receita'));
@@ -70,15 +135,15 @@ window.GS = window.GS || {};
       const todas = ctx.transacoes.filter(t => t.tipo === c.tipo && t.categoriaId === c.id && dentro(sel, c, t));
       const mesLanc = todas.filter(t => t.data >= ini && t.data <= fim).sort((x, y) => x.data.localeCompare(y.data) || (x.criadoEm || 0) - (y.criadoEm || 0));
       const total = GS.calc.somar(mesLanc);
-      const anterior = GS.calc.somar(todas.filter(t => t.data.slice(0, 7) === antes));
-      const barras = janela.map(j => ({ mes: j, total: GS.calc.somar(todas.filter(t => t.data.slice(0, 7) === j)) }));
+      const anterior = GS.calc.somar(todas.filter(t => t.data >= per.antes.ini && t.data <= per.antes.fim));
+      const barras = per.barras.map(b => ({ ...b, total: GS.calc.somar(todas.filter(t => t.data >= b.ini && t.data <= b.fim)) }));
       const escolhidas = sel.get(c.id);
       const subs = c.subs.filter(s => escolhidas.has(s.id)).map(s => ({
         ...s, total: GS.calc.somar(mesLanc.filter(t => (c.subs.some(x => x.id === t.subcategoriaId) ? t.subcategoriaId : SEM_SUB) === s.id)),
       })).sort((x, y) => y.total - x.total);
       return { cat: c, total, anterior, barras, subs, lancamentos: mesLanc, parcial: c.subs.length ? `${escolhidas.size} de ${c.subs.length} subcategorias` : '' };
     });
-    return { mes, secoes, saiuMes, entrouMes, antes };
+    return { per, secoes, saiuMes, entrouMes };
   }
 
   /* ---------- Folhas ---------- */
@@ -90,9 +155,9 @@ window.GS = window.GS || {};
     const saiu = d.secoes.filter(s => s.cat.tipo === 'despesa').reduce((s, x) => s + x.total, 0);
     const entrou = d.secoes.filter(s => s.cat.tipo === 'receita').reduce((s, x) => s + x.total, 0);
     const hoje = GS.hoje();
-    const titulo = `${nomeMes(d.mes)} de ${d.mes.slice(0, 4)}`;
-    const [a, m] = d.mes.split('-').map(Number);
-    const nome = nomeAnterior('mes', { inicio: new Date(a, m - 2, 1) });
+    const per = d.per;
+    const titulo = per.titulo;
+    const nome = per.nomeAnt;
 
     /* itens: blocos inteiros ou linhas de tabela (que podem passar para a folha seguinte) */
     const itens = [];
@@ -101,16 +166,17 @@ window.GS = window.GS || {};
       const base = c.tipo === 'despesa' ? d.saiuMes : d.entrouMes;
       const cmp = op.comparar ? comparar(s.total, s.anterior, nome, c.tipo === 'receita') : null;
       const maior = Math.max(...s.barras.map(b => b.total), 1);
-      const grafico = op.evolucao ? `
-        <div class="f-mini-grafico">${s.barras.map((b, i) => `<i class="${i === s.barras.length - 1 ? 'atual' : ''}" style="height:${Math.max(b.total ? 6 : 0, (b.total / maior) * 100)}%" title="${esc(moeda(b.total))}"></i>`).join('')}</div>
-        <div class="f-mini-leg">${s.barras.map(b => `<span>${nomeMes(b.mes).slice(0, 3)}</span>`).join('')}</div>` : '';
+      const comBarras = op.evolucao && s.barras.length > 0;
+      const grafico = !comBarras ? '' : s.barras.every(b => !b.total) ? `<div class="f-mini-vazio">Sem movimento ${per.semMov}</div>` : `
+        <div class="f-mini-grafico">${s.barras.map((b, i) => `<i class="${i === s.barras.length - 1 ? 'atual' : ''}${b.parcial ? ' parcial' : ''}" style="height:${Math.max(b.total ? 6 : 0, (b.total / maior) * 100)}%" title="${esc(moeda(b.total))}"></i>`).join('')}</div>
+        <div class="f-mini-leg">${s.barras.map(b => `<span${b.futuro ? ' class="fut"' : ''}>${esc(b.rotulo)}</span>`).join('')}</div>`;
       itens.push({
-        h: H.espaco + H.cabecalho + (op.evolucao ? H.grafico : 0),
+        h: H.espaco + H.cabecalho + (comBarras ? H.grafico : 0),
         html: `<div class="f-cat"><h3>${esc(c.nome)}${s.parcial ? ` <em>${s.parcial}</em>` : ''}
           <span>${moeda(s.total)}${base ? ` · ${pct(s.total, base)}% ${c.tipo === 'despesa' ? 'do que saiu' : 'do que entrou'}` : ''}${cmp && cmp.texto ? ` · <b class="${cmp.classe}">${cmp.texto}</b>` : ''}</span></h3>${grafico}</div>`,
       });
       if (!s.lancamentos.length) {
-        itens.push({ h: H.tabLinha, html: '<p class="f-vazio">Sem lançamentos neste mês.</p>' });
+        itens.push({ h: H.tabLinha, html: `<p class="f-vazio">Sem lançamentos neste ${per.que}.</p>` });
         return;
       }
       if (s.subs.length > 1) {
@@ -167,10 +233,10 @@ window.GS = window.GS || {};
     return paginas.map((lista, n) => `
       <article class="folha">
         ${n === 0 && !emb ? `
-        <div class="f-head">${marca}<div class="f-tit"><small>Relatório por categoria</small><strong>${esc(titulo)}</strong><span>${GS.mesAnoDeIso(d.mes)} · gerado em ${GS.dataMedia(hoje)}</span></div></div>
+        <div class="f-head">${marca}<div class="f-tit"><small>Relatório por categoria</small><strong>${esc(titulo)}</strong><span>${per.modo === 'mes' ? `${esc(per.rotulo)} · ` : ''}gerado em ${GS.dataMedia(hoje)}</span></div></div>
         <div class="f-kpis">
-          <div class="f-kpi"><small><i class="saiu"></i>Saiu (categorias escolhidas)</small><strong>${moeda(saiu)}</strong><span>${d.saiuMes ? `${pct(saiu, d.saiuMes)}% do que saiu no mês` : ''}</span></div>
-          <div class="f-kpi"><small><i class="entrou"></i>Entrou (categorias escolhidas)</small><strong>${moeda(entrou)}</strong><span>${d.entrouMes ? `${pct(entrou, d.entrouMes)}% do que entrou no mês` : ''}</span></div>
+          <div class="f-kpi"><small><i class="saiu"></i>Saiu (categorias escolhidas)</small><strong>${moeda(saiu)}</strong><span>${d.saiuMes ? `${pct(saiu, d.saiuMes)}% do que saiu no ${per.que}` : ''}</span></div>
+          <div class="f-kpi"><small><i class="entrou"></i>Entrou (categorias escolhidas)</small><strong>${moeda(entrou)}</strong><span>${d.entrouMes ? `${pct(entrou, d.entrouMes)}% do que entrou no ${per.que}` : ''}</span></div>
           <div class="f-kpi"><small>Lançamentos</small><strong>${lancTotal}</strong><span>${GS.plural(d.secoes.length, 'categoria', 'categorias')}</span></div>
         </div>` : `<div class="f-head p2">${marca}<div class="f-tit"><strong>${esc(titulo)} · por categoria</strong></div></div>`}
         <div class="f-sec">${corpoDe(lista)}</div>
@@ -197,10 +263,10 @@ window.GS = window.GS || {};
     return sel;
   }
 
-  function resumoHtml(ctx, mes, cats, sel) {
+  function resumoHtml(ctx, per, cats, sel) {
     const escolhidas = cats.filter(c => sel.has(c.id));
     if (!escolhidas.length) return 'Escolha pelo menos uma categoria.';
-    const lancs = escolhidas.reduce((n, c) => n + montarDados(ctx, mes, cats, new Map([[c.id, sel.get(c.id)]])).secoes[0].lancamentos.length, 0);
+    const lancs = escolhidas.reduce((n, c) => n + montarDados(ctx, per, cats, new Map([[c.id, sel.get(c.id)]])).secoes[0].lancamentos.length, 0);
     const parciais = escolhidas.filter(c => c.subs.length && sel.get(c.id).size < c.subs.length).length;
     return `<b>${GS.plural(escolhidas.length, 'categoria', 'categorias')}</b>${parciais ? ` · ${parciais === 1 ? '1 com' : `${parciais} com`} subcategorias de fora` : ''} · ${GS.plural(lancs, 'lançamento', 'lançamentos')}`;
   }
@@ -226,7 +292,7 @@ window.GS = window.GS || {};
 
   /* A linha "Todas as categorias · Escolher quais" e, escondida atrás dela, a lista com pesquisa.
      `sel` é alterado aqui dentro; `aoMudar` roda depois de cada mudança. */
-  function criarEscolha({ cats, sel, resumo, aoMudar }) {
+  function criarEscolha({ cats, sel, per, resumo, aoMudar }) {
     const el = GS.el('div', 'rc-escolha');
     el.innerHTML = `
       <p class="rc-frase"><span data-frase></span><button type="button" class="link-btn rc-alternar" data-alternar aria-expanded="false"><span>Escolher quais</span>${icone('chevron-down')}</button></p>
@@ -258,7 +324,7 @@ window.GS = window.GS || {};
     };
     const atualizar = () => {
       $('[data-frase]').textContent = !sel.size ? 'Nenhuma categoria escolhida · '
-        : padrao() ? 'Todas as categorias com movimento no mês · '
+        : padrao() ? `Todas as categorias com movimento no ${per.que} · `
         : `${GS.plural(sel.size, 'categoria escolhida', 'categorias escolhidas')} · `;
       $('[data-resumo]').innerHTML = resumo();
     };
@@ -305,18 +371,20 @@ window.GS = window.GS || {};
 
   /* ---------- No relatório do Painel (js/relatorio.js) ---------- */
 
-  // devolve a escolha e as folhas que entram no fim do relatório do Painel (só quando o período é um mês)
-  function detalhe(ctx, mes, aoMudar) {
-    const cats = montarCategorias(ctx, mes);
+  // devolve a escolha e as folhas que entram no fim do relatório do Painel, para o período que está na tela
+  function detalhe(ctx, info, aoMudar) {
+    const per = periodoDoPainel(info);
+    const cats = montarCategorias(ctx, per);
     const sel = selecaoInicial(cats);
-    const escolha = criarEscolha({ cats, sel, resumo: () => resumoHtml(ctx, mes, cats, sel), aoMudar });
+    const escolha = criarEscolha({ cats, sel, per, resumo: () => resumoHtml(ctx, per, cats, sel), aoMudar });
     const opcoes = op => ({ evolucao: true, lista: true, comparar: !!op.comparar });
     return {
       el: escolha.el,
+      nota: per.nota,
       vazio: !cats.length,
       temEscolha: () => sel.size > 0,
-      contar: op => folhasDe(montarDados(ctx, mes, cats, sel), opcoes(op), { embutido: true, inicioN: 1, total: 1 }).length,
-      folhas: (op, inicioN, total) => folhasDe(montarDados(ctx, mes, cats, sel), opcoes(op), { embutido: true, inicioN, total }).join(''),
+      contar: op => folhasDe(montarDados(ctx, per, cats, sel), opcoes(op), { embutido: true, inicioN: 1, total: 1 }).length,
+      folhas: (op, inicioN, total) => folhasDe(montarDados(ctx, per, cats, sel), opcoes(op), { embutido: true, inicioN, total }).join(''),
     };
   }
 
@@ -324,7 +392,8 @@ window.GS = window.GS || {};
 
   async function abrir(mes) {
     const ctx = await GS.carregarTudo();
-    const cats = montarCategorias(ctx, mes);
+    const per = periodoDoMes(mes);
+    const cats = montarCategorias(ctx, per);
     if (!cats.length) { GS.toast('Cadastre uma categoria para gerar o relatório.', 'erro'); return; }
     const sel = selecaoInicial(cats);
     const op = { evolucao: true, lista: true, comparar: false };
@@ -361,11 +430,11 @@ window.GS = window.GS || {};
 
     const pintar = () => {
       const tem = sel.size > 0;
-      previa.innerHTML = tem ? montarFolhas(montarDados(ctx, mes, cats, sel), op) : '<p class="rc-vazio">Escolha uma categoria para ver a prévia.</p>';
+      previa.innerHTML = tem ? montarFolhas(montarDados(ctx, per, cats, sel), op) : '<p class="rc-vazio">Escolha uma categoria para ver a prévia.</p>';
       const botao = modal && modal.foot.querySelector('[data-salvar]');
       if (botao) botao.disabled = !tem;
     };
-    const escolha = criarEscolha({ cats, sel, resumo: () => resumoHtml(ctx, mes, cats, sel), aoMudar: pintar });
+    const escolha = criarEscolha({ cats, sel, per, resumo: () => resumoHtml(ctx, per, cats, sel), aoMudar: pintar });
     corpo.querySelector('[data-escolha]').append(escolha.el);
     corpo.querySelectorAll('[data-opcao]').forEach(c => c.addEventListener('change', () => { op[c.dataset.opcao] = c.checked; pintar(); }));
 
@@ -382,7 +451,7 @@ window.GS = window.GS || {};
     botao.addEventListener('click', async () => {
       botao.disabled = true;
       botao.innerHTML = `${icone('download')}Salvando…`;
-      const r = await salvar(montarFolhas(montarDados(ctx, mes, cats, sel), op), arquivo);
+      const r = await salvar(montarFolhas(montarDados(ctx, per, cats, sel), op), arquivo);
       botao.disabled = false;
       botao.innerHTML = `${icone('download')}Salvar PDF`;
       if (r.ok) {

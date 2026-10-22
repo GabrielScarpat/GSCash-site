@@ -302,20 +302,19 @@ window.GS = window.GS || {};
     const n = d.lancamentos.length;
     const op = { comparar: true, faturas: d.temCartao, lista: n > 0 };
     const anterior = nomeAnterior(info.modo, info.anterior);
-    // o detalhe por categoria trabalha com um mês fechado: só aparece quando o Painel está em "Mês"
-    const mes = info.modo === 'mes' ? GS.isoMes(info.periodo.inicio) : null;
-    const detalhe = mes && GS.relatorioCategorias && ctx.categorias.length ? GS.relatorioCategorias.detalhe(ctx, mes, () => pintar()) : null;
+    // o detalhe por categoria vale para qualquer período do Painel (js/relatorio-categorias.js)
+    const detalhe = GS.relatorioCategorias && ctx.categorias.length ? GS.relatorioCategorias.detalhe(ctx, info, () => pintar()) : null;
     op.detalhar = false;
     op.detalheCat = detalhe;
     const textoDetalhe = detalhe ? 'Uma seção para cada categoria: total, evolução e lançamentos.'
-      : !ctx.categorias.length ? 'Cadastre uma categoria para usar.' : 'Disponível quando o período do Painel é um mês.';
+      : 'Cadastre uma categoria para usar.';
 
     const corpo = GS.el('div', 'rel-corpo');
     corpo.innerHTML = `
       <div class="rel-ops">
         <div>
           <span class="field-label">Período</span>
-          <div class="rel-periodo"><strong>${esc(info.rotulo)}</strong><small>o mesmo selecionado no Painel</small></div>
+          <div class="rel-periodo"><strong>${esc(info.rotulo)}</strong><small data-nota-periodo>o mesmo selecionado no Painel</small></div>
         </div>
         <div>
           <span class="field-label">Incluir</span>
@@ -335,7 +334,11 @@ window.GS = window.GS || {};
       <div class="rel-previa" aria-label="Prévia do relatório"></div>`;
 
     const previa = corpo.querySelector('.rel-previa');
-    function pintar() { previa.innerHTML = montarFolhas(d, op); }
+    function pintar() {
+      previa.innerHTML = montarFolhas(d, op);
+      const nota = corpo.querySelector('[data-nota-periodo]');
+      if (nota) nota.textContent = `o mesmo selecionado no Painel${op.detalhar && detalhe ? ` · ${detalhe.nota}` : ''}`;
+    }
     if (detalhe) corpo.querySelector('[data-detalhe]').append(detalhe.el);
     pintar();
     corpo.querySelectorAll('[data-opcao]').forEach(c => c.addEventListener('change', () => {

@@ -214,6 +214,10 @@
 .f-mini-grafico i.atual { opacity: 1; }
 .f-mini-leg { display: flex; gap: 8px; margin-bottom: 8px; font-size: 10.5px; color: var(--muted); }
 .f-mini-leg span { flex: 1; text-align: center; }
+.f-mini-leg span { min-width: 0; overflow: hidden; white-space: nowrap; }
+.f-mini-leg span.fut { opacity: .45; }
+.f-mini-grafico i.parcial { opacity: .35; }
+.f-mini-vazio { display: grid; place-items: center; height: 56px; margin: 6px 0 8px; border: 1px dashed var(--border-strong); border-radius: 8px; color: var(--muted); font-size: 11.5px; }
 .f-lanc { margin-top: 8px; }
 .f-lanc td { font-size: 12px; }
 
