@@ -10,7 +10,7 @@ window.GS = window.GS || {};
   GS.widgets = {
     // linha de transação (Painel, Transações e Faturas)
     // naFatura / valor / parcela: usados na página de faturas para mostrar só a parcela
-    linhaTransacao(t, ctx, { comData = false, comAcoes = false, valor = null, parcela = null, naFatura = false } = {}) {
+    linhaTransacao(t, ctx, { comData = false, comAcoes = false, valor = null, parcela = null, naFatura = false, comDescricao = false } = {}) {
       const pagamento = t.tipo === 'pagamento';
       const transferencia = t.tipo === 'transferencia';
       const cat = ctx.categoria.get(t.categoriaId);
@@ -51,6 +51,7 @@ window.GS = window.GS || {};
               ${comData ? `<span class="sep">·</span><span>${GS.dataCurta(t.data)}</span>` : ''}
               ${credito}${seloParcela}${recorrente}
             </div>
+            ${comDescricao && t.descricao && !transferencia ? `<div class="tx-desc">${esc(t.descricao)}</div>` : ''}
           </div>
           <div class="tx-value num ${receita ? 'income' : ''}">${receita ? '+' : ''}${GS.moeda(valor ?? t.valor)}</div>
           ${comAcoes ? `

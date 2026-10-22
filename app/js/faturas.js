@@ -140,9 +140,10 @@
       comData: true,
       comAcoes: true,
       naFatura: true,
+      comDescricao: true,
       valor: it.valor,
       parcela: it.total > 1 ? `${it.n}/${it.total}` : null,
-    })).join('') + f.pagamentos.map(p => widgets.linhaTransacao(p, ctx, { comData: true, comAcoes: true, naFatura: true })).join('');
+    })).join('') + f.pagamentos.map(p => widgets.linhaTransacao(p, ctx, { comData: true, comAcoes: true, naFatura: true, comDescricao: true })).join('');
 
     return `
       <section class="card tx-card">

@@ -177,7 +177,7 @@
           </div>
           <ul class="tx-list">`;
       }
-      html += widgets.linhaTransacao(t, ctx, { comAcoes: true });
+      html += widgets.linhaTransacao(t, ctx, { comAcoes: true, comDescricao: true });
     });
     html += '</ul>';
     $('lista').innerHTML = html;
