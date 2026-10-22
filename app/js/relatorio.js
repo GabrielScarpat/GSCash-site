@@ -277,8 +277,12 @@ window.GS = window.GS || {};
 
   function montarFolhas(d, op) {
     const comLista = op.lista && d.lancamentos.length > 0;
-    const total = 1 + (comLista ? contarFolhasLista(d) : 0);
-    return folhaResumo(d, op, 1, total) + (comLista ? folhasLista(d, 2, total).join('') : '');
+    // "Detalhar por categoria": as folhas do relatório por categoria entram no fim (js/relatorio-categorias.js)
+    const det = op.detalhar && op.detalheCat && op.detalheCat.temEscolha() ? op.detalheCat : null;
+    const nLista = comLista ? contarFolhasLista(d) : 0;
+    const total = 1 + nLista + (det ? det.contar(op) : 0);
+    return folhaResumo(d, op, 1, total) + (comLista ? folhasLista(d, 2, total).join('') : '')
+      + (det ? det.folhas(op, 2 + nLista, total) : '');
   }
 
   /* ---------- Janela (prévia e opções) ---------- */
@@ -298,6 +302,13 @@ window.GS = window.GS || {};
     const n = d.lancamentos.length;
     const op = { comparar: true, faturas: d.temCartao, lista: n > 0 };
     const anterior = nomeAnterior(info.modo, info.anterior);
+    // o detalhe por categoria trabalha com um mês fechado: só aparece quando o Painel está em "Mês"
+    const mes = info.modo === 'mes' ? GS.isoMes(info.periodo.inicio) : null;
+    const detalhe = mes && GS.relatorioCategorias && ctx.categorias.length ? GS.relatorioCategorias.detalhe(ctx, mes, () => pintar()) : null;
+    op.detalhar = false;
+    op.detalheCat = detalhe;
+    const textoDetalhe = detalhe ? 'Uma seção para cada categoria: total, evolução e lançamentos.'
+      : !ctx.categorias.length ? 'Cadastre uma categoria para usar.' : 'Disponível quando o período do Painel é um mês.';
 
     const corpo = GS.el('div', 'rel-corpo');
     corpo.innerHTML = `
@@ -311,6 +322,8 @@ window.GS = window.GS || {};
           ${opcaoHtml('comparar', 'Comparar com o período anterior', `Mostra quanto subiu ou desceu ${anterior.que.replace(/^que /, 'em relação a ').replace('a o período', 'ao período')}.`)}
           ${d.temCartao ? opcaoHtml('faturas', 'Faturas de cartão', 'Faturas que fecham ou vencem no período.') : ''}
           ${opcaoHtml('lista', 'Lista de transações', n ? `Uma página a mais com ${n === 1 ? 'a transação' : `todas as ${n} transações`} do período.` : 'Nenhuma transação neste período.', { desativada: !n })}
+          ${opcaoHtml('detalhar', 'Detalhar por categoria', textoDetalhe, { marcada: false, desativada: !detalhe })}
+          <div class="rc-aninhada hidden" data-detalhe></div>
         </div>
         <div>
           <span class="field-label">${GS.noDesktop ? 'Será salvo em' : 'Como salvar'}</span>
@@ -322,10 +335,12 @@ window.GS = window.GS || {};
       <div class="rel-previa" aria-label="Prévia do relatório"></div>`;
 
     const previa = corpo.querySelector('.rel-previa');
-    const pintar = () => { previa.innerHTML = montarFolhas(d, op); };
+    function pintar() { previa.innerHTML = montarFolhas(d, op); }
+    if (detalhe) corpo.querySelector('[data-detalhe]').append(detalhe.el);
     pintar();
     corpo.querySelectorAll('[data-opcao]').forEach(c => c.addEventListener('change', () => {
       op[c.dataset.opcao] = c.checked;
+      if (c.dataset.opcao === 'detalhar') corpo.querySelector('[data-detalhe]').classList.toggle('hidden', !c.checked);
       pintar();
     }));
 

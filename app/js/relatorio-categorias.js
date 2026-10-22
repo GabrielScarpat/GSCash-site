@@ -83,7 +83,9 @@ window.GS = window.GS || {};
 
   /* ---------- Folhas ---------- */
 
-  function montarFolhas(d, op) {
+  // extra.embutido: as folhas entram no fim do relatório do Painel (sem a capa, numeração continua)
+  function folhasDe(d, op, extra) {
+    const emb = !!(extra && extra.embutido);
     const lancTotal = d.secoes.reduce((s, x) => s + x.lancamentos.length, 0);
     const saiu = d.secoes.filter(s => s.cat.tipo === 'despesa').reduce((s, x) => s + x.total, 0);
     const entrou = d.secoes.filter(s => s.cat.tipo === 'receita').reduce((s, x) => s + x.total, 0);
@@ -137,7 +139,7 @@ window.GS = window.GS || {};
 
     /* reparte nas folhas */
     const paginas = [];
-    let atual = [], usado = 0, limite = ORCAMENTO_1;
+    let atual = [], usado = 0, limite = emb ? ORCAMENTO_N : ORCAMENTO_1;
     const fechar = () => { paginas.push(atual); atual = []; usado = 0; limite = ORCAMENTO_N; };
     itens.forEach(it => {
       const extra = it.grupo && !(atual.length && atual[atual.length - 1].grupo === it.grupo) ? H.tabHead : 0;
@@ -160,10 +162,11 @@ window.GS = window.GS || {};
       return html;
     };
 
-    const total = paginas.length;
+    const total = emb ? extra.total : paginas.length;
+    const inicio = emb ? extra.inicioN : 1;
     return paginas.map((lista, n) => `
       <article class="folha">
-        ${n === 0 ? `
+        ${n === 0 && !emb ? `
         <div class="f-head">${marca}<div class="f-tit"><small>Relatório por categoria</small><strong>${esc(titulo)}</strong><span>${GS.mesAnoDeIso(d.mes)} · gerado em ${GS.dataMedia(hoje)}</span></div></div>
         <div class="f-kpis">
           <div class="f-kpi"><small><i class="saiu"></i>Saiu (categorias escolhidas)</small><strong>${moeda(saiu)}</strong><span>${d.saiuMes ? `${pct(saiu, d.saiuMes)}% do que saiu no mês` : ''}</span></div>
@@ -171,37 +174,159 @@ window.GS = window.GS || {};
           <div class="f-kpi"><small>Lançamentos</small><strong>${lancTotal}</strong><span>${GS.plural(d.secoes.length, 'categoria', 'categorias')}</span></div>
         </div>` : `<div class="f-head p2">${marca}<div class="f-tit"><strong>${esc(titulo)} · por categoria</strong></div></div>`}
         <div class="f-sec">${corpoDe(lista)}</div>
-        ${rodapeFolha(n + 1, total)}
-      </article>`).join('');
+        ${rodapeFolha(inicio + n, total)}
+      </article>`);
+  }
+  const montarFolhas = (d, op) => folhasDe(d, op).join('');
+
+  /* ---------- Escolha de categorias e subcategorias ---------- */
+
+  const norm = t => String(t).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  // destaca o trecho pesquisado (sem diferenciar acentos); se o texto tiver acento decomposto, não destaca
+  function destaque(nome, q) {
+    if (!q) return esc(nome);
+    const n = norm(nome);
+    const i = n.length === nome.length ? n.indexOf(q) : -1;
+    return i < 0 ? esc(nome) : `${esc(nome.slice(0, i))}<mark>${esc(nome.slice(i, i + q.length))}</mark>${esc(nome.slice(i + q.length))}`;
   }
 
-  /* ---------- Janela ---------- */
+  // começa com todas as categorias que tiveram movimento no mês
+  function selecaoInicial(cats) {
+    const sel = new Map();
+    cats.filter(c => c.qtd > 0).forEach(c => sel.set(c.id, new Set(c.subs.map(s => s.id))));
+    return sel;
+  }
 
-  function linhaCategoria(c, sel, abertas) {
+  function resumoHtml(ctx, mes, cats, sel) {
+    const escolhidas = cats.filter(c => sel.has(c.id));
+    if (!escolhidas.length) return 'Escolha pelo menos uma categoria.';
+    const lancs = escolhidas.reduce((n, c) => n + montarDados(ctx, mes, cats, new Map([[c.id, sel.get(c.id)]])).secoes[0].lancamentos.length, 0);
+    const parciais = escolhidas.filter(c => c.subs.length && sel.get(c.id).size < c.subs.length).length;
+    return `<b>${GS.plural(escolhidas.length, 'categoria', 'categorias')}</b>${parciais ? ` · ${parciais === 1 ? '1 com' : `${parciais} com`} subcategorias de fora` : ''} · ${GS.plural(lancs, 'lançamento', 'lançamentos')}`;
+  }
+
+  function linhaCategoria(c, sel, abertas, q) {
     const marcadas = sel.get(c.id);
     const todas = c.subs.length ? c.subs.map(s => s.id) : [];
     const estado = !marcadas ? 'nao' : (!c.subs.length || todas.every(id => marcadas.has(id))) ? 'sim' : 'meio';
-    const aberta = abertas.has(c.id);
+    // pesquisando, a categoria abre sozinha quando o que combina é uma subcategoria
+    const achouSub = !!q && c.subs.some(s => norm(s.nome).includes(q));
+    const aberta = abertas.has(c.id) || achouSub;
     const subs = c.subs.length && aberta ? `<div class="rc-subs">${c.subs.map(s => `
         <label class="rc-sub"><input type="checkbox" data-sub="${esc(c.id)}" data-id="${esc(s.id)}" ${marcadas && marcadas.has(s.id) ? 'checked' : ''}>
-          <span class="rel-caixa">${icone('check')}</span><span class="nome">${esc(s.nome)}</span><span class="valor">${s.total ? moeda(s.total) : '—'}</span></label>`).join('')}</div>` : '';
+          <span class="rel-caixa">${icone('check')}</span><span class="nome">${destaque(s.nome, q)}</span><span class="valor">${s.total ? moeda(s.total) : '—'}</span></label>`).join('')}</div>` : '';
     return `
       <div class="rc-cat ${estado}">
         <label class="rc-linha"><input type="checkbox" data-cat="${esc(c.id)}" ${estado !== 'nao' ? 'checked' : ''}>
           <span class="rel-caixa ${estado === 'meio' ? 'meio' : ''}">${estado === 'meio' ? icone('traco') : icone('check')}</span>
-          <span class="nome">${esc(c.nome)}</span><span class="valor">${c.total ? moeda(c.total) : '—'}</span></label>
+          <span class="nome">${destaque(c.nome, q)}</span><span class="valor">${c.total ? moeda(c.total) : '—'}</span></label>
         ${c.subs.length ? `<button type="button" class="rc-seta ${aberta ? 'aberta' : ''}" data-abrir="${esc(c.id)}" aria-expanded="${aberta}" aria-label="${aberta ? 'Esconder' : 'Ver'} subcategorias de ${esc(c.nome)}">${icone('chevron-down')}</button>` : '<span class="rc-seta vazia"></span>'}
       </div>${subs}`;
   }
+
+  /* A linha "Todas as categorias · Escolher quais" e, escondida atrás dela, a lista com pesquisa.
+     `sel` é alterado aqui dentro; `aoMudar` roda depois de cada mudança. */
+  function criarEscolha({ cats, sel, resumo, aoMudar }) {
+    const el = GS.el('div', 'rc-escolha');
+    el.innerHTML = `
+      <p class="rc-frase"><span data-frase></span><button type="button" class="link-btn rc-alternar" data-alternar aria-expanded="false"><span>Escolher quais</span>${icone('chevron-down')}</button></p>
+      <div class="rc-painel hidden" data-painel>
+        <div class="input rc-busca">${icone('search')}<input type="search" data-busca placeholder="Pesquisar categoria ou subcategoria" autocomplete="off" aria-label="Pesquisar categoria ou subcategoria"></div>
+        <div class="rc-topo"><span class="rc-quem" data-quem></span>
+          <span><button type="button" class="link-btn" data-todas>Marcar todas</button> · <button type="button" class="link-btn" data-limpar>Limpar</button></span></div>
+        <div class="rc-arvore" data-arvore></div>
+      </div>
+      <p class="rc-resumo" data-resumo></p>`;
+    const $ = s => el.querySelector(s);
+    const abertas = new Set();
+    let q = '';
+
+    const visiveis = () => !q ? cats : cats.filter(c => norm(c.nome).includes(q) || c.subs.some(s => norm(s.nome).includes(q)));
+    const padrao = () => {
+      const com = cats.filter(c => c.qtd > 0);
+      return com.length > 0 && sel.size === com.length && com.every(c => sel.has(c.id) && sel.get(c.id).size === c.subs.length);
+    };
+
+    const desenharArvore = () => {
+      const lista = visiveis();
+      $('[data-quem]').textContent = q ? 'Resultados da pesquisa' : 'Categorias';
+      if (!lista.length) { $('[data-arvore]').innerHTML = `<p class="rc-nada">Nada encontrado para “${esc($('[data-busca]').value.trim())}”.</p>`; return; }
+      $('[data-arvore]').innerHTML = [['despesa', 'Gastos'], ['receita', 'Receitas']].map(([tipo, rotulo]) => {
+        const l = lista.filter(c => c.tipo === tipo);
+        return l.length ? `<div class="rc-grupo">${rotulo}</div>${l.map(c => linhaCategoria(c, sel, abertas, q)).join('')}` : '';
+      }).join('');
+    };
+    const atualizar = () => {
+      $('[data-frase]').textContent = !sel.size ? 'Nenhuma categoria escolhida · '
+        : padrao() ? 'Todas as categorias com movimento no mês · '
+        : `${GS.plural(sel.size, 'categoria escolhida', 'categorias escolhidas')} · `;
+      $('[data-resumo]').innerHTML = resumo();
+    };
+    const mudou = () => { desenharArvore(); atualizar(); aoMudar(); };
+
+    $('[data-alternar]').addEventListener('click', () => {
+      const botao = $('[data-alternar]');
+      const abrir = botao.getAttribute('aria-expanded') !== 'true';
+      botao.setAttribute('aria-expanded', abrir);
+      botao.firstElementChild.textContent = abrir ? 'Esconder' : 'Escolher quais';
+      botao.classList.toggle('aberto', abrir);
+      $('[data-painel]').classList.toggle('hidden', !abrir);
+      if (abrir) $('[data-busca]').focus();
+    });
+    $('[data-busca]').addEventListener('input', e => { q = norm(e.target.value.trim()); desenharArvore(); });
+    const arvore = $('[data-arvore]');
+    arvore.addEventListener('change', e => {
+      const t = e.target;
+      if (t.dataset.cat) {
+        const c = cats.find(x => x.id === t.dataset.cat);
+        if (t.checked) sel.set(c.id, new Set(c.subs.map(s => s.id))); else sel.delete(c.id);
+      } else if (t.dataset.sub) {
+        const c = cats.find(x => x.id === t.dataset.sub);
+        const set = sel.get(c.id) || new Set();
+        t.checked ? set.add(t.dataset.id) : set.delete(t.dataset.id);
+        set.size ? sel.set(c.id, set) : sel.delete(c.id);
+      }
+      mudou();
+    });
+    arvore.addEventListener('click', e => {
+      const b = e.target.closest('[data-abrir]');
+      if (!b) return;
+      abertas.has(b.dataset.abrir) ? abertas.delete(b.dataset.abrir) : abertas.add(b.dataset.abrir);
+      desenharArvore();
+    });
+    // com uma pesquisa na tela, "Marcar todas" e "Limpar" valem só para o que está na lista
+    $('[data-todas]').addEventListener('click', () => { visiveis().forEach(c => sel.set(c.id, new Set(c.subs.map(s => s.id)))); mudou(); });
+    $('[data-limpar]').addEventListener('click', () => { visiveis().forEach(c => sel.delete(c.id)); mudou(); });
+
+    desenharArvore();
+    atualizar();
+    return { el, atualizar };
+  }
+
+  /* ---------- No relatório do Painel (js/relatorio.js) ---------- */
+
+  // devolve a escolha e as folhas que entram no fim do relatório do Painel (só quando o período é um mês)
+  function detalhe(ctx, mes, aoMudar) {
+    const cats = montarCategorias(ctx, mes);
+    const sel = selecaoInicial(cats);
+    const escolha = criarEscolha({ cats, sel, resumo: () => resumoHtml(ctx, mes, cats, sel), aoMudar });
+    const opcoes = op => ({ evolucao: true, lista: true, comparar: !!op.comparar });
+    return {
+      el: escolha.el,
+      vazio: !cats.length,
+      temEscolha: () => sel.size > 0,
+      contar: op => folhasDe(montarDados(ctx, mes, cats, sel), opcoes(op), { embutido: true, inicioN: 1, total: 1 }).length,
+      folhas: (op, inicioN, total) => folhasDe(montarDados(ctx, mes, cats, sel), opcoes(op), { embutido: true, inicioN, total }).join(''),
+    };
+  }
+
+  /* ---------- Janela ---------- */
 
   async function abrir(mes) {
     const ctx = await GS.carregarTudo();
     const cats = montarCategorias(ctx, mes);
     if (!cats.length) { GS.toast('Cadastre uma categoria para gerar o relatório.', 'erro'); return; }
-    // começa com todas as categorias que tiveram movimento no mês
-    const sel = new Map();
-    cats.filter(c => c.qtd > 0).forEach(c => sel.set(c.id, new Set(c.subs.map(s => s.id))));
-    const abertas = new Set();
+    const sel = selecaoInicial(cats);
     const op = { evolucao: true, lista: true, comparar: false };
     const arquivo = `GSCASH - Categorias - ${nomeMes(mes)} ${mes.slice(0, 4)}`;
 
@@ -213,10 +338,8 @@ window.GS = window.GS || {};
           <div class="rel-periodo"><strong>${esc(GS.mesAnoDeIso(mes))}</strong><small>o mesmo da tela Categorias</small></div>
         </div>
         <div>
-          <div class="rc-topo"><span class="field-label">Categorias</span>
-            <span><button type="button" class="link-btn" data-todas>Marcar todas</button> · <button type="button" class="link-btn" data-limpar>Limpar</button></span></div>
-          <div class="rc-arvore" data-arvore></div>
-          <p class="rc-resumo" data-resumo></p>
+          <span class="field-label">Categorias</span>
+          <div data-escolha></div>
         </div>
         <div>
           <span class="field-label">Incluir</span>
@@ -233,53 +356,17 @@ window.GS = window.GS || {};
       </div>
       <div class="rel-previa" aria-label="Prévia do relatório"></div>`;
 
-    const arvore = corpo.querySelector('[data-arvore]');
     const previa = corpo.querySelector('.rel-previa');
-    const resumo = corpo.querySelector('[data-resumo]');
     let modal = null;
 
-    const desenharArvore = () => {
-      const grupos = [['despesa', 'Gastos'], ['receita', 'Receitas']];
-      arvore.innerHTML = grupos.map(([tipo, rotulo]) => {
-        const lista = cats.filter(c => c.tipo === tipo);
-        return lista.length ? `<div class="rc-grupo">${rotulo}</div>${lista.map(c => linhaCategoria(c, sel, abertas)).join('')}` : '';
-      }).join('');
-    };
     const pintar = () => {
-      const escolhidas = cats.filter(c => sel.has(c.id));
-      const lancs = escolhidas.reduce((n, c) => n + montarDados(ctx, mes, cats, new Map([[c.id, sel.get(c.id)]])).secoes[0].lancamentos.length, 0);
-      const parciais = escolhidas.filter(c => c.subs.length && sel.get(c.id).size < c.subs.length).length;
-      resumo.innerHTML = escolhidas.length
-        ? `<b>${GS.plural(escolhidas.length, 'categoria', 'categorias')}</b>${parciais ? ` · ${parciais === 1 ? '1 com' : `${parciais} com`} subcategorias de fora` : ''} · ${GS.plural(lancs, 'lançamento', 'lançamentos')}`
-        : 'Marque pelo menos uma categoria.';
-      previa.innerHTML = escolhidas.length ? montarFolhas(montarDados(ctx, mes, cats, sel), op) : '<p class="rc-vazio">Marque uma categoria para ver a prévia.</p>';
+      const tem = sel.size > 0;
+      previa.innerHTML = tem ? montarFolhas(montarDados(ctx, mes, cats, sel), op) : '<p class="rc-vazio">Escolha uma categoria para ver a prévia.</p>';
       const botao = modal && modal.foot.querySelector('[data-salvar]');
-      if (botao) botao.disabled = !escolhidas.length;
+      if (botao) botao.disabled = !tem;
     };
-
-    arvore.addEventListener('change', e => {
-      const t = e.target;
-      if (t.dataset.cat) {
-        const c = cats.find(x => x.id === t.dataset.cat);
-        if (t.checked) sel.set(c.id, new Set(c.subs.map(s => s.id))); else sel.delete(c.id);
-      } else if (t.dataset.sub) {
-        const c = cats.find(x => x.id === t.dataset.sub);
-        const set = sel.get(c.id) || new Set();
-        t.checked ? set.add(t.dataset.id) : set.delete(t.dataset.id);
-        set.size ? sel.set(c.id, set) : sel.delete(c.id);
-      }
-      desenharArvore(); pintar();
-    });
-    arvore.addEventListener('click', e => {
-      const b = e.target.closest('[data-abrir]');
-      if (!b) return;
-      abertas.has(b.dataset.abrir) ? abertas.delete(b.dataset.abrir) : abertas.add(b.dataset.abrir);
-      desenharArvore();
-    });
-    corpo.querySelector('[data-todas]').addEventListener('click', () => {
-      cats.forEach(c => sel.set(c.id, new Set(c.subs.map(s => s.id)))); desenharArvore(); pintar();
-    });
-    corpo.querySelector('[data-limpar]').addEventListener('click', () => { sel.clear(); desenharArvore(); pintar(); });
+    const escolha = criarEscolha({ cats, sel, resumo: () => resumoHtml(ctx, mes, cats, sel), aoMudar: pintar });
+    corpo.querySelector('[data-escolha]').append(escolha.el);
     corpo.querySelectorAll('[data-opcao]').forEach(c => c.addEventListener('change', () => { op[c.dataset.opcao] = c.checked; pintar(); }));
 
     modal = GS.abrirModal({
@@ -289,7 +376,6 @@ window.GS = window.GS || {};
       rodape: `<button type="button" class="btn btn-outline" data-fechar>Cancelar</button>
                <button type="button" class="btn btn-primary" data-salvar>${icone('download')}Salvar PDF</button>`,
     });
-    desenharArvore();
     pintar();
 
     const botao = modal.foot.querySelector('[data-salvar]');
@@ -308,5 +394,5 @@ window.GS = window.GS || {};
     });
   }
 
-  GS.relatorioCategorias = { abrir, _teste: { montarCategorias, montarDados, montarFolhas } };
+  GS.relatorioCategorias = { abrir, detalhe, _teste: { montarCategorias, montarDados, montarFolhas } };
 })();

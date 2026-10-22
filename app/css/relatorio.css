@@ -192,6 +192,17 @@
 .rc-resumo { margin: 8px 0 0; font-size: 13.5px; color: var(--text-2); }
 .rc-vazio { color: var(--text-2); margin: auto; }
 
+/* escolha recolhida: "Todas as categorias · Escolher quais" e a lista com pesquisa */
+.rc-frase { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 4px; margin: 0; font-size: 14.5px; color: var(--text-2); }
+.rc-alternar { display: inline-flex; align-items: center; gap: 4px; font-size: 14.5px; font-weight: 600; }
+.rc-alternar svg { width: 15px; height: 15px; transition: transform .15s; }
+.rc-alternar.aberto svg { transform: rotate(180deg); }
+.rc-painel { margin-top: 12px; }
+.rc-busca { margin-bottom: 10px; }
+.rc-nada { margin: 0; padding: 16px 12px; color: var(--text-2); font-size: 14px; }
+.rc-arvore mark { background: #FBE9A8; color: inherit; border-radius: 3px; padding: 0 1px; }
+.rc-aninhada { margin: 4px 0 4px 30px; }
+
 /* folha: seção de cada categoria */
 .f-cat { margin-top: 22px; }
 .f-cat h3 { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin: 0 0 8px; padding-bottom: 6px; border-bottom: 1px solid var(--border-strong); font-size: 16px; font-weight: 600; color: var(--text); }
