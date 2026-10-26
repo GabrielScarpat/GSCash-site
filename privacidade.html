@@ -48,7 +48,7 @@
       GSCASH
     </a>
     <h1>Política de privacidade</h1>
-    <p class="atualizado">Última atualização: 16 de outubro de 2026</p>
+    <p class="atualizado">Última atualização: 26 de outubro de 2026</p>
   </div>
 </header>
 
@@ -82,7 +82,7 @@
 
   <section id="quem">
     <h2>1. Quem somos</h2>
-    <p>O GSCASH é um aplicativo de controle de gastos pessoais que funciona no navegador, no Windows e no iPhone. Ele é desenvolvido e mantido por Gabriel Scarpat, que é o responsável pelo tratamento dos seus dados pessoais (o "controlador", nos termos da Lei Geral de Proteção de Dados, Lei nº 13.709/2018, a LGPD).</p>
+    <p>O GSCASH é um aplicativo de controle de gastos pessoais que funciona no navegador, no Windows, no iPhone e no Android. Ele é desenvolvido e mantido por Gabriel Scarpat, que é o responsável pelo tratamento dos seus dados pessoais (o "controlador", nos termos da Lei Geral de Proteção de Dados, Lei nº 13.709/2018, a LGPD).</p>
     <p>Para qualquer assunto sobre privacidade, escreva para <a href="mailto:suporte.gscash@gmail.com">suporte.gscash@gmail.com</a>.</p>
   </section>
 
@@ -107,12 +107,12 @@
       <li><strong>Registros de acesso:</strong> nosso provedor de login registra data e hora dos acessos, endereço IP e tipo de navegador, para segurança e para investigar problemas.</li>
       <li><strong>Datas de criação e alteração</strong> dos seus lançamentos, usadas para manter os dados em ordem entre aparelhos.</li>
       <li><strong>Licença:</strong> até quando a sua licença vale e o nome que aparece nela.</li>
-      <li><strong>Lembrete diário (se você ligar, no navegador):</strong> o endereço de notificação que o seu navegador cria para o aparelho, para o lembrete das 19h chegar. No app do iPhone, o lembrete é agendado no próprio celular e nada é enviado para nós.</li>
+      <li><strong>Lembrete diário (se você ligar, no navegador):</strong> o endereço de notificação que o seu navegador cria para o aparelho, para o lembrete das 19h chegar. Nos apps do iPhone e do Android, o lembrete é agendado no próprio celular e nada é enviado para nós.</li>
     </ul>
 
     <h3>Dados que ficam só no seu aparelho</h3>
     <ul>
-      <li><strong>Sessão:</strong> para você não precisar entrar toda vez, o app guarda a sua sessão no próprio aparelho (no navegador, no app do iPhone ou, no Windows, na pasta <code>%LOCALAPPDATA%\GSCASH</code>). Ela é apagada quando você sai da conta.</li>
+      <li><strong>Sessão:</strong> para você não precisar entrar toda vez, o app guarda a sua sessão no próprio aparelho (no navegador, nos apps do iPhone e do Android ou, no Windows, na pasta <code>%LOCALAPPDATA%\GSCASH</code>). Ela é apagada quando você sai da conta.</li>
       <li><strong>Licença antiga do Windows:</strong> quem ativou uma chave de licença em versões antigas tem a chave no arquivo <code>licenca.json</code>, no computador. Hoje a licença fica ligada à conta.</li>
       <li><strong>Registro de funcionamento do app para Windows</strong> (<code>gscash.log</code>): eventos como "app aberto" ou "atualização baixada", para ajudar no suporte. Ele fica no seu computador e só chega até nós se você mesmo enviar.</li>
     </ul>
@@ -143,6 +143,7 @@
     <ul>
       <li><strong>Pix e cartão de crédito (no navegador e no Windows):</strong> o pagamento é feito pelo Mercado Pago. Guardamos o código do pagamento, o valor, a data, a forma de pagamento e se foi aprovado. Os números do cartão são digitados num formulário do próprio Mercado Pago e <strong>nunca passam por nós</strong>. No cartão, o e-mail e o CPF de quem paga passam pelo nosso servidor apenas para serem enviados ao Mercado Pago, que os exige; nós não os guardamos.</li>
       <li><strong>Compra no app do iPhone:</strong> o pagamento é feito pela Apple, com a sua conta da App Store. Recebemos da Apple apenas o recibo da compra (código, produto e data), para liberar a licença na sua conta. Não recebemos seus dados de pagamento.</li>
+      <li><strong>Compra no app do Android:</strong> o pagamento é feito pelo Google Play, com a sua conta Google. Consultamos o Google apenas para confirmar a compra (código, produto, situação e data) e liberar a licença na sua conta. Não recebemos seus dados de pagamento.</li>
     </ul>
   </section>
 
@@ -155,6 +156,7 @@
         <tr><td>Supabase</td><td>Banco de dados e login. Os dados ficam em servidores localizados em São Paulo, Brasil.</td></tr>
         <tr><td>Google</td><td>Login com Google (se você escolher) e envio dos e-mails de confirmação e de recuperação de senha.</td></tr>
         <tr><td>Apple</td><td>Login com a Apple (se você escolher) e compras feitas no app do iPhone.</td></tr>
+        <tr><td>Google Play</td><td>Compras feitas no app do Android (confirmação da compra para liberar a licença).</td></tr>
         <tr><td>Mercado Pago</td><td>Pagamentos por Pix e cartão de crédito.</td></tr>
         <tr><td>Serviço de notificações do seu navegador</td><td>Entrega do lembrete diário no navegador (Google, Apple, Mozilla ou Microsoft, conforme o navegador que você usa). Ele recebe só o texto do lembrete, nunca seus lançamentos.</td></tr>
         <tr><td>GitHub</td><td>Hospedagem do site, do app no navegador e dos arquivos de atualização do app para Windows. O GitHub não recebe seus dados financeiros.</td></tr>
@@ -169,8 +171,8 @@
       <li>Toda a comunicação entre o app e os servidores é <strong>criptografada</strong> (HTTPS).</li>
       <li>O banco de dados tem regras que fazem <strong>cada pessoa enxergar só as próprias informações</strong>, mesmo que alguém tente acessar por fora do app.</li>
       <li>As senhas são guardadas de forma cifrada e nunca ficam visíveis para nós.</li>
-      <li>No login com Google ou com a Apple pelo app para Windows e pelo app do iPhone, usamos um método (PKCE) em que o navegador só devolve um código de uso único, que não funciona sozinho.</li>
-      <li>Cada compra feita no iPhone é conferida com a assinatura digital da Apple antes de liberar a licença.</li>
+      <li>No login com Google ou com a Apple pelo app para Windows e pelos apps do iPhone e do Android, usamos um método (PKCE) em que o navegador só devolve um código de uso único, que não funciona sozinho.</li>
+      <li>Cada compra feita no iPhone é conferida com a assinatura digital da Apple, e cada compra feita no Android é conferida diretamente com o Google Play, antes de liberar a licença.</li>
     </ul>
     <p>Nenhum sistema é 100% seguro. Se acontecer um incidente que possa trazer risco a você, vamos avisar você e a Autoridade Nacional de Proteção de Dados (ANPD), como manda a lei.</p>
   </section>
@@ -181,7 +183,7 @@
       <li>Seus dados ficam guardados <strong>enquanto a sua conta existir</strong>.</li>
       <li>Quando você exclui um lançamento, categoria ou carteira no app, ele deixa de aparecer, mas fica marcado como excluído no banco, para manter seus aparelhos em sincronia. Se você quiser que esses itens sejam apagados de vez, é só pedir.</li>
       <li><strong>Excluir a conta:</strong> no app, toque na sua inicial, no canto de cima, e em <strong>Excluir minha conta</strong>. Antes, o app oferece uma cópia dos seus lançamentos em planilha. Ao confirmar, a conta e todos os dados dela (lançamentos, carteiras, categorias, licença, pagamentos e lembretes) são apagados na hora. Se preferir, peça a exclusão por e-mail, e apagamos em até 30 dias.</li>
-      <li>Os comprovantes de pagamento continuam com o Mercado Pago ou com a Apple, que os guardam pelo tempo que a lei exige.</li>
+      <li>Os comprovantes de pagamento continuam com o Mercado Pago, com a Apple ou com o Google, que os guardam pelo tempo que a lei exige.</li>
       <li>Registros de acesso são guardados pelo tempo exigido pelo Marco Civil da Internet (Lei nº 12.965/2014).</li>
     </ul>
   </section>

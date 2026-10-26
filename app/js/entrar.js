@@ -514,7 +514,9 @@
   }));
 
   // o botão da Apple só aparece quando ela estiver ligada no Supabase (até lá, daria erro)
-  GS.auth.provedoresLigados().then(ligados => { $('apple').classList.toggle('hidden', !ligados.apple); }).catch(() => {});
+  // e nunca no app do Android, onde ninguém usa conta Apple
+  const noAndroid = GS.nativo && window.Capacitor.getPlatform() === 'android';
+  GS.auth.provedoresLigados().then(ligados => { $('apple').classList.toggle('hidden', !ligados.apple || noAndroid); }).catch(() => {});
 
   // voltou do Google/Apple pelo botão Voltar do navegador: a página volta como estava, então destrava o botão
   window.addEventListener('pageshow', e => {

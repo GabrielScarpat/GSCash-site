@@ -524,10 +524,10 @@ window.GS = window.GS || {};
     mostrarResumo();
   }
 
-  // no app do iPhone a Apple exige a compra pela própria Apple (In-App Purchase, etapa seguinte):
-  // até lá o Pix não aparece lá dentro
+  // nos apps (iPhone e Android) a Apple e o Google exigem a compra pela própria loja (js/compra-loja.js):
+  // o Pix não aparece lá dentro
   const comprar = () => (GS.nativo
-    ? (GS.compraApple ? GS.compraApple.abrir() : GS.toast('A compra pelo app do iPhone chega em breve.'))
+    ? (GS.compraLoja ? GS.compraLoja.abrir() : GS.toast('A compra pelo app chega em breve.'))
     : abrirCompra());
 
   /* ---------- campo da chave ---------- */

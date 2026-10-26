@@ -175,7 +175,9 @@ window.GS = window.GS || {};
     }
 
     function bloqueado() {
-      const onde = GS.nativo ? 'em <b>Ajustes &gt; Notificações &gt; GSCASH</b>' : 'nas configurações do navegador (ou do celular)';
+      const onde = !GS.nativo ? 'nas configurações do navegador (ou do celular)'
+        : window.Capacitor.getPlatform() === 'android' ? 'em <b>Configurações &gt; Apps &gt; GSCASH &gt; Notificações</b>'
+        : 'em <b>Ajustes &gt; Notificações &gt; GSCASH</b>';
       modal.body.innerHTML = `<div class="lembrete-aviso">${icone('alert')}<span>As notificações do GSCASH estão <b>bloqueadas</b> neste aparelho. Libere ${onde} e tente de novo.</span></div>`;
       rodape('<button type="button" class="btn btn-primary" data-fechar>Entendi</button>');
       modal.foot.className = 'modal-foot um';
