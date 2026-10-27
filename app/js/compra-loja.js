@@ -166,6 +166,12 @@ window.GS = window.GS || {};
         voltar();
         const msg = String((e && e.message) || e);
         if (/cancel/i.test(msg)) return;  // fechou a tela da loja: fica no resumo, sem aviso
+        // a loja diz que a licença já foi paga e não foi ativada (ex.: o servidor estava fora do ar): confirma a compra de antes
+        if (/already|owned/i.test(msg)) {
+          GS.toast('Você já pagou por esta licença. Vamos ativá-la agora.');
+          modal.body.querySelector('[data-restaurar]').click();
+          return;
+        }
         GS.toast(/pending/i.test(msg)
           ? 'A compra está esperando aprovação (por exemplo, de quem organiza a família). A licença ativa sozinha quando for aprovada.'
           : `${LOJA.nome === 'Google Play' ? 'O' : 'A'} ${LOJA.nome} não concluiu a compra. Nada foi cobrado; tente de novo.`, /pending/i.test(msg) ? undefined : 'erro');

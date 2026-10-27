@@ -102,7 +102,9 @@ window.GS = window.GS || {};
     for (let i = 0; i < DIAS; i++) {
       const at = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate() + i, 19, 0, 0);
       if (at <= agora || (i === 0 && pularHoje)) continue;
-      lista.push({ id: ID_BASE + i, title: TITULO, body: CORPO, schedule: { at, allowWhileIdle: true }, extra: { novo: 1 } });
+      // Android: isExactNotification false = alarme aproximado (pode atrasar alguns minutos). Sem isso o plugin abre a tela
+      // "Alarmes e lembretes" do sistema a cada vez que o app abre, e o app não declara a permissão de alarme exato
+      lista.push({ id: ID_BASE + i, title: TITULO, body: CORPO, schedule: { at, allowWhileIdle: true }, isExactNotification: false, extra: { novo: 1 } });
     }
     if (lista.length) await LN.schedule({ notifications: lista });
   }

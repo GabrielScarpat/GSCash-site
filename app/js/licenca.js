@@ -5,7 +5,7 @@
    (uma chave, uma conta). Vale igual no navegador e no app de computador.
 
    Situações:
-   · teste        — conta nova, nos 7 dias grátis (faixa azul)
+   · teste        — conta nova, nos 12 dias grátis (faixa azul)
    · teste-acabou — sem chave depois do teste: só leitura (faixa vermelha)
    · ativa / vencendo (30 dias ou menos) / vencida (só leitura)
    O banco também recusa gravar sem licença: aqui é só a parte visível.
@@ -52,11 +52,12 @@ window.GS = window.GS || {};
         nome: s.nome, validade: s.validade, dias: faltam,
       };
     }
-    const testeAte = new Date(s.teste_ate);  // data e hora: 7 dias depois de criar a conta
+    const testeAte = new Date(s.teste_ate);  // data e hora: 12 dias depois de criar a conta (ou do recomeço)
     const restante = testeAte - Date.now();
+    // bonus: conta antiga que ganhou 12 dias novos e ainda não viu o aviso
     return restante > 0
-      ? { estado: 'teste', testeAte, dias: Math.ceil(restante / DIA) }
-      : { estado: 'teste-acabou', testeAte };
+      ? { estado: 'teste', testeAte, dias: Math.ceil(restante / DIA), bonus: s.bonus || null }
+      : { estado: 'teste-acabou', testeAte, bonus: s.bonus || null };
   }
 
   // chama a Edge Function; devolve { nome, validade } ou lança o erro em português
@@ -97,6 +98,7 @@ window.GS = window.GS || {};
     else if (info.estado === 'teste-acabou') travar();
     else if (info.estado === 'vencida') travar();
     else if (info.estado === 'vencendo') avisoVencendo();
+    if (info.bonus) setTimeout(avisoBonus, 700);
 
     // veio do botão "Quero comprar" do site (app/?comprar, guardado por supabase.js até depois do login)
     try {
@@ -670,6 +672,34 @@ window.GS = window.GS || {};
       <span class="longo"><strong>Teste grátis: ${info.dias === 1 ? 'falta 1 dia' : `faltam ${info.dias} dias`}</strong> (até ${ATE(info.testeAte)}). Depois, ative sua licença para continuar lançando.</span>
       <span class="curto"><strong>Teste grátis:</strong> ${GS.plural(info.dias, 'dia', 'dias')}</span>
       <div class="acoes"><button type="button" class="btn btn-primary" data-comprar>Quero comprar</button></div>`);
+  }
+
+  // conta que já existia quando o teste passou de 7 para 12 dias: o banco recomeçou o teste e o aviso
+  // aparece uma vez só (fechar a janela chama bonus_visto)
+  function avisoBonus() {
+    const { dias, reaberto } = info.bonus;
+    const titulo = reaberto ? `Seu teste foi reaberto: mais ${dias} dias grátis` : `Você ganhou mais ${dias} dias de teste grátis`;
+    const texto = reaberto
+      ? `O seu teste tinha acabado, mas liberamos ${dias} dias novos, contados a partir de hoje. Seus dados estão todos aqui e você já pode voltar a lançar.`
+      : 'Obrigado por testar o GSCASH. Para você aproveitar com calma, o seu teste recomeçou hoje, com tudo liberado.';
+    const modal = GS.abrirModal({
+      titulo,
+      tamanho: 'bonus',
+      corpo: `
+        <div class="bonus-corpo">
+          <span class="bonus-icone">${icone(reaberto ? 'unlock' : 'gift')}</span>
+          <h2 class="bonus-titulo">${titulo}</h2>
+          <p>${texto}</p>
+          <div class="bonus-dias">
+            <div class="grande"><b class="num">${dias}</b><span>dias</span></div>
+            <div class="tracos">${'<i></i>'.repeat(dias)}</div>
+            <div class="ate"><span>Seu teste vai até</span><b>${data(info.testeAte)}</b></div>
+          </div>
+        </div>`,
+      rodape: `<button type="button" class="btn btn-primary" data-fechar>${reaberto ? 'Voltar a lançar' : 'Continuar'}</button>`,
+      aoFechar: () => { GS.supabase.rpc('bonus_visto').then(() => {}, e => console.warn('bonus_visto', e)); },
+    });
+    modal.foot.querySelector('[data-fechar]').focus();
   }
 
   // faltam 30 dias ou menos: avisa uma vez por dia

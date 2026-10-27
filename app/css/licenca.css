@@ -42,6 +42,29 @@
 .ativ-ok b { color: var(--text); font-weight: 600; }
 
 /* =========================================================
+   Aviso "ganhou mais 12 dias de teste" (contas antigas, uma vez só)
+   Sem cabeçalho: o título está no corpo, como na janela de licença ativada.
+   ========================================================= */
+
+.modal.bonus .modal-head { display: none; }
+.modal.bonus .modal-body { padding-top: 34px; }
+.modal.bonus .modal-foot { grid-template-columns: 1fr; }
+.modal.bonus .modal-foot .btn { width: 100%; }
+.bonus-corpo { display: grid; justify-items: center; gap: 14px; text-align: center; }
+.bonus-icone { display: grid; place-items: center; width: 64px; height: 64px; border-radius: 18px; background: var(--primary-soft); color: var(--primary); }
+.bonus-icone svg { width: 30px; height: 30px; }
+.bonus-titulo { font-size: 24px; font-weight: 600; letter-spacing: -.02em; line-height: 1.2; }
+.bonus-corpo p { color: var(--text-2); font-size: 15.5px; line-height: 1.5; }
+.bonus-dias { display: grid; gap: 12px; width: 100%; margin-top: 6px; padding: 18px 20px 16px; border-radius: 18px; background: var(--surface-2); }
+.bonus-dias .grande { display: flex; align-items: baseline; justify-content: center; gap: 8px; }
+.bonus-dias .grande b { font-size: 44px; font-weight: 700; letter-spacing: -.04em; line-height: 1; color: var(--primary); }
+.bonus-dias .grande span { font-size: 17px; font-weight: 500; color: var(--text-2); }
+.bonus-dias .tracos { display: grid; grid-template-columns: repeat(12, 1fr); gap: 5px; }
+.bonus-dias .tracos i { height: 6px; border-radius: 3px; background: var(--primary); }
+.bonus-dias .ate { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; color: var(--text-2); }
+.bonus-dias .ate b { color: var(--text); font-weight: 600; white-space: nowrap; }
+
+/* =========================================================
    Faixas: teste grátis (azul), perto de vencer (amarela) e vencida (vermelha)
    ========================================================= */
 

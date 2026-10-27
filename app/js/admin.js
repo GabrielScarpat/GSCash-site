@@ -52,7 +52,7 @@
     ['todos', 'Todos', 'Da mais nova para a mais antiga (a sua não entra).'],
     ['acaba', 'Teste acaba em 2 dias', 'Ainda sem licença. Hora de oferecer ajuda ou lembrar do preço.'],
     ['nada', 'Não lançaram nada', 'Criaram a conta há mais de 1 dia e não lançaram nenhum gasto. Provavelmente travaram no começo.'],
-    ['acabou', 'Teste acabou, sem compra', 'O teste de 7 dias acabou e não houve licença. Perguntar o que faltou.'],
+    ['acabou', 'Teste acabou, sem compra', 'O teste de 12 dias acabou e não houve licença. Perguntar o que faltou.'],
     ['pararam', 'Pararam de usar', 'Usavam e estão há 7 dias ou mais sem lançar.'],
     ['vence', 'Licença vence em 30 dias', 'Renovação.'],
     ['muito', 'Usam muito, não compraram', '30 ou mais lançamentos e ainda sem licença paga.'],
@@ -164,7 +164,7 @@
             ${etapa('Lançaram algo', f.lancaram)}
             ${etapa('Importaram extrato', f.importaram)}
             ${etapa('Ligaram o lembrete', f.lembrete)}
-            ${etapa('Compraram', f.compraram, f.passaram_teste ? ` · das que já passaram dos 7 dias: ${f.compraram_depois_teste} de ${f.passaram_teste}` : '')}
+            ${etapa('Compraram', f.compraram, f.passaram_teste ? ` · das que já passaram dos 12 dias: ${f.compraram_depois_teste} de ${f.passaram_teste}` : '')}
           </div>
         </div>
       </div>
