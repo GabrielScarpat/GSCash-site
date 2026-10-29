@@ -9,7 +9,8 @@
   body { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
 
   /* ---------- topo: inicial + "Olá, Gabriel" + transferir ---------- */
-  .topbar { background: var(--bg); border-bottom: 0; }
+  /* o app ocupa a tela toda: o topo fixo cobre a faixa da barra de status do iPhone */
+  .topbar { background: var(--bg); border-bottom: 0; padding-top: env(safe-area-inset-top); }
   .topbar-inner { flex-wrap: nowrap; height: 64px; padding: 0 16px; gap: 10px; }
   .topbar .logo, .topbar .nav-links, .topbar [data-acao="novo-gasto"] { display: none; }
   .topbar-acoes { flex: 1; display: flex; align-items: center; gap: 8px; }
@@ -194,9 +195,9 @@
   /* ---------- Janelas (Novo gasto, Transferir...) ---------- */
   /* sobem de baixo, deixando um pedaço da tela à mostra em cima; os campos rolam por dentro
      e os botões (Salvar, Cancelar) ficam presos embaixo, sempre à vista */
-  .modal-backdrop { padding-top: 28px; }
-  .modal { height: auto; max-height: calc(100dvh - 28px); border-radius: 22px 22px 0 0; }
-  .modal.lg { height: calc(100dvh - 28px); }
+  .modal-backdrop { padding-top: calc(28px + env(safe-area-inset-top)); }
+  .modal { height: auto; max-height: calc(100dvh - 28px - env(safe-area-inset-top)); border-radius: 22px 22px 0 0; }
+  .modal.lg { height: calc(100dvh - 28px - env(safe-area-inset-top)); }
   .modal-foot:empty { display: none; }
   .modal-head { padding: 18px 18px 6px; }
   .modal-title { font-size: 21px; }
@@ -205,10 +206,13 @@
 
   /* ---------- Novo gasto: janela só da altura necessária ----------
      tipo e valor em destaque no topo; data e carteira lado a lado; Única/Recorrente e descrição em "Mais opções" */
-  .modal.lg.form-gasto { height: auto; max-height: calc(100dvh - 48px); }
-  .form-gasto .modal-body { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 10px; align-content: start; }
+  .modal.lg.form-gasto { height: auto; max-height: calc(100dvh - 48px - env(safe-area-inset-top)); }
+  .form-gasto .modal-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px 10px; align-content: start; }
   .form-gasto .modal-body > *, .form-gasto .modal-body-form > *, .form-gasto .modal-body .field { grid-column: 1 / -1; min-width: 0; }
   .form-gasto .row-2 { display: contents; }
+  /* o botão da carteira cabe na meia coluna: quebra a linha em vez de alargar a janela */
+  .form-gasto .sem-carteira { padding: 12px; }
+  .form-gasto .sem-carteira .btn { width: 100%; height: auto; min-height: 44px; padding: 10px 12px; white-space: normal; text-align: center; line-height: 1.25; }
   .form-gasto .field { gap: 5px; }
   .form-gasto .field-label, .form-gasto .field > label { font-size: 13px; }
 

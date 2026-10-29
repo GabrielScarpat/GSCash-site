@@ -29,6 +29,25 @@ window.GS = window.GS || {};
     }
   })();
 
+  // Indique e ganhe: o código de quem indicou chega no link (gscash.com.br/?ref=CODIGO, que o site
+  // guarda, ou app/entrar.html?ref=CODIGO) ou é digitado ao criar a conta. Fica guardado neste
+  // aparelho até a conta nova usar (licenca.js) e vai junto no cadastro, para valer mesmo se o
+  // e-mail de confirmação for aberto em outro aparelho.
+  const CHAVE_CONVITE = 'gscash:ref';
+  GS.convite = {
+    limpar: c => String(c || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12),
+    ler() { try { return localStorage.getItem(CHAVE_CONVITE) || ''; } catch (e) { return ''; } },
+    guardar(c) {
+      c = GS.convite.limpar(c);
+      try { c ? localStorage.setItem(CHAVE_CONVITE, c) : localStorage.removeItem(CHAVE_CONVITE); } catch (e) { /* sem localStorage: só o cadastro leva */ }
+    },
+    veioDoLink: false,
+  };
+  try {
+    const ref = new URLSearchParams(location.search).get('ref');
+    if (GS.convite.limpar(ref)) { GS.convite.guardar(ref); GS.convite.veioDoLink = true; }
+  } catch (e) { /* endereço sem busca: segue */ }
+
   // dentro do app do iPhone (Capacitor): sem convite de instalar, sem Windows, sem Pix
   GS.nativo = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
 
@@ -371,8 +390,10 @@ window.GS = window.GS || {};
     },
 
     // devolve { precisaConfirmar: true } quando o Supabase exige confirmar o e-mail
-    async criarConta(email, senha) {
-      const dados = await executar(cliente.auth.signUp({ email: email.trim(), password: senha, options: { emailRedirectTo: SITE_EMAILS } }));
+    // convite: código de quem indicou (vai nos dados da conta; licenca.js usa depois de entrar)
+    async criarConta(email, senha, convite) {
+      const opcoes = { emailRedirectTo: SITE_EMAILS, ...(convite ? { data: { ref: convite } } : {}) };
+      const dados = await executar(cliente.auth.signUp({ email: email.trim(), password: senha, options: opcoes }));
       // e-mail já cadastrado: o Supabase não avisa, devolve um usuário sem identidades
       if (dados.user && dados.user.identities && dados.user.identities.length === 0) {
         throw new Error(traduzir({ code: 'user_already_exists' }));

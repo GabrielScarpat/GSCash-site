@@ -1,6 +1,6 @@
 /* GSCASH — tela de login (entrar.html) */
 
-.entrar-pagina { min-height: 100vh; display: grid; place-items: center; padding: 24px; }
+.entrar-pagina { min-height: 100vh; display: grid; place-items: center; padding: calc(24px + env(safe-area-inset-top)) 24px 24px; }
 
 .entrar-caixa { width: 100%; max-width: 420px; }
 
@@ -90,6 +90,20 @@
 .regra-senha svg { width: 15px; height: 15px; }
 .regra-senha.ok { color: var(--success); }
 .senha-caixa input::-ms-reveal, .senha-caixa input::-ms-clear { display: none; }  /* o Edge (app de computador) tem um olho próprio */
+
+/* Indique e ganhe: convite reconhecido pelo link e o código de quem indicou */
+.entrar-convite {
+  display: flex; gap: 10px; align-items: flex-start; margin: 14px 0 0; padding: 12px 14px;
+  border: 1px solid rgba(29, 58, 94, .25); border-radius: 12px; background: var(--primary-soft);
+  color: var(--primary); font-size: 14px; line-height: 1.45;
+}
+.entrar-convite svg { flex: none; width: 20px; height: 20px; margin-top: 1px; }
+.campo .opcional { color: var(--muted); font-weight: 400; }
+.codigo-caixa { position: relative; }
+.codigo-caixa input { padding-right: 40px; letter-spacing: .04em; text-transform: uppercase; }
+.codigo-caixa input::placeholder { letter-spacing: 0; text-transform: none; }
+.codigo-caixa input:read-only { font-weight: 600; }
+.codigo-caixa .codigo-ok { position: absolute; right: 12px; top: 50%; width: 18px; height: 18px; margin-top: -9px; color: var(--success); }
 
 /* botão ocupado ("Criando sua conta…") */
 .entrar-principal { display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; }

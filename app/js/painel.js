@@ -244,7 +244,7 @@
   // eixo em valores "redondos": 1, 2, 2,5 ou 5 × 10^n
   function escalaY(maximo) {
     if (maximo <= 0) return { max: 100000, passo: 25000 };
-    const bruto = maximo / 4;
+    const bruto = Math.max(maximo / 4, 100);  // nunca menos de R$ 1 por linha: com centavos os rótulos virariam todos "0"
     const potencia = Math.pow(10, Math.floor(Math.log10(bruto)));
     const passo = [1, 2, 2.5, 5, 10].map(m => m * potencia).find(v => v >= bruto);
     return { max: Math.ceil(maximo / passo) * passo, passo };
@@ -286,7 +286,7 @@
     };
 
     let svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Entrou e saiu nos últimos ${dados.length} meses"><g class="grade eixo">`;
-    for (let v = 0; v <= max + 1; v += passo) {
+    for (let v = 0; v <= max + passo / 1000; v += passo) {
       svg += `<line x1="${ml}" x2="${W}" y1="${y(v)}" y2="${y(v)}"/><text x="${ml - 10}" y="${y(v) + 4}" text-anchor="end">${rotuloEixo(v)}</text>`;
     }
     svg += '</g>';
@@ -300,7 +300,7 @@
       svg += barra(centro + 1, d.saiu, 'var(--saiu)', d.parcial);
       svg += `<g class="mes ${d.parcial ? 'atual' : ''}" pointer-events="none">
         ${(dados.length - 1 - i) % passoRotulo === 0
-          ? `<text x="${centro}" y="${H - mb + 22}" text-anchor="middle">${d.rotulo}${d.parcial && dados.length <= 6 ? ' (parcial)' : ''}</text>` : ''}
+          ? `<text x="${centro}" y="${H - mb + 22}" text-anchor="middle">${d.rotulo}${d.parcial && grupo >= 80 ? ' (parcial)' : ''}</text>` : ''}
         ${dados.length <= 6 && (d.entrou || d.saiu)
           ? `<text class="sob" x="${centro}" y="${H - mb + 40}" text-anchor="middle">${sobra < 0 ? 'faltou' : 'sobrou'} ${GS.moedaInteira(Math.abs(sobra))}</text>` : ''}
       </g>`;

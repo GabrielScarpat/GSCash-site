@@ -59,6 +59,35 @@
 .cfg-avatar { display: grid; place-items: center; flex: none; width: 44px; height: 44px; border-radius: 50%; background: var(--primary); color: var(--bg); font-size: 18px; font-weight: 600; }
 .cfg-linha .txt b { overflow-wrap: anywhere; }
 
+/* Indique e ganhe: link, progresso até 5 amigos e quem usou o link */
+.ind-link { display: flex; flex-wrap: wrap; gap: 8px; }
+.ind-link .campo-link { display: flex; align-items: center; flex: 1 0 100%; min-width: 0; height: 44px; padding: 0 14px; border: 1px solid var(--border-strong); border-radius: 10px; background: var(--surface-2); font-size: 15px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; user-select: all; }
+.ind-link .btn { flex: 1; padding: 0 16px; }
+.ind-codigo { margin-top: 8px; color: var(--muted); font-size: 13px; }
+.ind-codigo b { color: var(--text-2); font-weight: 600; letter-spacing: .04em; }
+.ind-progresso { display: grid; gap: 10px; margin-top: 22px; padding: 18px 20px; border-radius: 18px; background: var(--surface-2); }
+.cfg-texto + .ind-progresso { margin-top: 0; }
+.ind-progresso .topo { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.ind-progresso .conta { display: flex; align-items: baseline; gap: 6px; }
+.ind-progresso .conta b { font-size: 32px; font-weight: 700; letter-spacing: -.04em; line-height: 1; color: var(--primary); }
+.ind-progresso .conta span { color: var(--text-2); font-size: 15px; }
+.ind-progresso .falta { color: var(--text-2); font-size: 14px; }
+.ind-progresso .falta b { color: var(--text); font-weight: 600; }
+.ind-tracos { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.ind-tracos i { height: 8px; border-radius: 4px; background: var(--border-strong); }
+.ind-tracos i.on { background: var(--primary); }
+.ind-progresso.ganhou .conta b { color: var(--success); }
+.ind-progresso.ganhou .ind-tracos i { background: var(--success); }
+.ind-amigos { display: grid; margin-top: 18px; }
+.ind-amigos h3 { margin-bottom: 4px; font-size: 14px; font-weight: 600; color: var(--text-2); }
+.ind-amigo { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--border); }
+.ind-amigos h3 + .ind-amigo { border-top: 0; }
+.ind-amigo .ini { display: grid; place-items: center; flex: none; width: 34px; height: 34px; border-radius: 50%; background: var(--chip); color: var(--text-2); font-size: 14px; font-weight: 600; }
+.ind-amigo .txt { display: flex; flex-direction: column; min-width: 0; margin-right: auto; }
+.ind-amigo .txt b { overflow: hidden; font-size: 14.5px; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
+.ind-amigo .txt small { color: var(--muted); font-size: 12.5px; }
+.ind-amigo .selo { flex: none; min-width: 112px; }
+
 @media (max-width: 640px) {
   .cfg-voltar { display: inline-flex; align-items: center; gap: 4px; margin-bottom: -8px; color: var(--text-2); font-size: 14px; }
   .cfg-voltar svg { width: 18px; height: 18px; }

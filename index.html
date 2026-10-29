@@ -9,11 +9,17 @@
   // · links dos e-mails (confirmar conta, trocar senha, link vencido) vão para conta.html
   // · quem já entrou no app neste aparelho vai direto para o app
   // · o resto (e os buscadores, como o Google) vê esta página
+  // · link de indicação (?ref=CODIGO): guarda o código para a tela de criar conta do app
+  //   (mesmo endereço, então app/js/supabase.js lê a mesma chave)
   (function () {
     if (/(access_token|error|type|code|token_hash)=/.test(location.hash + location.search)) {
       location.replace('conta.html' + location.search + location.hash);
       return;
     }
+    try {
+      const ref = String(new URLSearchParams(location.search).get('ref') || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12);
+      if (ref) localStorage.setItem('gscash:ref', ref);
+    } catch (e) { /* sem localStorage: a pessoa digita o código ao criar a conta */ }
     try {
       const sessao = JSON.parse(localStorage.getItem('sb-dlgxytheymnlcnxtbqib-auth-token'));
       if (sessao && sessao.refresh_token) location.replace('app/');
@@ -89,7 +95,7 @@
   ]
 }
 </script>
-<link rel="stylesheet" href="app/css/fonts.css?v=48c6e24">
+<link rel="stylesheet" href="app/css/fonts.css?v=0bc3702">
 <style>
   /* página pública do GSCASH: o que é, preço e onde usar (também é a "página inicial" do login com Google) */
   :root { --bg:#F3EFE4; --surface:#FDFCF8; --surface-2:#F6F3EB; --border:#ECE7DA; --border-strong:#DDD7C7;
@@ -367,6 +373,6 @@
   </div>
 </footer>
 
-<script src="app/js/baixar.js?v=48c6e24"></script>
+<script src="app/js/baixar.js?v=0bc3702"></script>
 </body>
 </html>

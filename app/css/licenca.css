@@ -61,6 +61,7 @@
 .bonus-dias .grande span { font-size: 17px; font-weight: 500; color: var(--text-2); }
 .bonus-dias .tracos { display: grid; grid-template-columns: repeat(12, 1fr); gap: 5px; }
 .bonus-dias .tracos i { height: 6px; border-radius: 3px; background: var(--primary); }
+.bonus-dias .tracos.meses { grid-template-columns: repeat(6, 1fr); }  /* prêmio do "Indique e ganhe" */
 .bonus-dias .ate { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; color: var(--text-2); }
 .bonus-dias .ate b { color: var(--text); font-weight: 600; white-space: nowrap; }
 

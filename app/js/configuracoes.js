@@ -1,5 +1,6 @@
 /* =========================================================
    GSCASH — Configurações (menu da conta › Configurações)
+   · Indique e ganhe: link, código, progresso até 5 amigos e quem usou.
    · Moeda do app: só troca o símbolo e o formato, sem converter
      os valores. Clicar numa moeda só marca; a troca vale ao
      confirmar e fica salva nas preferências da conta.
@@ -72,6 +73,109 @@
       botao.disabled = false;
       desenharMoedas();
     }
+  });
+
+  /* ---------- Indique e ganhe ----------
+     5 amigos criam conta pelo link e registram o primeiro gasto: 6 meses de licença, uma vez.
+     Quem conta e quem ganha é o banco (minha_indicacao); aqui só mostra. */
+
+  const LINK_INDICACAO = 'https://gscash.com.br/?ref=';
+  let indicacao = null;
+
+  async function desenharIndicacao() {
+    try {
+      const { data, error } = await GS.supabase.rpc('minha_indicacao');
+      if (error) throw error;
+      indicacao = data;
+    } catch (err) {
+      console.warn('minha_indicacao', err);
+      return;   // sem internet: o cartão não aparece
+    }
+    const { codigo, meta, premio, amigos } = indicacao;
+    const validas = Math.min(indicacao.validas, meta);
+    const link = LINK_INDICACAO + codigo;
+    const tracos = Array.from({ length: meta }, (_, i) => `<i${i < validas ? ' class="on"' : ''}></i>`).join('');
+    const nota = texto => `<div class="cfg-nota">${icone('alert')}<span>${texto}</span></div>`;
+
+    $('cardIndicacao').hidden = false;
+    $('indicacaoSelo').classList.toggle('hidden', !premio);
+
+    if (premio) {
+      $('indicacao').innerHTML = `
+        <p class="cfg-texto">Obrigado por indicar o GSCASH. Seus 6 meses grátis já estão na sua licença.</p>
+        <div class="ind-progresso ganhou">
+          <div class="topo">
+            <div class="conta"><b class="num">${meta}</b><span>de ${meta} amigos</span></div>
+            <span class="falta">Licença até <b>${esc(GS.dataMedia(premio.validade))}</b></span>
+          </div>
+          <div class="ind-tracos">${tracos}</div>
+        </div>
+        ${nota('Você ainda pode compartilhar o GSCASH, mas o prêmio vale uma vez só.')}`;
+      return;
+    }
+
+    const faltam = meta - validas;
+    const lista = amigos.length ? `
+      <div class="ind-amigos">
+        <h3>Quem usou seu link</h3>
+        ${amigos.map(a => `<div class="ind-amigo">
+          <span class="ini" aria-hidden="true">${esc(a.email.charAt(0).toUpperCase())}</span>
+          <span class="txt"><b>${esc(a.email)}</b><small>Entrou em ${esc(GS.dataMedia(new Date(a.criada_em)))}</small></span>
+          ${a.valida ? '<span class="selo ok">Valeu</span>' : '<span class="selo alerta">Falta 1º gasto</span>'}
+        </div>`).join('')}
+      </div>` : '';
+
+    $('indicacao').innerHTML = `
+      <p class="cfg-texto">Quando ${meta} amigos criarem conta pelo seu link e registrarem o primeiro gasto, você ganha <b>6 meses de licença grátis</b>.</p>
+      <div class="ind-link">
+        <span class="campo-link">${esc(link.replace('https://', ''))}</span>
+        <button type="button" class="btn btn-outline" data-copiar>${icone('copiar')}Copiar</button>
+        <button type="button" class="btn btn-primary" data-compartilhar>${icone('compartilhar')}Compartilhar</button>
+      </div>
+      <p class="ind-codigo">Quem baixar pela loja pode digitar o código <b>${esc(codigo)}</b> ao criar a conta.</p>
+      <div class="ind-progresso">
+        <div class="topo">
+          <div class="conta"><b class="num">${validas}</b><span>de ${meta} amigos</span></div>
+          <span class="falta">${faltam === 1 ? 'Falta 1' : `Faltam ${faltam}`}</span>
+        </div>
+        <div class="ind-tracos">${tracos}</div>
+      </div>
+      ${lista}
+      ${nota(`Vale uma vez por conta. Os 6 meses somam à licença que você já tem. Só conta quem criou uma conta nova.`)}`;
+  }
+
+  async function copiarLink(botao, texto) {
+    try {
+      await navigator.clipboard.writeText(texto);
+    } catch (e) {
+      const t = GS.el('textarea');
+      t.value = texto;
+      document.body.append(t);
+      t.select();
+      document.execCommand('copy');
+      t.remove();
+    }
+    if (botao.dataset.textoOriginal === undefined) botao.dataset.textoOriginal = botao.innerHTML;
+    botao.innerHTML = `${icone('check')}Copiado`;
+    clearTimeout(botao._volta);
+    botao._volta = setTimeout(() => { botao.innerHTML = botao.dataset.textoOriginal; }, 2000);
+  }
+
+  $('indicacao').addEventListener('click', async e => {
+    if (!indicacao) return;
+    const link = LINK_INDICACAO + indicacao.codigo;
+    const copiar = e.target.closest('[data-copiar]');
+    if (copiar) return copiarLink(copiar, link);
+    const compartilhar = e.target.closest('[data-compartilhar]');
+    if (!compartilhar) return;
+    const texto = `Uso o GSCASH para controlar meus gastos. Crie sua conta pelo meu link, são 12 dias grátis para testar (código ${indicacao.codigo}):`;
+    // celular e navegadores que têm a janela de compartilhar do sistema; nos outros, copia
+    if (navigator.share) {
+      try { await navigator.share({ title: 'GSCASH', text: texto, url: link }); } catch (err) { /* fechou a janela */ }
+      return;
+    }
+    copiarLink(compartilhar, `${texto} ${link}`);
+    GS.toast('Link copiado. Cole no WhatsApp ou onde quiser.');
   });
 
   /* ---------- Lembrete diário ---------- */
@@ -202,6 +306,12 @@
   $('conta').addEventListener('click', async e => {
     const botao = e.target.closest('[data-sair]');
     if (!botao || botao.disabled) return;
+    const ok = await GS.confirmar({
+      titulo: 'Sair da conta?',
+      mensagem: `Você sai de <strong>${esc(GS.dadosDaConta(GS.usuario).email)}</strong> neste aparelho. Seus dados continuam guardados na nuvem.`,
+      botao: 'Sair', perigo: false,
+    });
+    if (!ok) return;
     botao.disabled = true;
     try {
       await GS.contas.sair(GS.usuario.id);   // a página vai para a tela de entrar daqui
@@ -214,7 +324,7 @@
   async function desenhar() {
     desenharMoedas();
     desenharAplicativo();
-    await Promise.all([desenharLembrete(), desenharDuasEtapas(), desenharConta()]);
+    await Promise.all([desenharIndicacao(), desenharLembrete(), desenharDuasEtapas(), desenharConta()]);
   }
 
   GS.iniciarPagina('configuracoes', desenhar);

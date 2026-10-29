@@ -23,13 +23,29 @@
 
   let modo = 'entrar';
 
+  /* ---------- Indique e ganhe ----------
+     Veio pelo link de um amigo (?ref aqui, ou o site guardou): o código já vem preenchido e travado.
+     Sem link, o campo é opcional (quem baixou pela loja digita). O que estiver no campo fica
+     guardado também para o login com Google/Apple, que não passa pelo formulário. */
+  const conviteGuardado = GS.convite.ler();
+  const campoCodigo = $('codigo');
+  if (conviteGuardado) {
+    campoCodigo.value = conviteGuardado;
+    campoCodigo.readOnly = true;
+    $('codigoOk').classList.remove('hidden');
+    $('codigoOpcional').classList.add('hidden');
+  }
+  campoCodigo.addEventListener('input', () => GS.convite.guardar(campoCodigo.value));
+
   /* ---------- Várias contas ----------
      entrar.html?adicionar=1  : chegou pelo menu da conta ("Adicionar outra conta"); a conta em uso continua guardada
      entrar.html?reentrar=EMAIL : a sessão guardada dessa conta não vale mais; pede a senha só dela
      Sem nada na barra e com contas guardadas: atalhos "Continuar como…". */
   const params = new URLSearchParams(location.search);
   const emOutraConta = params.has('adicionar') || !!params.get('reentrar');
-  let semAbas = emOutraConta;   // sem "Criar conta": a pessoa já tem a conta
+  // sem "Criar conta" só ao pedir de novo a senha de uma conta guardada; em "Adicionar outra conta"
+  // a outra pode ainda não existir
+  let semAbas = !!params.get('reentrar');
   let contexto = null;          // { titulo, sub }: textos do modo "entrar" quando ele não é o de sempre
   let temContas = false;
   let temSessao = false;
@@ -60,6 +76,8 @@
     el.campoSenha.classList.toggle('hidden', novo === 'recuperar');
     el.esqueci.classList.toggle('hidden', novo !== 'entrar');
     el.blocoGoogle.classList.toggle('hidden', !soAbas);
+    $('campoCodigo').classList.toggle('hidden', novo !== 'criar');
+    $('convite').classList.toggle('hidden', novo !== 'criar' || !conviteGuardado);
     el.voltar.classList.toggle('hidden', soAbas);
     if (t.senha) {
       el.senha.placeholder = t.senha;
@@ -439,7 +457,7 @@
         return await seguir();
       }
       if (modo === 'criar') {
-        const { precisaConfirmar } = await GS.auth.criarConta(el.email.value, el.senha.value);
+        const { precisaConfirmar } = await GS.auth.criarConta(el.email.value, el.senha.value, GS.convite.limpar(campoCodigo.value));
         if (!precisaConfirmar) return irParaOApp();
         mostrarConfirmar(el.email.value, 'criada');
         return;
@@ -548,7 +566,9 @@
     $('baixarLinha').hidden = false;
   }
 
-  // "Começar grátis" da página inicial do site (→ entrar.html#criar): abre em "Criar conta" (no fim deste arquivo)
+  // "Começar grátis" da página inicial do site (→ entrar.html#criar) e o link de indicação (?ref):
+  // abrem em "Criar conta" (no fim deste arquivo)
+  const querCriar = location.hash === '#criar' || GS.convite.veioDoLink;
 
   // veio pelo link "recuperar senha" do e-mail: pede a nova senha em vez de entrar direto
   const veioDoLinkDeSenha = /type=recovery/.test(location.hash);
@@ -570,17 +590,17 @@
     if (params.has('adicionar')) {
       contexto = {
         titulo: 'Adicionar outra conta',
-        sub: sessao && sessao.user.email ? `Você continua conectado como ${sessao.user.email}. Entre com a outra conta para guardá-la neste aparelho.` : 'Entre com a outra conta para guardá-la neste aparelho.',
+        sub: sessao && sessao.user.email ? `Você continua conectado como ${sessao.user.email}. Entre com a outra conta (ou crie uma em "Criar conta") para guardá-la neste aparelho.` : 'Entre com a outra conta (ou crie uma em "Criar conta") para guardá-la neste aparelho.',
       };
     }
     if (email) {
       pedirSenha(email);
-    } else if (!params.has('adicionar') && !sessao && temContas && !veioDoLinkDeSenha && location.hash !== '#criar') {
+    } else if (!params.has('adicionar') && !sessao && temContas && !veioDoLinkDeSenha && !querCriar) {
       mostrarEscolha(lista);
     } else {
       mostrarSo('formulario');
       // (o link de nova senha do e-mail já pode ter pedido 'novasenha' enquanto isto carregava)
-      trocarModo(modo === 'novasenha' ? 'novasenha' : location.hash === '#criar' && !emOutraConta ? 'criar' : 'entrar');
+      trocarModo(modo === 'novasenha' ? 'novasenha' : querCriar && !emOutraConta ? 'criar' : 'entrar');
     }
     if (mensagemInicial) {
       if ($('escolha').classList.contains('hidden')) avisar(mensagemInicial, true);

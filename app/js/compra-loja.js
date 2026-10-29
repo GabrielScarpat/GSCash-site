@@ -165,7 +165,10 @@ window.GS = window.GS || {};
       } catch (e) {
         voltar();
         const msg = String((e && e.message) || e);
-        if (/cancel/i.test(msg)) return;  // fechou a tela da loja: fica no resumo, sem aviso
+        // fechou a tela da loja (ou a loja desistiu sozinha): fica no resumo, com um aviso curto;
+        // se a loja respondeu outra coisa, o texto dela vai junto (é o que diz por que não concluiu)
+        const detalhe = msg === 'User cancelled' ? '' : ` (${msg})`;
+        if (/cancel/i.test(msg)) return GS.toast(`Compra cancelada. Nada foi cobrado.${detalhe}`);
         // a loja diz que a licença já foi paga e não foi ativada (ex.: o servidor estava fora do ar): confirma a compra de antes
         if (/already|owned/i.test(msg)) {
           GS.toast('Você já pagou por esta licença. Vamos ativá-la agora.');
@@ -174,7 +177,7 @@ window.GS = window.GS || {};
         }
         GS.toast(/pending/i.test(msg)
           ? 'A compra está esperando aprovação (por exemplo, de quem organiza a família). A licença ativa sozinha quando for aprovada.'
-          : `${LOJA.nome === 'Google Play' ? 'O' : 'A'} ${LOJA.nome} não concluiu a compra. Nada foi cobrado; tente de novo.`, /pending/i.test(msg) ? undefined : 'erro');
+          : `${LOJA.nome === 'Google Play' ? 'O' : 'A'} ${LOJA.nome} não concluiu a compra. Nada foi cobrado; tente de novo.${detalhe}`, /pending/i.test(msg) ? undefined : 'erro');
         return;
       }
       botao.innerHTML = '<span class="roda-botao" aria-hidden="true"></span>Ativando a licença…';

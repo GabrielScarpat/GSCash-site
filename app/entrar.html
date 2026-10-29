@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="robots" content="noindex">
   <title>Entrar · GSCASH</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
@@ -14,10 +14,10 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="GSCASH">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <link rel="stylesheet" href="css/fonts.css?v=48c6e24">
-  <link rel="stylesheet" href="css/base.css?v=48c6e24">
-  <link rel="stylesheet" href="css/entrar.css?v=48c6e24">
-  <link rel="stylesheet" href="css/duas-etapas.css?v=48c6e24">
+  <link rel="stylesheet" href="css/fonts.css?v=0bc3702">
+  <link rel="stylesheet" href="css/base.css?v=0bc3702">
+  <link rel="stylesheet" href="css/entrar.css?v=0bc3702">
+  <link rel="stylesheet" href="css/duas-etapas.css?v=0bc3702">
 </head>
 <body class="entrar-pagina">
 
@@ -52,6 +52,12 @@
       <h1 id="titulo">Bem-vindo de volta</h1>
       <p class="entrar-sub" id="subtitulo">Entre para ver suas contas em qualquer aparelho.</p>
 
+      <!-- Indique e ganhe: chegou pelo link de um amigo (js/entrar.js) -->
+      <p class="entrar-convite hidden" id="convite">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6"/><path d="M22 11h-6"/></svg>
+        <span>Você veio pelo convite de um amigo. Ao criar a conta e registrar seu primeiro gasto, ele fica mais perto de ganhar 6 meses.</span>
+      </p>
+
       <div class="campo" id="campoEmail">
         <label for="email">E-mail</label>
         <input id="email" type="email" placeholder="voce@exemplo.com" autocomplete="email" required>
@@ -63,6 +69,13 @@
           <button type="button" class="mostrar-senha" id="mostrarSenha" aria-label="Mostrar senha" aria-pressed="false"><svg class="icone-olho" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.06 12.35a1 1 0 0 1 0-.7 10.75 10.75 0 0 1 19.88 0 1 1 0 0 1 0 .7 10.75 10.75 0 0 1-19.88 0"/><circle cx="12" cy="12" r="3"/></svg><svg class="icone-olho-fechado hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c4.36 0 8.15 2.63 9.94 6.65a1 1 0 0 1 0 .7 10.6 10.6 0 0 1-1.62 2.6"/><path d="M14.08 14.16a3 3 0 0 1-4.24-4.24"/><path d="M17.48 17.5A10.56 10.56 0 0 1 12 19c-4.36 0-8.15-2.63-9.94-6.65a1 1 0 0 1 0-.7 10.7 10.7 0 0 1 4.46-5.14"/><path d="m2 2 20 20"/></svg></button>
         </div>
         <p class="regra-senha hidden" id="regraSenha"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Pelo menos 8 caracteres</p>
+      </div>
+      <div class="campo hidden" id="campoCodigo">
+        <label for="codigo">Código de indicação <span class="opcional" id="codigoOpcional">(opcional)</span></label>
+        <div class="codigo-caixa">
+          <input id="codigo" type="text" placeholder="Se um amigo indicou, digite aqui" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="12">
+          <svg class="codigo-ok hidden" id="codigoOk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+        </div>
       </div>
       <button type="button" class="entrar-link" id="esqueci">Esqueci minha senha</button>
 
@@ -133,11 +146,11 @@
   <p class="entrar-rodape">Seus dados ficam guardados na nuvem, só você tem acesso. <a href="https://gscash.com.br/privacidade.html" target="_blank" rel="noopener">Política de privacidade</a></p>
 </div>
 
-<script src="js/vendor/capacitor.js?v=48c6e24"></script>
-<script src="js/vendor/supabase.js?v=48c6e24"></script>
-<script src="js/supabase.js?v=48c6e24"></script>
-<script src="js/baixar.js?v=48c6e24"></script>
-<script src="js/duas-etapas.js?v=48c6e24"></script>
-<script src="js/entrar.js?v=48c6e24"></script>
+<script src="js/vendor/capacitor.js?v=0bc3702"></script>
+<script src="js/vendor/supabase.js?v=0bc3702"></script>
+<script src="js/supabase.js?v=0bc3702"></script>
+<script src="js/baixar.js?v=0bc3702"></script>
+<script src="js/duas-etapas.js?v=0bc3702"></script>
+<script src="js/entrar.js?v=0bc3702"></script>
 </body>
 </html>

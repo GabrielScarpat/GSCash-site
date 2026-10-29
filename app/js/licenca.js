@@ -45,11 +45,12 @@ window.GS = window.GS || {};
   async function lerSituacao() {
     const { data: s, error } = await GS.supabase.rpc('minha_licenca');
     if (error) throw error;
+    // premio: ganhou os 6 meses do "Indique e ganhe" e ainda não viu o aviso
     if (s.validade) {
       const faltam = entreDatas(s.hoje, s.validade);
       return {
         estado: faltam < 0 ? 'vencida' : faltam <= 30 ? 'vencendo' : 'ativa',
-        nome: s.nome, validade: s.validade, dias: faltam,
+        nome: s.nome, validade: s.validade, dias: faltam, premio: s.premio || null,
       };
     }
     const testeAte = new Date(s.teste_ate);  // data e hora: 12 dias depois de criar a conta (ou do recomeço)
@@ -99,6 +100,8 @@ window.GS = window.GS || {};
     else if (info.estado === 'vencida') travar();
     else if (info.estado === 'vencendo') avisoVencendo();
     if (info.bonus) setTimeout(avisoBonus, 700);
+    else if (info.premio) setTimeout(avisoPremio, 700);
+    usarConvite().catch(e => console.warn('usar_codigo', e));
 
     // veio do botão "Quero comprar" do site (app/?comprar, guardado por supabase.js até depois do login)
     try {
@@ -698,6 +701,48 @@ window.GS = window.GS || {};
         </div>`,
       rodape: `<button type="button" class="btn btn-primary" data-fechar>${reaberto ? 'Voltar a lançar' : 'Continuar'}</button>`,
       aoFechar: () => { GS.supabase.rpc('bonus_visto').then(() => {}, e => console.warn('bonus_visto', e)); },
+    });
+    modal.foot.querySelector('[data-fechar]').focus();
+  }
+
+  /* ---------- Indique e ganhe ---------- */
+
+  // Conta nova que veio por indicação informa o código uma vez. Ele vem deste aparelho (link ou
+  // campo do cadastro) ou dos dados da conta (cadastro feito aqui, e-mail confirmado em outro
+  // aparelho). O banco só aceita nos primeiros 7 dias da conta e uma vez por conta.
+  async function usarConvite() {
+    const usuario = await GS.usuarioPronto;
+    if (!usuario || GS.daConta.ler('convite-usado')) return;
+    const codigo = GS.convite.ler() || GS.convite.limpar((usuario.user_metadata || {}).ref);
+    if (!codigo) return;
+    const { data: r, error } = await GS.supabase.rpc('usar_codigo', { p_codigo: codigo });
+    if (error) throw error;
+    GS.daConta.gravar('convite-usado', '1');
+    // conta antiga: o código continua guardado para uma conta nova criada neste aparelho
+    if (r.ok || r.motivo === 'codigo' || r.motivo === 'propria') GS.convite.guardar('');
+    if (r.motivo === 'codigo') GS.toast(`O código de indicação ${codigo} não existe. Confira com quem indicou.`, 'erro');
+  }
+
+  // 5 amigos valeram: o banco já somou os 6 meses à licença. O aviso aparece uma vez (premio_visto).
+  function avisoPremio() {
+    const { meses, validade } = info.premio;
+    const titulo = `Você ganhou ${meses} meses de GSCASH`;
+    const modal = GS.abrirModal({
+      titulo,
+      tamanho: 'bonus',
+      corpo: `
+        <div class="bonus-corpo">
+          <span class="bonus-icone">${icone('gift')}</span>
+          <h2 class="bonus-titulo">${titulo}</h2>
+          <p>5 amigos criaram conta pelo seu link e já estão usando. Obrigado por indicar!</p>
+          <div class="bonus-dias">
+            <div class="grande"><b class="num">${meses}</b><span>meses</span></div>
+            <div class="tracos meses">${'<i></i>'.repeat(meses)}</div>
+            <div class="ate"><span>Sua licença vai até</span><b>${data(validade)}</b></div>
+          </div>
+        </div>`,
+      rodape: '<button type="button" class="btn btn-primary" data-fechar>Continuar</button>',
+      aoFechar: () => { GS.supabase.rpc('premio_visto').then(() => {}, e => console.warn('premio_visto', e)); },
     });
     modal.foot.querySelector('[data-fechar]').focus();
   }
