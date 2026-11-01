@@ -145,6 +145,10 @@ window.GS = window.GS || {};
     }));
     const App = window.Capacitor.registerPlugin('App');
     const Browser = window.Capacitor.registerPlugin('Browser');
+    // o Capacitor guarda o último endereço recebido até alguém ouvir. Se uma volta anterior chegou quando o app
+    // não esperava (fechado pelo sistema, por exemplo), ela seria entregue agora com o código velho e daria
+    // "code challenge does not match previously saved code verifier": ouve e descarta antes de abrir o login
+    (await App.addListener('appUrlOpen', () => {})).remove();
     const ouvintes = [];
     const codigo = await new Promise((ok, falha) => {
       const cancelar = () => falha(new DOMException('Cancelado', 'AbortError'));

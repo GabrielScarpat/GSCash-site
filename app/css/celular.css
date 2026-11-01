@@ -210,7 +210,7 @@
   .form-gasto .modal-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px 10px; align-content: start; }
   .form-gasto .modal-body > *, .form-gasto .modal-body-form > *, .form-gasto .modal-body .field { grid-column: 1 / -1; min-width: 0; }
   .form-gasto .row-2 { display: contents; }
-  /* o botão da carteira cabe na meia coluna: quebra a linha em vez de alargar a janela */
+  /* em tela muito estreita ou fonte grande o botão quebra a linha em vez de alargar a janela */
   .form-gasto .sem-carteira { padding: 12px; }
   .form-gasto .sem-carteira .btn { width: 100%; height: auto; min-height: 44px; padding: 10px 12px; white-space: normal; text-align: center; line-height: 1.25; }
   .form-gasto .field { gap: 5px; }
@@ -228,6 +228,9 @@
   .form-gasto .field:has([data-slot="subcategoria"]) { order: 6; }
   .form-gasto .modal-body .field:has([data-slot="data"]) { order: 7; grid-column: 1; }
   .form-gasto .modal-body .field:has([data-slot="carteira"]) { order: 8; grid-column: 2; }
+  /* sem carteira, o aviso e o botão ocupam a linha toda: na meia coluna o texto quebrava em três linhas */
+  .form-gasto .modal-body:has([data-sem-carteira]:not(.hidden)) .field:has([data-slot="data"]),
+  .form-gasto .modal-body .field:has([data-sem-carteira]:not(.hidden)) { grid-column: 1 / -1; }
   .form-gasto [data-campo-forma] { order: 9; }
   .form-gasto [data-campo-parcelas] { order: 10; }
   .form-gasto [data-sem-cartao] { order: 11; }

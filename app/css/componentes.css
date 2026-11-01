@@ -289,6 +289,8 @@
   inset: 0;
   z-index: 100;
   display: grid;
+  /* a coluna fica presa à tela: sem isso, um conteúdo largo alarga a janela e o X sai pela direita */
+  grid-template-columns: minmax(0, 1fr);
   place-items: center;
   padding: 24px;
   background: rgba(27, 27, 25, .38);
