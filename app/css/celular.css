@@ -191,6 +191,18 @@
   .row-item .icon-btn { width: 32px; height: 32px; flex-shrink: 0; }
   .row-item .icon-btn svg { width: 18px; height: 18px; }
   .row-item .icon-btn.kebab { margin-left: -6px; }
+  /* subcategorias abertas: mesmas medidas da linha da categoria (sem barra, botões de 32 px),
+     senão o nome ficava sem largura e escapava por cima da barra */
+  .sub-item { gap: 10px; }
+  .sub-item .sub-bar { display: none; }
+  .sub-item .row-values { min-width: 0; }
+  .sub-item .icon-btn.vazio { width: 32px; flex-shrink: 0; }
+  .sub-item .icon-btn.vazio + .icon-btn.vazio { margin-left: -6px; }
+  /* campo de nova subcategoria cabe na tela: o campo encolhe, o botão fica inteiro */
+  .sub-nova { gap: 8px; }
+  .sub-nova .tile { margin-right: 0; }
+  .sub-nova input { min-width: 0; }
+  .sub-nova .btn { flex-shrink: 0; padding: 0 12px; }
 
   /* ---------- Janelas (Novo gasto, Transferir...) ---------- */
   /* sobem de baixo, deixando um pedaço da tela à mostra em cima; os campos rolam por dentro

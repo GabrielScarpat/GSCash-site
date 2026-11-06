@@ -23,7 +23,11 @@ window.GS = window.GS || {};
   // o que muda de uma loja para a outra
   const LOJA = android
     ? { nome: 'Google Play', quem: 'O Google', na: 'no Google Play', funcao: 'google', conta: 'a sua conta Google', celular: 'no Android', recibo: 'O recibo chega no seu e-mail do Google Play.', abrindo: 'Abrindo o Google Play…' }
-    : { nome: 'App Store', quem: 'A Apple', na: 'na App Store', funcao: 'apple', conta: 'a sua conta da App Store', celular: 'no iPhone', recibo: 'O recibo chega no seu e-mail da Apple.', abrindo: 'Abrindo a App Store…' };
+    : { nome: 'App Store', quem: 'A Apple', na: 'na App Store', funcao: 'apple', conta: 'a sua conta da App Store', celular: 'no iPhone', recibo: 'O recibo chega no seu e-mail da Apple.', abrindo: 'Abrindo a App Store…',
+        // a Apple exige na tela de compra links para os Termos de Uso (EULA padrão dela) e a privacidade
+        termos: 'https://www.apple.com/legal/internet-services/itunes/dev/stdeula/' };
+  const PRIVACIDADE = 'https://gscash.com.br/privacidade.html';
+  const Navegador = window.Capacitor.registerPlugin('Browser');
   const TIPO = android ? { productType: 'inapp' } : {};
   const data = d => GS.dataMedia(d);
 
@@ -145,7 +149,15 @@ window.GS = window.GS || {};
         ? `<div class="compra-renova">${icone('clock')}<span>Sua licença vale até <b>${data(info.validade)}</b>. Com a renovação, passa a valer até <b>${data(novaValidade)}</b>.</span></div>`
         : `<div class="compra-conta"><span>Para a conta</span><b>${esc(email)}</b></div>`}
       <div class="compra-seguro">${icone('lock')}Pagamento feito ${LOJA.quem === 'O Google' ? 'pelo Google' : 'pela Apple'}, com ${LOJA.conta}</div>
-      <p class="compra-restaurar">Já pagou e a licença não ativou? <button type="button" class="link-btn" data-restaurar>Restaurar compra</button></p>`;
+      <p class="compra-restaurar">Já pagou e a licença não ativou? <button type="button" class="link-btn" data-restaurar>Restaurar compra</button></p>
+      <p class="compra-legal">Licença de 1 ano, sem renovação automática.<br>${LOJA.termos
+        ? `<a href="${LOJA.termos}" data-externo>Termos de Uso (EULA)</a> e <a href="${PRIVACIDADE}" data-externo>Política de Privacidade</a>`
+        : `<a href="${PRIVACIDADE}" data-externo>Política de Privacidade</a>`}</p>`;
+    // os links abrem no navegador do sistema, por cima do app (não trocam a página do app)
+    modal.body.querySelectorAll('[data-externo]').forEach(a => a.addEventListener('click', e => {
+      e.preventDefault();
+      Navegador.open({ url: a.href, presentationStyle: 'popover' }).catch(() => window.open(a.href, '_blank'));
+    }));
     rodape(`<button type="button" class="btn btn-outline" data-fechar>Cancelar</button>
             <button type="button" class="btn btn-primary" data-comprar>Comprar · ${esc(produto.priceString)}</button>`);
 

@@ -7,3 +7,5 @@
 .compra-carregando .roda-botao { border-color: var(--border-strong); border-top-color: var(--primary); }
 .compra-restaurar { margin: 0; text-align: center; color: var(--muted); font-size: 13.5px; }
 .compra-restaurar .link-btn { font-size: 14px; font-weight: 600; }
+.compra-legal { margin: 0; text-align: center; color: var(--muted); font-size: 12.5px; line-height: 1.5; }
+.compra-legal a { color: var(--primary); text-decoration: underline; text-underline-offset: 2px; }

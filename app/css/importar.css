@@ -20,7 +20,8 @@
 .imp-fontes b { font-weight: 600; color: var(--text); }
 .imp-erro { display: flex; gap: 10px; padding: 12px 14px; border-radius: 12px; background: #F4DCD6; color: #7E2318 !important; font-size: 14px; line-height: 1.45; }
 .imp-erro svg { width: 18px; height: 18px; flex-shrink: 0; margin-top: 1px; }
-.imp-arquivo { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px; background: var(--surface-2); }
+.imp-arquivo { display: flex; align-items: center; gap: 12px; min-width: 0; padding: 12px 14px; border-radius: 14px; background: var(--surface-2); }
+.imp-arquivo .link-btn { flex-shrink: 0; }
 .imp-arquivo .ic { display: grid; place-items: center; width: 40px; height: 40px; flex-shrink: 0; border-radius: 10px; background: #DCEBDC; color: var(--success); }
 .imp-arquivo .ic svg { width: 20px; height: 20px; }
 .imp-arquivo > span:nth-child(2) { flex: 1; min-width: 0; }
