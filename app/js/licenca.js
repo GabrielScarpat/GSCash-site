@@ -45,6 +45,12 @@ window.GS = window.GS || {};
   async function lerSituacao() {
     const { data: s, error } = await GS.supabase.rpc('minha_licenca');
     if (error) throw error;
+    guardarSituacao(s);
+    return situacaoDe(s);
+  }
+
+  // o que o banco respondeu, traduzido para a situação da tela
+  function situacaoDe(s) {
     // premio: ganhou os 6 meses do "Indique e ganhe" e ainda não viu o aviso
     if (s.validade) {
       const faltam = entreDatas(s.hoje, s.validade);
@@ -70,21 +76,73 @@ window.GS = window.GS || {};
     throw new Error(msg);
   }
 
+  // situação vinda do servidor; no app de computador, a chave que já estava
+  // neste computador passa para a conta, sozinha
+  async function buscarSituacao() {
+    let i = await lerSituacao();
+    if (GS.noDesktop && (i.estado === 'teste' || i.estado === 'teste-acabou')) {
+      const local = await (await GS.apiDesktop()).chave_local();
+      if (local) {
+        try {
+          const r = await enviarChave(local);
+          i = await lerSituacao();
+          setTimeout(() => GS.toast(`A licença deste computador agora está na sua conta (até ${data(r.validade)})`), 800);
+        } catch (e) {
+          console.warn('Não foi possível ligar a licença deste computador à conta', e);
+        }
+      }
+    }
+    return i;
+  }
+
+  /* Cópia da situação nesta aba: ao trocar de tela, a próxima aparece na hora com ela,
+     sem esperar o servidor, e a conferência vem em segundo plano. Os avisos de bônus e
+     prêmio não entram na cópia, para não reaparecerem a cada tela. Separada por conta. */
+  const CHAVE_SITUACAO = 'gscash:licenca';
+  let usuarioId = null;
+
+  function guardarSituacao(s) {
+    if (!usuarioId) return;
+    const { bonus, premio, ...resto } = s;
+    try { sessionStorage.setItem(CHAVE_SITUACAO, JSON.stringify({ usuario: usuarioId, s: resto })); } catch (e) { /* sem espaço: segue sem cópia */ }
+  }
+
+  function situacaoGuardada() {
+    try {
+      const c = JSON.parse(sessionStorage.getItem(CHAVE_SITUACAO));
+      return c && c.usuario === usuarioId && c.s ? situacaoDe(c.s) : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // depois de comprar ou ativar: a próxima abertura busca a situação nova no servidor
+  function recarregar() {
+    try { sessionStorage.removeItem(CHAVE_SITUACAO); } catch (e) { /* segue */ }
+    location.reload();
+  }
+
+  // confere com o servidor depois de mostrar a cópia. Mudou de situação (ex.: comprou em outro
+  // aparelho, ou o teste acabou): recarrega a tela, que já vem com a situação certa
+  function conferirEmSegundoPlano() {
+    buscarSituacao().then(nova => {
+      if (nova.estado !== info.estado) return location.reload();
+      Object.assign(info, nova);
+      if (nova.bonus) setTimeout(avisoBonus, 700);
+      else if (nova.premio) setTimeout(avisoPremio, 700);
+    }).catch(e => console.warn('Não foi possível conferir a licença', e));
+  }
+
   const pronta = (async () => {
     try {
-      info = await lerSituacao();
-      // app de computador: a chave que já estava neste computador passa para a conta, sozinha
-      if (GS.noDesktop && (info.estado === 'teste' || info.estado === 'teste-acabou')) {
-        const local = await (await GS.apiDesktop()).chave_local();
-        if (local) {
-          try {
-            const r = await enviarChave(local);
-            info = await lerSituacao();
-            setTimeout(() => GS.toast(`A licença deste computador agora está na sua conta (até ${data(r.validade)})`), 800);
-          } catch (e) {
-            console.warn('Não foi possível ligar a licença deste computador à conta', e);
-          }
-        }
+      const usuario = await GS.usuarioPronto;
+      usuarioId = usuario ? usuario.id : null;
+      const guardada = situacaoGuardada();
+      if (guardada) {
+        info = guardada;
+        conferirEmSegundoPlano();
+      } else {
+        info = await buscarSituacao();
       }
     } catch (e) {
       // sem internet ou erro: não trava nada aqui (o banco continua conferindo ao gravar)
@@ -522,7 +580,7 @@ window.GS = window.GS || {};
         </div>`;
       rodape(`<button type="button" class="btn btn-primary" data-continuar>Continuar${icone('arrow-right')}</button>`, true);
       const continuar = modal.foot.querySelector('[data-continuar]');
-      continuar.addEventListener('click', () => location.reload());
+      continuar.addEventListener('click', recarregar);
       continuar.focus();
     }
 
@@ -604,7 +662,7 @@ window.GS = window.GS || {};
         </div>`;
       modal.foot.innerHTML = `<button type="button" class="btn btn-primary" data-continuar>Continuar${icone('arrow-right')}</button>`;
       const continuar = modal.foot.querySelector('[data-continuar]');
-      continuar.addEventListener('click', () => location.reload());
+      continuar.addEventListener('click', recarregar);
       continuar.focus();
     };
     botao.addEventListener('click', enviar);
@@ -803,5 +861,5 @@ window.GS = window.GS || {};
     return `<span>${texto}</span><span class="sep">·</span><button type="button" class="link-btn" data-licenca>Licença</button><span class="sep">·</span>`;
   }
 
-  GS.licenca = { pronta, rodapeHtml, abrirJanela, abrirAtivacao, abrirCompra: comprar };
+  GS.licenca = { pronta, recarregar, rodapeHtml, abrirJanela, abrirAtivacao, abrirCompra: comprar };
 })();

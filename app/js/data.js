@@ -560,17 +560,24 @@ window.GS = window.GS || {};
   // fechar a aba) e é apagada ao sair da conta (supabase.js).
   const CHAVE_COPIA = 'gscash:copia';
   let mudancas = 0;   // conta as gravações, para a atualização em segundo plano não desfazer uma
+  // quando os dados foram conferidos com a nuvem pela última vez (vai junto na cópia da aba)
+  let conferidoEm = 0;
+  // trocar de tela não baixa tudo de novo antes disso: baixar e comparar todos os dados
+  // pesa justo durante a passagem de uma tela para outra
+  const INTERVALO_CONFERIR = 30000;
 
   function guardarCopia() {
     try {
-      sessionStorage.setItem(CHAVE_COPIA, JSON.stringify({ usuario: usuarioId, db: cache }));
+      sessionStorage.setItem(CHAVE_COPIA, JSON.stringify({ usuario: usuarioId, db: cache, conferidoEm }));
     } catch (e) { /* cheio ou bloqueado: segue sem cópia */ }
   }
 
   function lerCopia() {
     try {
       const c = JSON.parse(sessionStorage.getItem(CHAVE_COPIA));
-      return c && c.usuario === usuarioId && c.db ? c.db : null;
+      if (!(c && c.usuario === usuarioId && c.db)) return null;
+      conferidoEm = c.conferidoEm || 0;
+      return c.db;
     } catch (e) {
       return null;
     }
@@ -578,14 +585,24 @@ window.GS = window.GS || {};
 
   // confere com a nuvem depois de mostrar a cópia; se mudou algo (ex.: lançado em outro aparelho), redesenha
   function atualizarEmSegundoPlano() {
+    if (Date.now() - conferidoEm < INTERVALO_CONFERIR) return;
+    conferidoEm = Date.now();   // marca já, para duas chamadas seguidas não baixarem duas vezes
     const versao = mudancas;
     gravando.then(baixar).then(({ db }) => {
       if (versao !== mudancas) return;   // a pessoa gravou algo enquanto isso: o que vale é o que ela fez
-      if (JSON.stringify(db) === JSON.stringify(cache)) return;
+      if (JSON.stringify(db) === JSON.stringify(cache)) return guardarCopia();
       aplicar(db);
       if (GS.notificarMudanca) GS.notificarMudanca();
-    }).catch(e => console.warn('Não foi possível conferir os dados com a nuvem', e));
+    }).catch(e => {
+      conferidoEm = 0;   // falhou: a próxima tela tenta de novo
+      console.warn('Não foi possível conferir os dados com a nuvem', e);
+    });
   }
+
+  // de volta ao app depois de um tempo fora (outra aba, outro app): confere se mudou algo
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && cache && usuarioId) atualizarEmSegundoPlano();
+  });
 
   const CONFLITO = { perfis: 'user_id' };
 
@@ -637,6 +654,7 @@ window.GS = window.GS || {};
         }
 
         const { vazio, db } = await baixar();
+        conferidoEm = Date.now();
         if (!vazio) return aplicar(db);
 
         // vazio pode ser o banco escondendo os dados: a verificação em duas etapas foi ligada em

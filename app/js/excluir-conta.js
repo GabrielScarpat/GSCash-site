@@ -137,6 +137,7 @@ window.GS = window.GS || {};
       // a conta já não existe: limpa a sessão deste aparelho e volta para a entrada com o aviso
       try {
         sessionStorage.removeItem('gscash:copia');
+        sessionStorage.removeItem('gscash:licenca');
         sessionStorage.setItem('gscash:excluida', '1');
         localStorage.removeItem('gscash:instalado');
       } catch (e) { /* segue */ }

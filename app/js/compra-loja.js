@@ -78,7 +78,7 @@ window.GS = window.GS || {};
     }
     if (ultima) {
       GS.toast(`Sua compra pelo ${LOJA.nome} foi confirmada. Licença válida até ${data(ultima.validade)}.`);
-      setTimeout(() => location.reload(), 2500);
+      setTimeout(() => GS.licenca.recarregar(), 2500);
     }
   }
   GS.licenca.pronta.then(async () => {
@@ -232,7 +232,7 @@ window.GS = window.GS || {};
         </div>`;
       rodape(`<button type="button" class="btn btn-primary" data-continuar>Continuar${icone('arrow-right')}</button>`, true);
       const continuar = modal.foot.querySelector('[data-continuar]');
-      continuar.addEventListener('click', () => location.reload());
+      continuar.addEventListener('click', () => GS.licenca.recarregar());
       continuar.focus();
     }
   }

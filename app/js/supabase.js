@@ -326,6 +326,7 @@ window.GS = window.GS || {};
         // nada da conta anterior fica para a próxima: a cópia dos dados da aba e o aviso de boas-vindas
         try {
           sessionStorage.removeItem('gscash:copia');
+          sessionStorage.removeItem('gscash:licenca');
           sessionStorage.setItem('gscash:trocou', conta.nome || conta.email);
         } catch (err) { /* sem sessionStorage: só não mostra o aviso */ }
       } finally {
@@ -350,6 +351,7 @@ window.GS = window.GS || {};
         await contas.esquecer(id);
         try {
           sessionStorage.removeItem('gscash:copia');
+          sessionStorage.removeItem('gscash:licenca');
           sessionStorage.setItem('gscash:saiu', email);
         } catch (e) { /* sem sessionStorage: só não mostra a confirmação */ }
         location.replace('entrar.html');
@@ -374,6 +376,7 @@ window.GS = window.GS || {};
       await mexerContas(r => { r.contas = {}; });
       try {
         sessionStorage.removeItem('gscash:copia');
+        sessionStorage.removeItem('gscash:licenca');
         sessionStorage.setItem('gscash:saiu-todas', '1');
       } catch (e) { /* segue */ }
       location.replace('entrar.html');
