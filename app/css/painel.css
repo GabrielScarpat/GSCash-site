@@ -171,6 +171,8 @@
 .uso .bar span { background: var(--saiu); }
 .uso p { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 8px; color: var(--text-2); font-size: 14px; }
 .uso b { color: var(--text); font-weight: 600; }
+.uso p.fixos-dia { display: block; margin-top: 4px; font-size: 13.5px; color: var(--muted); }
+.uso p.fixos-dia b { color: var(--text-2); }
 
 .evo-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
 .legenda-evo { display: flex; gap: 18px; color: var(--text-2); font-size: 14.5px; }

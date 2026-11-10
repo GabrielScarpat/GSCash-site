@@ -148,7 +148,9 @@ window.GS = window.GS || {};
      altura em linhas e lemos a parte "Movimentação": a coluna de valores é a que mais aparece;
      a descrição continua nas linhas de baixo (ex.: "COMPRA CARTAO DEB MC" / "05/09 PADARIA X").
      O que vem depois no PDF (compras do cartão, comprovantes, investimentos) repete lançamentos
-     e fica de fora. Feito sobre o extrato do Santander; outros bancos parecidos também funcionam. */
+     e fica de fora. Feito sobre o extrato do Santander; outros bancos parecidos também funcionam.
+     O extrato novo do Santander ("Detalhe dos movimentos") põe a descrição em volta da linha da
+     data e do valor: o tipo logo acima ("Pix recebido") e o nome logo abaixo ("Ana Souza"). */
 
   let pdfjs = null;
   function carregarPdf() {
@@ -205,7 +207,7 @@ window.GS = window.GS || {};
 
   const MESES_PDF = ['janeiro', 'fevereiro', 'marco', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
   const DATA_PDF = /^(\d{2})\/(\d{2})(?:\/(\d{2}|\d{4}))?$/;
-  const VALOR_PDF = /^-?\(?\d{1,3}(?:\.\d{3})*,\d{2}\)?-?$/;
+  const VALOR_PDF = /^-?\s*(?:R\$\s*)?-?\(?\d{1,3}(?:\.\d{3})*,\d{2}\)?-?$/;  // "1.234,56", "-R$ 30,00"
   const textoDe = itens => itens.map(i => i.s).join(' ').replace(/\s+/g, ' ').trim();
 
   function extratoDoPdf(linhas) {
@@ -219,7 +221,7 @@ window.GS = window.GS || {};
       return dataValida(ano, Number(m), Number(d));
     };
 
-    let inicio = linhas.findIndex(l => /movimenta/i.test(norm(textoDe(l.itens))));
+    let inicio = linhas.findIndex(l => /movimenta|movimentos/i.test(norm(textoDe(l.itens))));
     if (inicio < 0) inicio = 0;
     const fim = /n.mero do cart.o|comprovantes? de pagamento|aplica..o n|investimentos|resumo do m.s|saldo final|indicadores/i;
 
@@ -231,9 +233,21 @@ window.GS = window.GS || {};
     const xs = linhas.slice(inicio).map(l => l.itens[0]).filter(i => i && DATA_PDF.test(i.s)).map(i => i.x);
     const colData = xs.length ? Math.min(...xs) : -1;
 
+    const lista = linhas.slice(inicio + 1);
+    const ehData = l => l && l.itens[0] && DATA_PDF.test(l.itens[0].s) && Math.abs(l.itens[0].x - colData) < 6;
+    const ehValor = i => VALOR_PDF.test(i.s) && Math.abs(i.x2 - colValor) < 14;
+    // sem nada entre a data e o valor na maioria das linhas: a descrição está em volta (Santander novo)
+    const comValor = lista.filter(l => ehData(l) && l.itens.some(ehValor));
+    const sanduiche = comValor.length > 0 &&
+      comValor.filter(l => l.itens.length - 1 - l.itens.filter(i => VALOR_PDF.test(i.s)).length === 0).length > comValor.length / 2;
+    // linha só de texto, colada (acima ou abaixo) na linha da data
+    const vizinha = (v, l) => v && v.pagina === l.pagina && !ehData(v) && !v.itens.some(i => VALOR_PDF.test(i.s)) &&
+      Math.abs(v.y - l.y) < l.altura * 1.1 ? textoDe(v.itens) : '';
+
     const saida = [];
     let data = null, atual = null, lancados = 0;
-    for (const l of linhas.slice(inicio + 1)) {
+    for (let k = 0; k < lista.length; k++) {
+      const l = lista[k];
       const texto = textoDe(l.itens);
       if (fim.test(semAcento(texto))) break;
       let itens = l.itens;
@@ -241,6 +255,16 @@ window.GS = window.GS || {};
       const temData = primeiro && DATA_PDF.test(primeiro.s) && Math.abs(primeiro.x - colData) < 6;
       const valores = itens.filter(i => VALOR_PDF.test(i.s));
       const mov = valores.find(i => Math.abs(i.x2 - colValor) < 14);
+      if (sanduiche) {
+        if (!mov || !temData) continue;
+        const m = primeiro.s.match(DATA_PDF);
+        const quando = completar(m[1], m[2], m[3]);
+        const acima = vizinha(lista[k - 1], l), abaixo = vizinha(lista[k + 1], l);
+        const principal = acima || abaixo;
+        if (!quando || !principal || /saldo/i.test(norm(principal))) continue;
+        saida.push({ data: quando, valor: centavos(mov.s, ','), principal, detalhe: acima && abaixo ? [abaixo] : [] });
+        continue;
+      }
       if (!mov) {
         // linha com data e valor em outra coluna: começou outra tabela (ex.: compras do cartão)
         if (temData && valores.length && lancados >= 3) break;
@@ -273,7 +297,8 @@ window.GS = window.GS || {};
         if (d && d <= data && diasEntre(d, data) <= 10) data = d;
         titulo = comData[3] || 'Compra no cartão de débito';
       }
-      if (!cartao && detalhe && !/^[A-Z0-9]{6,}$/.test(detalhe)) titulo = `${principal} · ${detalhe}`;
+      // código de controle do banco ("ICK48462523") não é nome de ninguém
+      if (!cartao && detalhe && !/^(?=.*\d)[A-Z0-9]{6,}$/i.test(detalhe) && !/^[A-Z0-9]{6,}$/.test(detalhe)) titulo = `${principal} · ${detalhe}`;
       else if (!cartao) titulo = principal;
       titulo = titulo.replace(/^pix (enviado|recebido)\s+(?!·)/i, (_, q) => `Pix ${q.toLowerCase()} · `)
         .replace(/^pix (enviado|recebido)/i, (_, q) => `Pix ${q.toLowerCase()}`);
@@ -417,6 +442,42 @@ window.GS = window.GS || {};
     [/\b(mesada)\b/, ['Mesada']],
     [/\b(reembolso|estorno|cashback|devolucao|devolvido)\b/, ['Reembolso', 'Estorno', 'Cashback']],
   ];
+  /* ---------- investimentos no extrato ----------
+     Aplicação (dinheiro saindo) e resgate (voltando) não são gasto nem receita: viram transferência
+     entre a conta e um investimento. "Rendimento"/"juros" continuam receita (categoria Rendimentos).
+     chave: o nome do produto sem as palavras de movimento ("Aplicação RDB" e "Resgate RDB" -> "rdb"),
+     usada para juntar as linhas e para lembrar o investimento nas próximas importações. */
+  const PISTA_INV = /\b(aplic\w*|apl|resgates?|resg|cdb|rdb|lci|lca|tesouro|caixinhas?|porquinho|cofrinho|capitalizacao|invest facil|contamax|rende facil|poupanca|investimentos?|fundos?)\b/;
+  const NAO_INV = /\b(rendimentos?|rend pago|remuneracao|juros|dividendos?|proventos|salario|tarifa|iof)\b/;
+  const AUTOMATICA = /\b(invest facil|contamax|rende facil)\b|\baut\w*\b.*\b(aplic\w*|apl|res|resg)\b|\b(aplic\w*|apl|res|resg)\b.*\baut\w*\b/;
+  const SIGLAS = new Set(['cdb', 'rdb', 'lci', 'lca', 'ipca', 'cdi', 'xp', 'btg', 'bb']);
+
+  function investimentoDaLinha(titulo) {
+    const t = norm(titulo);
+    if (!PISTA_INV.test(t) || NAO_INV.test(t)) return null;
+    if (AUTOMATICA.test(t)) return { chave: 'aplicacao automatica' };
+    const chave = t.replace(/\b(aplic\w*|apl|res|resgates?|resg|debito|deb|credito|cred|aut\w*|de|da|do|dos|das|em|para|no|na|pix|ted|doc|valor|transf\w*|\d+)\b/g, ' ')
+      .replace(/\s+/g, ' ').trim();
+    return { chave: chave || 'investimento' };
+  }
+
+  const nomeBonito = chave => chave.split(' ').map(p => (SIGLAS.has(p) ? p.toUpperCase() : p.charAt(0).toUpperCase() + p.slice(1))).join(' ');
+
+  // tipo, taxa e nome sugeridos pelo nome do produto (a pessoa confere na primeira vez)
+  function sugestaoDeInvestimento(chave, conta) {
+    const nome = nomeBonito(chave);
+    const com = (tipo, indexador, taxa, liquidez, n) => ({ tipo, indexador, taxa, liquidez, nome: n.slice(0, 60) });
+    if (chave === 'aplicacao automatica') return com('cdb', 'cdi_pct', 100, 'diaria', `Aplicação automática ${conta}`);
+    if (/capitalizacao/.test(chave)) return com('outro', 'sem_taxa', 0, 'vencimento', 'Título de capitalização');
+    if (/\bpoupanca\b/.test(chave)) return com('poupanca', 'poupanca', 0, 'diaria', `Poupança ${conta}`);
+    if (/\btesouro\b/.test(chave)) return com('tesouro', 'selic', 0, 'diaria', nome);
+    if (/\b(lci|lca)\b/.test(chave)) return com('lci_lca', 'cdi_pct', 90, 'diaria', chave.includes(' ') ? nome : `${nome} ${conta}`);
+    if (/\b(rdb|caixinhas?|porquinho|cofrinho)\b/.test(chave)) return com('cdb', 'cdi_pct', 100, 'diaria', chave.includes(' ') ? nome : `${nome} ${conta}`);
+    if (/\bcdb\b/.test(chave)) return com('cdb', 'cdi_pct', 100, 'diaria', chave.includes(' ') ? nome : `CDB ${conta}`);
+    if (/\bfundos?\b/.test(chave)) return com('fundos', 'sem_taxa', 0, 'diaria', nome);
+    return com('outro', 'sem_taxa', 0, 'diaria', nome === 'Investimento' ? `Investimento ${conta}` : nome);
+  }
+
   // prefixos de banco que só atrapalham a comparação de nomes
   const limparTitulo = t => norm(t)
     .replace(/^(compra (no )?(debito|credito)|pix (enviado|recebido)|transferencia (enviada|recebida)|pagamento (de|da|do)? ?(boleto|conta)?|pg|pag|debito automatico|deb aut|ted|doc|tef|cartao)\s+/, '')
@@ -718,9 +779,28 @@ window.GS = window.GS || {};
       titulo('Revisando…');
       modal.body.innerHTML = '<p class="imp-carregando"><span class="roda-botao"></span>Organizando os lançamentos…</p>';
       rodape('');
-      const [categorias, transacoes] = await Promise.all([GS.api.listarCategorias(), GS.api.listarTransacoes()]);
+      const [categorias, transacoes, carteiras, investimentos] = await Promise.all([
+        GS.api.listarCategorias(), GS.api.listarTransacoes(), GS.api.listarCarteiras(), GS.api.listarInvestimentos()]);
       const sugerir = motorDeCategorias(categorias, transacoes);
       const cartao = destino.cartao ? destino.carteira : null;
+
+      // investimentos ativos e o que já se aprendeu: chave da linha -> investimento (importações e lançamentos anteriores)
+      const regInv = new Map(investimentos.map(v => [v.id, v]));
+      const ativos = carteiras.filter(c => c.tipo === 'investimento' && !(regInv.get(c.id) || {}).resgatadoEm);
+      const ehAtivo = new Set(ativos.map(c => c.id));
+      const aprendido = new Map();
+      transacoes.filter(t => t.tipo === 'transferencia' && (ehAtivo.has(t.destinoId) || ehAtivo.has(t.carteiraId)))
+        .sort((a, b) => a.data.localeCompare(b.data))
+        .forEach(t => {
+          const d = investimentoDaLinha(t.titulo.replace(/^(aplicação|resgate|vencimento) · /i, ''));
+          if (d) aprendido.set(d.chave, ehAtivo.has(t.destinoId) ? t.destinoId : t.carteiraId);
+        });
+      const investimentoDaChave = chave => aprendido.get(chave)
+        || (ativos.find(c => norm(c.nome) === chave) || ativos.find(c => chave.length >= 3 && norm(c.nome).split(' ').includes(chave)) || {}).id || null;
+      const novosInv = new Map();   // chave -> dados do formulário (investimento novo configurado nesta revisão)
+      // transferências que já existem entre esta conta e um investimento (para não repetir)
+      const transfInv = transacoes.filter(t => t.tipo === 'transferencia'
+        && ((t.carteiraId === destino.carteira.id && ehAtivo.has(t.destinoId)) || (t.destinoId === destino.carteira.id && ehAtivo.has(t.carteiraId))));
       if (cartao && !fatura) opcoesFatura();
 
       let linhas = linhasAtuais();
@@ -774,9 +854,20 @@ window.GS = window.GS || {};
           }
         }
         const s = sugerir(l.titulo, tipo, l.categoriaTexto);
+        // aplicação ou resgate (só em conta; fatura de cartão não tem)
+        const achado = !cartao && investimentoDaLinha(l.titulo);
+        const inv = achado ? { chave: achado.chave, invId: investimentoDaChave(achado.chave), mov: tipo === 'despesa' ? 'aplicacao' : 'resgate' } : null;
+        if (inv && !repetido) {
+          const igual = transfInv.find(t => !usados.has(t.id) && t.valor === valor && diasEntre(t.data, l.data) <= 2
+            && (inv.mov === 'aplicacao' ? t.carteiraId === destino.carteira.id : t.destinoId === destino.carteira.id));
+          if (igual) {
+            usados.add(igual.id);
+            repetido = `Já está no GSCASH (${GS.dataCurta ? GS.dataCurta(igual.data) : igual.data}, ${fmt(igual.valor)})`;
+          }
+        }
         return {
           n, id, tipo, valor, data, titulo: l.titulo.slice(0, 80), nota, parcela: parcela ? `${parcela[1]}/${parcela[2]}` : '',
-          marcado: !repetido, repetido,
+          marcado: !repetido, repetido, inv,
           cat: s.nova ? `nova:${s.nova}` : `${s.categoriaId}${s.subcategoriaId ? '|' + s.subcategoriaId : ''}`,
           sugerida: s.sugerida,
         };
@@ -809,44 +900,116 @@ window.GS = window.GS || {};
       titulo(`Revisar ${GS.plural(itens.length, 'lançamento', 'lançamentos')}`);
       const entreContas = itens.filter(i => i.repetido && i.repetido.startsWith('Parece uma transfer')).length;
       const repetidos = itens.filter(i => i.repetido).length - entreContas;
+      const nomeInv = id => (carteiras.find(c => c.id === id) || {}).nome || 'Investimento';
+      // investimento novo desta revisão: configurado (tem dados) ou ainda por configurar
+      const pendente = i => i.inv && !i.inv.invId && !novosInv.has(i.inv.chave);
+
+      function slotHtml(i) {
+        if (!i.inv) return `<button type="button" class="imp-cat">${rotuloCat(i.tipo, i.cat)}${i.sugerida ? `<span class="sug" title="Categoria sugerida">${icone('brilho')}</span>` : ''}</button>`;
+        if (pendente(i)) return `<button type="button" class="imp-inv novo">${icone('plus')}<span>Investimento novo · configurar</span></button>`;
+        const nome = i.inv.invId ? nomeInv(i.inv.invId) : novosInv.get(i.inv.chave).nome;
+        const selo = i.inv.invId ? (i.inv.escolhido ? '' : 'reconhecido') : 'novo';
+        return `<button type="button" class="imp-inv">${icone('trending')}<span>${esc(nome)}</span>${selo ? `<small>${selo}</small>` : ''}</button>`;
+      }
+      function linhaHtml(i) {
+        const sub = i.repetido ? `<small class="aviso">${esc(i.repetido)}</small>`
+          : i.inv ? `<small class="inv">${i.inv.mov === 'aplicacao' ? 'Sai da conta para o investimento' : 'Volta do investimento para a conta'}</small>`
+          : i.nota ? `<small>${esc(i.nota)}</small>` : '';
+        return `
+          <div class="imp-item ${i.repetido ? 'rep' : ''}" data-n="${i.n}">
+            <input type="checkbox" class="imp-marca" ${i.marcado ? 'checked' : ''} aria-label="Importar ${esc(i.titulo)}">
+            <span class="data">${esc(GS.dataCurta ? GS.dataCurta(i.data) : i.data)}</span>
+            <span class="desc"><b title="${esc(i.titulo)}">${esc(i.titulo)}</b>${sub}</span>
+            <span class="cat-slot">${slotHtml(i)}</span>
+            <span class="val ${i.tipo === 'receita' ? 'e' : ''}">${i.tipo === 'receita' ? '+ ' : ''}${fmt(i.valor)}</span>
+          </div>`;
+      }
+
       modal.body.innerHTML = `
         <div class="imp-resumo">
           <span class="chip-r"><b data-conta></b> para importar</span>
+          <span class="chip-r inv hidden" data-chip-inv>${icone('trending')}<b></b> de investimento</span>
+          <span class="chip-r aviso hidden" data-chip-pend>${icone('alert')}<b></b></span>
           ${repetidos ? `<span class="chip-r aviso">${icone('alert')}<b>${repetidos}</b> já ${repetidos === 1 ? 'estava' : 'estavam'} no GSCASH</span>` : ''}
           ${entreContas ? `<span class="chip-r aviso">${icone('transfer')}<b>${entreContas}</b> entre suas contas</span>` : ''}
           ${foraDaFatura ? `<span class="chip-r">${GS.plural(foraDaFatura, 'pagamento ou estorno fica', 'pagamentos e estornos ficam')} de fora</span>` : ''}
           <span class="chip-r">Total <b data-total></b></span>
         </div>
-        <div class="imp-itens">${itens.map(i => `
-          <div class="imp-item ${i.repetido ? 'rep' : ''}" data-n="${i.n}">
-            <input type="checkbox" class="imp-marca" ${i.marcado ? 'checked' : ''} aria-label="Importar ${esc(i.titulo)}">
-            <span class="data">${esc(GS.dataCurta ? GS.dataCurta(i.data) : i.data)}</span>
-            <span class="desc"><b title="${esc(i.titulo)}">${esc(i.titulo)}</b>${i.repetido ? `<small class="aviso">${esc(i.repetido)}</small>` : i.nota ? `<small>${esc(i.nota)}</small>` : ''}</span>
-            <span class="cat-slot"><button type="button" class="imp-cat">${rotuloCat(i.tipo, i.cat)}${i.sugerida ? `<span class="sug" title="Categoria sugerida">${icone('brilho')}</span>` : ''}</button></span>
-            <span class="val ${i.tipo === 'receita' ? 'e' : ''}">${i.tipo === 'receita' ? '+ ' : ''}${fmt(i.valor)}</span>
-          </div>`).join('')}</div>
+        <div class="imp-itens">${itens.map(linhaHtml).join('')}</div>
         <p class="imp-legenda">${icone('brilho')}<span>categoria sugerida. Toque na categoria para trocar; o que você trocar o GSCASH aprende para as próximas importações.</span></p>`;
 
       const porN = new Map(itens.map(i => [i.n, i]));
+      const lista = modal.body.querySelector('.imp-itens');
+      const redesenhar = i => {
+        const el = lista.querySelector(`[data-n="${i.n}"]`);
+        if (el) el.outerHTML = linhaHtml(i);
+      };
       const botaoImportar = () => modal.foot.querySelector('[data-importar]');
       function atualizar() {
         const marcados = itens.filter(i => i.marcado);
         const total = marcados.reduce((s, i) => s + (i.tipo === 'receita' ? i.valor : -i.valor), 0);
         modal.body.querySelector('[data-conta]').textContent = marcados.length;
         modal.body.querySelector('[data-total]').textContent = `${total > 0 ? '+ ' : total < 0 ? '− ' : ''}${fmt(total)}`;
+        const deInv = marcados.filter(i => i.inv).length;
+        const pend = new Set(marcados.filter(pendente).map(i => i.inv.chave)).size;
+        const chipInv = modal.body.querySelector('[data-chip-inv]');
+        chipInv.classList.toggle('hidden', !deInv);
+        chipInv.querySelector('b').textContent = deInv;
+        const chipPend = modal.body.querySelector('[data-chip-pend]');
+        chipPend.classList.toggle('hidden', !pend);
+        chipPend.querySelector('b').textContent = pend === 1 ? '1 investimento novo para configurar' : `${pend} investimentos novos para configurar`;
         const b = botaoImportar();
-        b.disabled = !marcados.length;
-        b.innerHTML = `${icone('subir')}Importar ${GS.plural(marcados.length, 'lançamento', 'lançamentos')}`;
+        b.disabled = !marcados.length;   // com investimento por configurar, o botão abre a configuração
+        b.innerHTML = pend ? `Configure ${GS.plural(pend, 'investimento', 'investimentos')}`
+          : `${icone('subir')}Importar ${GS.plural(marcados.length, 'lançamento', 'lançamentos')}`;
       }
-      const lista = modal.body.querySelector('.imp-itens');
+
+      // investimento novo: configurado uma vez para todas as linhas com a mesma chave
+      function configurar(chave) {
+        const grupo = itens.filter(i => i.inv && i.inv.chave === chave && !i.inv.invId);
+        if (!grupo.length) return;
+        const saindo = grupo.filter(i => i.inv.mov === 'aplicacao');
+        GS.formInvestimento.abrir({
+          ctx: { carteiras, investimento: regInv },
+          extrato: {
+            titulo: grupo[0].titulo, linhas: grupo.length,
+            total: grupo.reduce((s, i) => s + i.valor, 0), saindo: saindo.length >= grupo.length - saindo.length,
+            data: grupo.map(i => i.data).sort()[0], conta: destino.carteira,
+            sugestao: novosInv.get(chave) || sugestaoDeInvestimento(chave, destino.carteira.nome),
+          },
+          aoUsar: dados => { novosInv.set(chave, dados); grupo.forEach(redesenhar); atualizar(); },
+          aoNaoE: () => { grupo.forEach(i => { i.inv = null; redesenhar(i); }); atualizar(); },
+        });
+      }
+
       lista.addEventListener('change', e => {
         if (!e.target.classList.contains('imp-marca')) return;
         const linha = e.target.closest('.imp-item');
         porN.get(Number(linha.dataset.n)).marcado = e.target.checked;
         atualizar();
       });
-      // a lista de categorias só é montada na linha em que a pessoa toca (arquivos grandes ficam leves)
       lista.addEventListener('click', e => {
+        const bi = e.target.closest('.imp-inv');
+        if (bi) {
+          const item = porN.get(Number(bi.closest('.imp-item').dataset.n));
+          if (pendente(item)) return configurar(item.inv.chave);
+          // trocar: outro investimento, um novo, ou "não é investimento"
+          GS.abrirMenu(bi, [
+            ...ativos.filter(c => c.id !== item.inv.invId).map(c => ({
+              rotulo: c.nome, icone: 'trending',
+              acao: () => { item.inv.invId = c.id; item.inv.escolhido = true; redesenhar(item); atualizar(); },
+            })),
+            { rotulo: item.inv.invId ? 'Investimento novo' : 'Configurar de novo', icone: 'plus', acao: () => {
+              item.inv.invId = null;
+              item.inv.escolhido = false;
+              redesenhar(item); atualizar();
+              configurar(item.inv.chave);
+            } },
+            { rotulo: `Não é investimento (${item.tipo === 'despesa' ? 'gasto' : 'receita'})`, icone: 'x', acao: () => { item.inv = null; redesenhar(item); atualizar(); } },
+          ]);
+          return;
+        }
+        // a lista de categorias só é montada na linha em que a pessoa toca (arquivos grandes ficam leves)
         const b = e.target.closest('.imp-cat');
         if (!b) return;
         const linha = b.closest('.imp-item');
@@ -862,17 +1025,37 @@ window.GS = window.GS || {};
       rodape(`<button type="button" class="btn btn-outline" data-voltar>Voltar</button>
               <button type="button" class="btn btn-primary" data-importar></button>`);
       modal.foot.querySelector('[data-voltar]').addEventListener('click', () => (arq.tipo === 'tabela' && (arq.precisaColunas || (arq.sinalIncerto && !destino.cartao)) ? passoColunas() : passoDestino()));
-      botaoImportar().addEventListener('click', () => importar(itens.filter(i => i.marcado), categorias));
+      botaoImportar().addEventListener('click', () => {
+        const falta = itens.find(i => i.marcado && pendente(i));
+        if (falta) return configurar(falta.inv.chave);
+        importar(itens.filter(i => i.marcado), categorias, novosInv);
+      });
       atualizar();
     }
 
     /* ---------- importar ---------- */
 
-    async function importar(escolhidos, categorias) {
+    async function importar(todos, categorias, novosInv = new Map()) {
       const b = modal.foot.querySelector('[data-importar]');
       b.disabled = true;
       b.innerHTML = '<span class="roda-botao" aria-hidden="true"></span>Importando…';
+      const escolhidos = todos.filter(i => !i.inv);
+      const deInvestimento = todos.filter(i => i.inv);
       try {
+        // aplicações e resgates: transferências entre a conta e o investimento (os novos são criados juntos)
+        let inv = { transacoes: [], investimentos: [], movimentos: 0 };
+        if (deInvestimento.length) {
+          const chavesNovas = new Set(deInvestimento.filter(i => !i.inv.invId).map(i => i.inv.chave));
+          inv = await GS.api.importarMovimentosInvestimento(
+            [...chavesNovas].map(chave => ({ chave, dados: novosInv.get(chave) })),
+            deInvestimento.map(i => ({
+              id: i.id, investimentoId: i.inv.invId, chave: i.inv.chave, mov: i.inv.mov,
+              valor: i.valor, data: i.data, titulo: i.titulo, contaId: destino.carteira.id,
+            })));
+        }
+        if (!escolhidos.length) {
+          return concluir([], inv);
+        }
         // categorias que ainda não existem (da planilha, ou "Outros"): criadas uma vez cada
         const novas = new Map();
         for (const i of escolhidos.filter(x => x.cat.startsWith('nova:'))) {
@@ -892,21 +1075,7 @@ window.GS = window.GS || {};
           };
         });
         const criadas = await GS.api.importarTransacoes(lista);
-        GS.daConta.gravar(CONVITE, 'importou');
-        document.querySelector('.convite-importar')?.remove();
-        modal.fechar();
-        GS.notificarMudanca();
-        GS.toast(`${GS.plural(criadas.length, 'lançamento importado', 'lançamentos importados')}`, 'ok', {
-          desfazer: async () => {
-            try {
-              await GS.api.excluirTransacoes(criadas.map(t => t.id));
-              GS.notificarMudanca();
-              GS.toast('Importação desfeita');
-            } catch (err) {
-              GS.toast(err.message, 'erro');
-            }
-          },
-        });
+        concluir(criadas.map(t => t.id), inv);
       } catch (err) {
         console.error('Falha ao importar', err);
         b.disabled = false;
@@ -915,10 +1084,32 @@ window.GS = window.GS || {};
       }
     }
 
+    // fim: aviso com "Desfazer" (que tira os lançamentos e os investimentos criados agora)
+    function concluir(ids, inv) {
+      GS.daConta.gravar(CONVITE, 'importou');
+      document.querySelector('.convite-importar')?.remove();
+      modal.fechar();
+      GS.notificarMudanca();
+      const n = ids.length + (inv.movimentos || 0);
+      const criados = inv.investimentos.length;
+      GS.toast(`${GS.plural(n, 'lançamento importado', 'lançamentos importados')}${criados ? ` · ${GS.plural(criados, 'investimento criado', 'investimentos criados')}` : ''}`, 'ok', {
+        desfazer: async () => {
+          try {
+            await GS.api.excluirTransacoes([...ids, ...inv.transacoes]);
+            for (const id of inv.investimentos) await GS.api.excluirInvestimento(id);
+            GS.notificarMudanca();
+            GS.toast('Importação desfeita');
+          } catch (err) {
+            GS.toast(err.message, 'erro');
+          }
+        },
+      });
+    }
+
     passoArquivo();
   }
 
-  GS.importar = { abrir, _testes: { linhasDoPdf, extratoDoPdf, lerCsv, lerOfx, dataIso, centavos, separadorDecimal, adivinharColunas, linhasDaTabela, motorDeCategorias } };
+  GS.importar = { abrir, _testes: { investimentoDaLinha, sugestaoDeInvestimento, linhasDoPdf, extratoDoPdf, lerCsv, lerOfx, dataIso, centavos, separadorDecimal, adivinharColunas, linhasDaTabela, motorDeCategorias } };
 
   // botão "Importar" da tela Transações
   document.getElementById('importar')?.addEventListener('click', abrir);

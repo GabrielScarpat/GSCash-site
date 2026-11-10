@@ -392,15 +392,16 @@
     if (editar) return GS.abrirFormTransacao(editar);
 
     const excluir = b.dataset.excluir && ctx.transacoes.find(t => t.id === b.dataset.excluir);
-    if (excluir && excluir.recorrenciaId && ctx.transacoes.filter(x => x.recorrenciaId === excluir.recorrenciaId).length > 1) {
-      const ids = await GS.escolherExclusaoRecorrente(excluir, ctx.transacoes);
-      if (!ids) return;
+    const modo = excluir && excluir.recorrenciaId ? await GS.escolherExclusaoRecorrente(excluir) : 'simples';
+    if (!modo) return;
+    if (modo !== 'simples') {
+      let n;
       try {
-        await GS.api.excluirTransacoes(ids);
+        n = await GS.api.excluirDaSerie(excluir.id, modo);
       } catch (err) {
         return GS.toast(err.message, 'erro');
       }
-      GS.avisarExclusao(ids.length === 1 ? 'Compra excluída' : `${ids.length} compras excluídas`);
+      GS.avisarExclusao(n === 1 ? 'Compra excluída' : `${n} compras excluídas`);
       return GS.notificarMudanca();
     }
     if (excluir) {

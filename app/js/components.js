@@ -375,31 +375,20 @@ window.GS = window.GS || {};
     };
   };
 
-  /* ---------- Excluir uma transação recorrente ----------
-     Pergunta se é só esta, esta e as próximas, ou todas da série.
-     Devolve os ids a excluir (ou null se a pessoa desistir). */
+  /* ---------- Escolher entre opções (janela com "bolinhas") ----------
+     opcoes: [{ valor, titulo, dica, botao }]; o botão de confirmar mostra o "botao" da escolhida.
+     Devolve o valor escolhido (ou null se a pessoa desistir). */
 
-  GS.escolherExclusaoRecorrente = function (t, todas) {
-    const serie = todas.filter(x => x.recorrenciaId === t.recorrenciaId)
-      .sort((a, b) => (a.data < b.data ? -1 : a.data > b.data ? 1 : 0));
-    const proximas = serie.filter(x => x.data >= t.data);
-    const outras = serie.length - 1;
-    const opcoes = [{ titulo: 'Só esta', dica: outras === 1 ? 'A outra continua.' : `As outras ${outras} continuam.`, ids: [t.id] }];
-    if (proximas.length > 1 && proximas.length < serie.length) {
-      opcoes.push({ titulo: 'Esta e as próximas', dica: `${proximas.length} transações, de ${GS.dataMedia(t.data)} em diante.`, ids: proximas.map(x => x.id) });
-    }
-    opcoes.push({ titulo: `Todas as ${serie.length}`, dica: 'Inclusive as que já passaram.', ids: serie.map(x => x.id) });
-    const numero = t.parcela || serie.indexOf(t) + 1;
-
+  GS.escolherOpcao = function ({ titulo, texto, rotulo, opcoes, perigo = false }) {
     return new Promise(resolve => {
       let escolha = 0;
       let resposta = null;
       const m = GS.abrirModal({
-        titulo: 'Excluir transação recorrente?',
+        titulo,
         tamanho: 'sm',
         corpo: `
-          <p><strong>${esc(t.titulo)}</strong> se repete ${serie.length} vezes. Esta é a ${numero}ª (${esc(GS.dataMedia(t.data))}).</p>
-          <div class="opcoes-serie" role="radiogroup" aria-label="O que excluir">
+          <p>${texto}</p>
+          <div class="opcoes-serie" role="radiogroup" aria-label="${esc(rotulo)}">
             ${opcoes.map((o, i) => `
               <button type="button" class="opcao-serie" role="radio" data-i="${i}">
                 <span class="opcao-radio" aria-hidden="true"></span>
@@ -407,7 +396,7 @@ window.GS = window.GS || {};
               </button>`).join('')}
           </div>`,
         rodape: `<button type="button" class="btn btn-outline" data-fechar>Cancelar</button>
-                 <button type="button" class="btn btn-danger" data-ok></button>`,
+                 <button type="button" class="btn ${perigo ? 'btn-danger' : 'btn-primary'}" data-ok></button>`,
         aoFechar: () => resolve(resposta),
       });
       const pintar = () => {
@@ -415,15 +404,62 @@ window.GS = window.GS || {};
           b.classList.toggle('sel', i === escolha);
           b.setAttribute('aria-checked', String(i === escolha));
         });
-        m.foot.querySelector('[data-ok]').textContent = opcoes[escolha].ids.length === 1 ? 'Excluir' : `Excluir ${opcoes[escolha].ids.length}`;
+        m.foot.querySelector('[data-ok]').textContent = opcoes[escolha].botao;
       };
       m.body.addEventListener('click', e => {
         const b = e.target.closest('.opcao-serie');
         if (b) { escolha = Number(b.dataset.i); pintar(); }
       });
-      m.foot.querySelector('[data-ok]').addEventListener('click', () => { resposta = opcoes[escolha].ids; m.fechar(); });
+      m.foot.querySelector('[data-ok]').addEventListener('click', () => { resposta = opcoes[escolha].valor; m.fechar(); });
       pintar();
       setTimeout(() => m.body.querySelector('.opcao-serie.sel').focus(), 50);
+    });
+  };
+
+  const NOME_FREQ = { semanal: 'toda semana', mensal: 'todo mês', anual: 'todo ano' };
+  const frasesSerie = (t, info) => `<strong>${esc(t.titulo)}</strong> se repete ${NOME_FREQ[info.frequencia]}`
+    + (info.semFim ? ', até você cancelar.' : ` (${info.total} vezes).`)
+    + ` Esta é de ${esc(GS.dataMedia(t.data))}.`;
+
+  /* ---------- Excluir uma transação recorrente ----------
+     Só esta · Esta e as próximas · Só as próximas (fica esta, a série para).
+     As que já passaram não são apagadas por aqui: são histórico.
+     Devolve o modo de GS.api.excluirDaSerie, 'simples' se não é série (exclusão comum)
+     ou null se a pessoa desistir. */
+
+  GS.escolherExclusaoRecorrente = async function (t) {
+    const info = await GS.api.infoSerie(t.id);
+    if (!info || (info.total < 2 && !info.semFim)) return 'simples';
+    const seguintes = info.seguintes;
+    const depois = seguintes === 1 ? 'a próxima' : `as próximas ${seguintes}`;
+    const opcoes = [{ valor: 'esta', titulo: 'Só esta', dica: info.semFim || seguintes ? 'As outras continuam.' : 'As anteriores continuam.', botao: 'Excluir' }];
+    if (seguintes || info.semFim) {
+      opcoes.push({ valor: 'esta-e-proximas', titulo: 'Esta e as próximas', dica: seguintes ? `Esta e ${depois}. Para de repetir.` : 'Para de repetir.', botao: `Excluir ${seguintes + 1}` });
+      if (seguintes) opcoes.push({ valor: 'so-proximas', titulo: 'Só as próximas', dica: `Esta fica; saem ${depois}. Para de repetir depois desta.`, botao: `Excluir ${seguintes}` });
+    }
+    return GS.escolherOpcao({
+      titulo: 'Excluir transação recorrente?',
+      texto: frasesSerie(t, info) + ' As que já passaram ficam no histórico.',
+      rotulo: 'O que excluir',
+      opcoes,
+      perigo: true,
+    });
+  };
+
+  /* ---------- Salvar a edição de um lançamento recorrente ----------
+     Devolve 'esta', 'proximas' ou null se a pessoa desistir. */
+
+  GS.escolherEdicaoRecorrente = function (t, info) {
+    if (!info.seguintes) return Promise.resolve('esta');
+    const depois = info.seguintes === 1 ? 'a próxima' : `as próximas ${info.seguintes}`;
+    return GS.escolherOpcao({
+      titulo: 'Salvar em quais?',
+      texto: frasesSerie(t, info),
+      rotulo: 'Onde salvar',
+      opcoes: [
+        { valor: 'esta', titulo: 'Só esta', dica: 'As outras ficam como estão.', botao: 'Salvar' },
+        { valor: 'proximas', titulo: 'Esta e as próximas', dica: `Muda esta e ${depois}. As anteriores ficam.`, botao: `Salvar ${info.seguintes + 1}` },
+      ],
     });
   };
 
@@ -805,7 +841,7 @@ window.GS = window.GS || {};
   /* ---------- Celular: abas embaixo (vidro, com a "gota" na aba ativa) e "Nova transação" flutuante ----------
      Feitas a partir dos links do menu do topo; o CSS (celular.css) só mostra em telas estreitas. */
 
-  const ICONE_ABA = { painel: 'painel', transacoes: 'list', carteiras: 'carteira', faturas: 'cartao', categorias: 'etiqueta' };
+  const ICONE_ABA = { painel: 'painel', transacoes: 'list', carteiras: 'carteira', faturas: 'cartao', categorias: 'etiqueta', investimentos: 'trending' };
 
   function barraCelular(pagina) {
     const links = [...document.querySelectorAll('.nav-links a')];
@@ -845,6 +881,76 @@ window.GS = window.GS || {};
     });
     // voltou pelo botão "voltar" do navegador: a página reaparece como estava
     window.addEventListener('pageshow', () => barra.querySelectorAll('.indo').forEach(a => a.classList.remove('indo')));
+    arrastarEntreTelas(barra);
+  }
+
+  /* ---------- Celular: arrastar o dedo para o lado troca de tela ----------
+     Para a esquerda vai para a aba seguinte da barra; para a direita, a anterior. A tela acompanha
+     o dedo e só troca se o gesto for claramente para o lado. Fica de fora quando há janela aberta,
+     quando o dedo começa num campo ou em algo que rola para o lado (chips, tabelas) e perto das
+     bordas (onde o sistema tem o gesto de voltar). */
+  function arrastarEntreTelas(barra) {
+    const abas = [...barra.querySelectorAll('.aba')];
+    const atual = abas.findIndex(a => a.classList.contains('on'));
+    const conteudo = document.querySelector('main');
+    if (atual < 0 || !conteudo) return;
+
+    const BORDA = 24, TRAVA = 10, TROCA = 0.28;   // TROCA: fração da largura da tela
+    let ini = null;   // { x, y, t, eixo: null | 'x' | 'y' }
+
+    const rolaDeLado = alvo => {
+      for (let e = alvo; e && e !== document.body; e = e.parentElement) {
+        if (e.scrollWidth > e.clientWidth + 1 && /auto|scroll/.test(getComputedStyle(e).overflowX)) return true;
+      }
+      return false;
+    };
+    const mover = (dx, animar) => {
+      conteudo.style.transition = animar ? 'transform .2s ease, opacity .2s ease' : 'none';
+      conteudo.style.transform = dx ? `translateX(${dx}px)` : '';
+      conteudo.style.opacity = dx ? String(1 - Math.min(Math.abs(dx) / innerWidth, 0.5)) : '';
+    };
+
+    document.addEventListener('touchstart', e => {
+      ini = null;
+      if (e.touches.length !== 1 || !barra.offsetWidth) return;   // barra escondida = computador
+      const t = e.touches[0];
+      if (t.clientX < BORDA || t.clientX > innerWidth - BORDA) return;
+      const alvo = e.target;
+      if (document.querySelector('.modal-backdrop') || alvo.closest('input, textarea, select, [contenteditable], .barra-celular, [data-sem-arrastar]') || rolaDeLado(alvo)) return;
+      ini = { x: t.clientX, y: t.clientY, t: Date.now(), eixo: null };
+    }, { passive: true });
+
+    document.addEventListener('touchmove', e => {
+      if (!ini) return;
+      const t = e.touches[0];
+      const dx = t.clientX - ini.x, dy = t.clientY - ini.y;
+      if (!ini.eixo) {
+        if (Math.abs(dx) < TRAVA && Math.abs(dy) < TRAVA) return;
+        ini.eixo = Math.abs(dx) > Math.abs(dy) * 1.5 ? 'x' : 'y';
+      }
+      if (ini.eixo !== 'x') return;
+      e.preventDefault();   // enquanto arrasta para o lado, a página não rola
+      const destino = abas[atual + (dx < 0 ? 1 : -1)];
+      mover(destino ? dx * 0.45 : dx * 0.12, false);   // sem tela para aquele lado: só resiste
+    }, { passive: false });
+
+    const soltar = e => {
+      if (!ini || ini.eixo !== 'x') { ini = null; return; }
+      const dx = (e.changedTouches[0]?.clientX ?? ini.x) - ini.x;
+      const rapido = Math.abs(dx) > 50 && Date.now() - ini.t < 300;
+      const destino = abas[atual + (dx < 0 ? 1 : -1)];
+      ini = null;
+      if (destino && (Math.abs(dx) > innerWidth * TROCA || rapido)) {
+        mover(Math.sign(dx) * innerWidth * 0.3, true);
+        destino.click();   // o mesmo caminho do toque na aba (realce "indo" e transição)
+      } else {
+        mover(0, true);
+      }
+    };
+    document.addEventListener('touchend', soltar);
+    document.addEventListener('touchcancel', soltar);
+    // voltou para esta tela pelo "voltar": ela aparece no lugar
+    window.addEventListener('pageshow', () => mover(0, false));
   }
 
   // celular: o lápis e a lixeira das linhas somem (celular.css) e tocar na linha abre as mesmas ações

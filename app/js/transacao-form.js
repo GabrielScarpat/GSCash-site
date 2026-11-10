@@ -23,7 +23,12 @@ window.GS = window.GS || {};
       GS.toast('Pagamentos de fatura não podem ser editados.', 'erro');
       return;
     }
-    const [categorias, carteiras] = await Promise.all([GS.api.listarCategorias(), GS.api.listarCarteiras()]);
+    const [categorias, todasCarteiras, serie] = await Promise.all([
+      GS.api.listarCategorias(), GS.api.listarCarteiras(),
+      transacao && transacao.recorrenciaId ? GS.api.infoSerie(transacao.id) : null,
+    ]);
+    // investimentos não entram na lista (a não ser que este lançamento já seja de um)
+    const carteiras = todasCarteiras.filter(c => c.tipo !== 'investimento' || (transacao && c.id === transacao.carteiraId));
     const cartoes = GS.faturas.cartoes(carteiras);
     const editando = !!transacao;
     const t = transacao || {
@@ -38,7 +43,12 @@ window.GS = window.GS || {};
       parcelas: 1,
       ...padroes,
     };
-    let recorrente = false;
+    // repetição como está ao abrir (editando um da série: conta a partir deste)
+    const repInicial = serie
+      ? { recorrente: true, frequencia: serie.frequencia, semFim: serie.semFim, vezes: serie.seguintes + 1 }
+      : { recorrente: false, frequencia: 'mensal', semFim: true, vezes: 12 };
+    let recorrente = repInicial.recorrente;
+    let semFim = repInicial.semFim;
 
     const subcategoriasDe = id => ((categorias.find(c => c.id === id) || {}).subcategorias || []);
     // título igual ao nome da subcategoria = o usuário não escreveu um; o campo começa vazio
@@ -49,16 +59,22 @@ window.GS = window.GS || {};
     corpo.noValidate = true;
     corpo.style.display = 'contents';
     corpo.innerHTML = `
-      ${editando ? '' : `
       <div class="toggle" role="group" aria-label="Frequência">
         <button type="button" data-rec="0" class="active" aria-pressed="true">${icone('clock')}Única</button>
         <button type="button" data-rec="1" aria-pressed="false">${icone('repeat')}Recorrente</button>
-      </div>`}
+      </div>
 
       <div class="recurring-box hidden" data-recbox>
         <div class="field"><span class="field-label">Repetir</span><div data-slot="freq"></div></div>
         <div class="field">
-          <label for="txVezes">Quantas vezes</label>
+          <span class="field-label">Até quando</span>
+          <div class="toggle" role="group" aria-label="Até quando">
+            <button type="button" data-fim="sem">Até eu cancelar</button>
+            <button type="button" data-fim="vezes">Número de vezes</button>
+          </div>
+        </div>
+        <div class="field" data-campo-vezes>
+          <label for="txVezes" data-rotulo-vezes>Quantas vezes</label>
           <div class="input"><input id="txVezes" type="number" min="2" max="120" value="12"></div>
         </div>
         <p class="hint" data-rechint></p>
@@ -81,7 +97,7 @@ window.GS = window.GS || {};
         <label for="txTitulo" data-rotulo-titulo>Título</label>
         <div class="input" data-wrap="titulo"><input id="txTitulo" maxlength="80" placeholder="Ex.: Almoço, Uber, Mercado" value="${esc(tituloInicial)}" autofocus></div>
         <span class="field-hint hidden" data-dica-titulo></span>
-        <span class="field-hint hidden" data-dica-receita>Recebe todo mês? Em <b>Mais opções</b>, marque <b>Repetir</b> e lance o ano inteiro de uma vez.</span>
+        <span class="field-hint hidden" data-dica-receita>Recebe todo mês? Em <b>Mais opções</b>, escolha <b>Recorrente</b>: ela se repete até você cancelar.</span>
       </div>
 
       <div class="field">
@@ -236,8 +252,9 @@ window.GS = window.GS || {};
     const parcelas = GS.criarSelect({ opcoes: [], valor: t.parcelas || 1, rotuloAria: 'Parcelas', aoMudar: atualizarFatura });
     $('[data-slot="parcelas"]').append(parcelas.el);
 
-    const frequencia = GS.criarSelect({ opcoes: FREQUENCIAS, valor: 'mensal', aoMudar: atualizarDica, rotuloAria: 'Repetir' });
+    const frequencia = GS.criarSelect({ opcoes: FREQUENCIAS, valor: repInicial.frequencia, aoMudar: atualizarDica, rotuloAria: 'Repetir' });
     $('[data-slot="freq"]').append(frequencia.el);
+    $('#txVezes').value = repInicial.vezes;
     $('#txVezes').addEventListener('input', atualizarDica);
 
     let tipo = t.tipo;
@@ -336,25 +353,51 @@ window.GS = window.GS || {};
     $('#txValor').addEventListener('input', () => parcelas.definirOpcoes(opcoesParcelas(), parcelas.valor || 1));
 
     /* única / recorrente */
-    corpo.querySelectorAll('[data-rec]').forEach(b => b.addEventListener('click', () => {
-      recorrente = b.dataset.rec === '1';
+    function pintarRepeticao() {
       corpo.querySelectorAll('[data-rec]').forEach(x => {
-        x.classList.toggle('active', x === b);
-        x.setAttribute('aria-pressed', x === b);
+        const ativo = (x.dataset.rec === '1') === recorrente;
+        x.classList.toggle('active', ativo);
+        x.setAttribute('aria-pressed', ativo);
+      });
+      corpo.querySelectorAll('[data-fim]').forEach(x => {
+        const ativo = (x.dataset.fim === 'sem') === semFim;
+        x.classList.toggle('active', ativo);
+        x.setAttribute('aria-pressed', ativo);
       });
       $('[data-recbox]').classList.toggle('hidden', !recorrente);
+      $('[data-campo-vezes]').classList.toggle('hidden', semFim);
+      $('[data-rotulo-vezes]').textContent = serie ? 'Quantas vezes, contando esta' : 'Quantas vezes';
       atualizarDica();
+    }
+    corpo.querySelectorAll('[data-rec]').forEach(b => b.addEventListener('click', () => {
+      recorrente = b.dataset.rec === '1';
+      pintarRepeticao();
       pintarForma();
     }));
+    corpo.querySelectorAll('[data-fim]').forEach(b => b.addEventListener('click', () => {
+      semFim = b.dataset.fim === 'sem';
+      pintarRepeticao();
+    }));
+
+    // cada frequência tem o seu limite (pagar algo por 120 anos não faz sentido)
+    const LIMITE_VEZES = { semanal: 260, mensal: 120, anual: 30 };
+    const NOME_FREQ = { semanal: 'toda semana', mensal: 'todo mês', anual: 'todo ano' };
 
     function vezes() {
-      return Math.max(2, Math.min(120, Math.floor(Number($('#txVezes').value)) || 2));
+      const max = LIMITE_VEZES[frequencia.valor];
+      $('#txVezes').max = max;
+      return Math.max(2, Math.min(max, Math.floor(Number($('#txVezes').value)) || 2));
     }
 
     function atualizarDica() {
       if (!recorrente) return;
-      const n = vezes();
       const inicio = GS.parseData(data.valor);
+      if (semFim) {
+        $('[data-rechint]').textContent = `Repete ${NOME_FREQ[frequencia.valor]} a partir de ${GS.dataMedia(inicio)}, até você cancelar. Os próximos 12 meses já aparecem no app.`;
+        return;
+      }
+      const n = vezes();
+      const max = LIMITE_VEZES[frequencia.valor];
       let fim;
       if (frequencia.valor === 'semanal') fim = GS.somarDias(inicio, 7 * (n - 1));
       else if (frequencia.valor === 'anual') fim = new Date(inicio.getFullYear() + n - 1, inicio.getMonth(), inicio.getDate());
@@ -363,11 +406,17 @@ window.GS = window.GS || {};
         const ultimoDia = new Date(mes.getFullYear(), mes.getMonth() + 1, 0).getDate();
         fim = new Date(mes.getFullYear(), mes.getMonth(), Math.min(inicio.getDate(), ultimoDia));
       }
-      $('[data-rechint]').textContent = `Serão criadas ${n} transações, de ${GS.dataMedia(inicio)} até ${GS.dataMedia(fim)}.`;
+      const corte = Number($('#txVezes').value) > max ? ` (no máximo ${max})` : '';
+      $('[data-rechint]').textContent = `Serão ${n} transações${corte}, de ${GS.dataMedia(inicio)} até ${GS.dataMedia(fim)}.`;
     }
+
+    // a repetição mudou em relação a como estava ao abrir?
+    const repeticaoMudou = () => recorrente !== repInicial.recorrente || (recorrente && (
+      frequencia.valor !== repInicial.frequencia || semFim !== repInicial.semFim || (!semFim && vezes() !== repInicial.vezes)));
 
     pintarTipo();
     pintarForma();
+    pintarRepeticao();
 
     // cria a carteira por cima deste formulário e volta com ela escolhida (o que já foi digitado fica)
     $('[data-criar-carteira]').addEventListener('click', () => GS.abrirFormCarteira(null, {
@@ -417,21 +466,39 @@ window.GS = window.GS || {};
         forma: credito() ? 'credito' : 'debito',
         parcelas: credito() && !recorrente ? parcelas.valor : 1,
       };
-      if (recorrente) dados.recorrencia = { frequencia: frequencia.valor, vezes: vezes() };
+      const repeticao = recorrente ? { frequencia: frequencia.valor, vezes: semFim ? null : vezes(), semFim } : null;
+
+      // editando: mudar a repetição vale para esta e as próximas; sem mudar, pergunta onde salvar
+      let escopo = 'esta';
+      if (editando) {
+        if (repeticaoMudou()) dados.recorrencia = repeticao;
+        else if (serie) {
+          escopo = await GS.escolherEdicaoRecorrente({ ...transacao, titulo: dados.titulo || transacao.titulo }, serie);
+          if (!escopo) return;
+        }
+      } else if (repeticao) dados.recorrencia = repeticao;
 
       GS.salvando(botaoSalvar, true);
       try {
         if (editando) {
-          await GS.api.atualizarTransacao(transacao.id, dados);
-          GS.toast(tipo === 'receita' ? 'Receita atualizada' : 'Gasto atualizado');
+          await GS.api.atualizarTransacao(transacao.id, dados, escopo);
+          const nome = tipo === 'receita' ? 'Receita' : 'Gasto';
+          const atualizado = tipo === 'receita' ? 'Receita atualizada' : 'Gasto atualizado';
+          GS.toast('recorrencia' in dados
+            ? (repeticao ? `${atualizado}: a repetição vale a partir de ${GS.dataMedia(GS.parseData(dados.data))}` : `${nome} não se repete mais`)
+            : escopo === 'proximas' ? `${atualizado} nesta e nas próximas`
+            : atualizado);
         } else {
           const criadas = await GS.api.criarTransacao(dados);
-          GS.toast(tipo === 'receita'
+          if (repeticao && repeticao.semFim) GS.toast(`${tipo === 'receita' ? 'Receita salva' : 'Gasto salvo'}: repete ${NOME_FREQ[repeticao.frequencia]} até você cancelar`);
+          else GS.toast(tipo === 'receita'
             ? (criadas.length > 1 ? `${criadas.length} receitas salvas` : 'Receita salva')
             : (criadas.length > 1 ? `${criadas.length} gastos salvos` : 'Gasto salvo'));
         }
         modal.fechar();
         GS.notificarMudanca();
+        // primeiro lançamento salvo no app instalado: convite para o lembrete das 19h (uma vez só)
+        if (!editando && GS.lembrete && GS.lembrete.convidar) GS.lembrete.convidar();
       } catch (e) {
         GS.toast(e.message, 'erro');
         GS.salvando(botaoSalvar, false);

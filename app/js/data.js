@@ -29,6 +29,22 @@
                                  diaVencimento, pagarComId } }
                · oculta: some da lista de carteiras e não entra no
                  saldo geral; os gastos dela continuam contando.
+   Recorrencia { id, frequencia: 'semanal'|'mensal'|'anual', inicio, semFim, geradaAte }
+               · a regra de uma série. Os lançamentos dela são gravados um a um
+                 (recorrenciaId = id, parcela = n, data = inicio + n-1 períodos).
+               · semFim ("Até eu cancelar"): a série é completada sozinha até
+                 HORIZONTE_MESES à frente. geradaAte = último n já criado, para um
+                 lançamento excluído com "Só esta" não voltar.
+               · séries antigas não têm regra: a frequência sai das datas.
+   Investimento { id (= id da carteira tipo 'investimento'), tipo, indexador, taxa,
+               liquidez: 'diaria'|'vencimento', vencimento, destinoId,
+               valorAtual, valorAtualEm, resgatadoEm }
+               · a aplicação é uma carteira (oculta) do tipo 'investimento': o dinheiro
+                 entra por transferência e volta por outra no resgate; o ganho entra
+                 nela como receita "Rendimentos" na hora do resgate.
+               · indexador: cdi_pct | cdi_mais | prefixado | ipca_mais | selic |
+                 poupanca | sem_taxa (veja js/indices.js).
+               · carteira 'investimento' sem registro aqui (criada antes): "sem taxa".
    ========================================================= */
 
 window.GS = window.GS || {};
@@ -208,6 +224,8 @@ window.GS = window.GS || {};
       categorias: CATEGORIAS_INICIAIS.map(c => ({ ...c, orcamento: null, subcategorias: subcategoriasPadrao(c.id) })),
       carteiras: [],
       transacoes: [],
+      recorrencias: [],
+      investimentos: [],
       preferencias: {},
     };
   }
@@ -383,7 +401,8 @@ window.GS = window.GS || {};
 
   /* ---------- Conversão: modelo do app <-> linhas do banco ---------- */
 
-  const TABELAS = ['categorias', 'subcategorias', 'carteiras', 'transacoes', 'perfis'];
+  // a ordem importa no envio: quem é apontado (carteiras) vai antes de quem aponta (investimentos, transações)
+  const TABELAS = ['categorias', 'subcategorias', 'carteiras', 'investimentos', 'transacoes', 'recorrencias', 'perfis'];
   const POR_PAGINA = 1000;
   const paraIso = ms => new Date(ms || Date.now()).toISOString();
 
@@ -426,6 +445,21 @@ window.GS = window.GS || {};
       });
     });
 
+    (db.investimentos || []).forEach(v => {
+      linhas.investimentos.set(v.id, {
+        user_id: u, id: v.id, tipo: v.tipo, indexador: v.indexador, taxa: v.taxa || 0,
+        liquidez: v.liquidez, vencimento: v.vencimento || null, destino_id: v.destinoId || null,
+        valor_atual: v.valorAtual == null ? null : v.valorAtual, valor_atual_em: v.valorAtualEm || null,
+        resgatado_em: v.resgatadoEm || null,
+      });
+    });
+
+    (db.recorrencias || []).forEach(r => {
+      linhas.recorrencias.set(r.id, {
+        user_id: u, id: r.id, frequencia: r.frequencia, inicio: r.inicio, sem_fim: !!r.semFim, gerada_ate: r.geradaAte,
+      });
+    });
+
     linhas.perfis.set(u, { user_id: u, preferencias: db.preferencias || {} });
     return linhas;
   }
@@ -464,6 +498,14 @@ window.GS = window.GS || {};
         if (r.total_parcelas != null) t.totalParcelas = r.total_parcelas;
         return t;
       }).sort((a, b) => a.criadoEm - b.criadoEm),
+      investimentos: (l.investimentos || []).map(v => ({
+        id: v.id, tipo: v.tipo, indexador: v.indexador, taxa: Number(v.taxa) || 0, liquidez: v.liquidez,
+        vencimento: v.vencimento, destinoId: v.destino_id, valorAtual: v.valor_atual == null ? null : Number(v.valor_atual),
+        valorAtualEm: v.valor_atual_em, resgatadoEm: v.resgatado_em,
+      })),
+      recorrencias: (l.recorrencias || []).map(r => ({
+        id: r.id, frequencia: r.frequencia, inicio: r.inicio, semFim: r.sem_fim, geradaAte: r.gerada_ate,
+      })),
       preferencias: (l.perfis[0] && l.perfis[0].preferencias) || {},
     };
   }
@@ -497,14 +539,17 @@ window.GS = window.GS || {};
   }
 
   async function baixar() {
-    const [categorias, subcategorias, carteiras, transacoes, perfis] = await Promise.all(TABELAS.map(buscarTudo));
+    const lidas = await Promise.all(TABELAS.map(buscarTudo));
+    const l = Object.fromEntries(TABELAS.map((t, i) => [t, lidas[i]]));
     return {
-      vazio: !categorias.length && !carteiras.length && !transacoes.length && !perfis.length,
-      db: dasLinhas({ categorias, subcategorias, carteiras, transacoes, perfis }),
+      vazio: !l.categorias.length && !l.carteiras.length && !l.transacoes.length && !l.perfis.length,
+      db: dasLinhas(l),
     };
   }
 
   function aplicar(db) {
+    db.recorrencias = db.recorrencias || [];   // cópia ou dados de antes das regras de repetição
+    db.investimentos = db.investimentos || [];
     cache = db;
     gravado = fotografia(paraLinhas(db));
     guardarCopia();
@@ -609,10 +654,14 @@ window.GS = window.GS || {};
           `Encontramos neste aparelho ${local.transacoes.length} lançamentos e ${local.carteiras.length} carteiras do GSCASH.\n\n` +
           'OK = importar para a sua conta\nCancelar = começar do zero');
         cache = quer ? sanear(local) : dadosIniciais();
-        gravado = fotografia(paraLinhas({ categorias: [], carteiras: [], transacoes: [] }));
+        cache.recorrencias = cache.recorrencias || [];
+        cache.investimentos = cache.investimentos || [];
+        gravado = fotografia(paraLinhas({ categorias: [], carteiras: [], transacoes: [], recorrencias: [], investimentos: [] }));
         await sincronizar();
       })();
       iniciando.catch(() => { iniciando = null; });
+      // não segura a abertura: as séries "Até eu cancelar" são completadas logo depois
+      iniciando.then(() => completarSeriesAoAbrir()).catch(e => console.warn('Não foi possível completar as séries', e));
     }
     return iniciando;
   }
@@ -698,23 +747,106 @@ window.GS = window.GS || {};
     return limpas;
   }
 
-  // grava um lançamento (ou uma série, se recorrente) e devolve os criados
-  function gravarSerie(db, base, rec) {
-    const vezes = rec ? Math.max(1, Math.min(120, Math.floor(rec.vezes) || 1)) : 1;
-    const recorrenciaId = rec ? novoId('r') : undefined;
+  /* ---------- Séries (lançamentos que se repetem) ---------- */
+
+  // quantas vezes cada frequência aceita (5 anos de semanas, 10 de meses, 30 de anos)
+  const LIMITE_VEZES = { semanal: 260, mensal: 120, anual: 30 };
+  // "Até eu cancelar": lançamentos ficam gravados até esta distância à frente
+  const HORIZONTE_MESES = 12;
+  const FREQUENCIAS = Object.keys(LIMITE_VEZES);
+
+  const horizonte = () => {
+    const h = hoje();
+    return GS.isoData(new Date(h.getFullYear(), h.getMonth() + HORIZONTE_MESES, h.getDate()));
+  };
+
+  // { frequencia, vezes, semFim } vindo do formulário -> valores aceitos (ou null = não repete)
+  function limparRepeticao(rec) {
+    if (!rec) return null;
+    const frequencia = FREQUENCIAS.includes(rec.frequencia) ? rec.frequencia : 'mensal';
+    const semFim = !!rec.semFim;
+    const vezes = semFim ? null : Math.max(2, Math.min(LIMITE_VEZES[frequencia], Math.floor(rec.vezes) || 2));
+    return { frequencia, semFim, vezes };
+  }
+
+  const serieDe = (db, recorrenciaId) => db.transacoes.filter(x => x.recorrenciaId === recorrenciaId);
+  const regraDe = (db, recorrenciaId) => (db.recorrencias || []).find(r => r.id === recorrenciaId);
+  // x vem depois de t na mesma série?
+  const depoisDe = (t, x) => (x.parcela != null && t.parcela != null ? x.parcela > t.parcela : x.data > t.data);
+
+  // o lançamento n da série, copiando os campos do modelo (o último que existe)
+  function linhaDaSerie(regra, modelo, n, total) {
+    const { id, data, parcela, criadoEm, ...campos } = modelo;
+    return {
+      ...campos,
+      id: `${regra.id}-${n}`,   // id fixo: dois aparelhos completando a mesma série não duplicam
+      data: somarPeriodo(regra.inicio, regra.frequencia, n - 1),
+      recorrenciaId: regra.id,
+      parcela: n,
+      totalParcelas: total,
+      criadoEm: Date.now() + n,
+    };
+  }
+
+  // começa uma série a partir de um lançamento já pronto (o 1º) e cria os seguintes
+  function comecarSerie(db, primeiro, rep) {
+    const regra = { id: novoId('r'), frequencia: rep.frequencia, inicio: primeiro.data, semFim: rep.semFim, geradaAte: 1 };
+    db.recorrencias.push(regra);
+    Object.assign(primeiro, { recorrenciaId: regra.id, parcela: 1, totalParcelas: rep.semFim ? null : rep.vezes, parcelas: 1 });
     const criadas = [];
-    for (let i = 0; i < vezes; i++) {
-      const t = {
-        ...base,
-        id: novoId('t'),
-        data: i === 0 ? base.data : somarPeriodo(base.data, rec.frequencia, i),
-        criadoEm: Date.now() + i,
-      };
-      if (rec) Object.assign(t, { recorrenciaId, parcela: i + 1, totalParcelas: vezes });
+    if (rep.semFim) criadas.push(...completarSerie(db, regra));
+    else {
+      for (let n = 2; n <= rep.vezes; n++) {
+        const t = linhaDaSerie(regra, primeiro, n, rep.vezes);
+        db.transacoes.push(t);
+        criadas.push(t);
+      }
+      regra.geradaAte = rep.vezes;
+    }
+    return criadas;
+  }
+
+  // "Até eu cancelar": cria os lançamentos que faltam até o horizonte; devolve os criados
+  function completarSerie(db, regra) {
+    if (!regra.semFim) return [];
+    const serie = serieDe(db, regra.id);
+    if (!serie.length) return [];
+    const modelo = serie.reduce((a, b) => ((b.parcela || 0) > (a.parcela || 0) ? b : a));
+    const limite = horizonte();
+    const ids = new Set(db.transacoes.map(x => x.id));
+    const criadas = [];
+    for (let n = regra.geradaAte + 1; somarPeriodo(regra.inicio, regra.frequencia, n - 1) <= limite; n++) {
+      regra.geradaAte = n;
+      const t = linhaDaSerie(regra, modelo, n, null);
+      if (ids.has(t.id)) continue;   // outro aparelho já criou este
       db.transacoes.push(t);
       criadas.push(t);
     }
     return criadas;
+  }
+
+  // regra sem nenhum lançamento: não tem mais o que repetir
+  function limparRegras(db) {
+    const usadas = new Set(db.transacoes.map(t => t.recorrenciaId).filter(Boolean));
+    db.recorrencias = (db.recorrencias || []).filter(r => usadas.has(r.id));
+  }
+
+  // grava um lançamento (ou uma série, se recorrente) e devolve os criados
+  function gravarSerie(db, base, rec) {
+    const primeiro = { ...base, id: novoId('t'), criadoEm: Date.now() };
+    db.transacoes.push(primeiro);
+    const rep = limparRepeticao(rec);
+    return rep ? [primeiro, ...comecarSerie(db, primeiro, rep)] : [primeiro];
+  }
+
+  // séries "Até eu cancelar" completadas ao abrir o app (licença vencida: não grava nada)
+  async function completarSeriesAoAbrir() {
+    await (GS.licenca && GS.licenca.pronta);
+    if (GS.somenteLeitura || !cache) return;
+    const criadas = (cache.recorrencias || []).flatMap(r => completarSerie(cache, r));
+    if (!criadas.length) return;
+    salvar();
+    if (GS.notificarMudanca) GS.notificarMudanca();
   }
 
   function limparTransferencia(dados) {
@@ -754,6 +886,51 @@ window.GS = window.GS || {};
       diaFechamento: dia(cfg.diaFechamento),
       diaVencimento: dia(cfg.diaVencimento),
       pagarComId: cfg.pagarComId || null,
+    };
+  }
+
+  /* ---------- Investimentos ---------- */
+
+  const TIPOS_INV = ['cdb', 'lci_lca', 'tesouro', 'poupanca', 'fundos', 'outro'];
+  const INDEXADORES = ['cdi_pct', 'cdi_mais', 'prefixado', 'ipca_mais', 'selic', 'poupanca', 'sem_taxa'];
+
+  // dados do formulário -> registro do investimento (com nome), ou o texto do erro
+  function limparInvestimento(db, d) {
+    const nome = String(d.nome || '').trim().slice(0, 60);
+    if (!nome) return 'Dê um nome ao investimento.';
+    const indexador = INDEXADORES.includes(d.indexador) ? d.indexador : 'sem_taxa';
+    const semTaxa = ['selic', 'poupanca', 'sem_taxa'].includes(indexador);
+    const taxa = semTaxa ? 0 : Math.round((Number(d.taxa) || 0) * 10000) / 10000;
+    if (!semTaxa && !(taxa > 0 && taxa <= 1000)) return 'Informe quanto o investimento rende.';
+    const liquidez = d.liquidez === 'vencimento' ? 'vencimento' : 'diaria';
+    const vencimento = liquidez === 'vencimento' ? d.vencimento : null;
+    if (liquidez === 'vencimento' && !/^\d{4}-\d{2}-\d{2}$/.test(vencimento || '')) return 'Informe quando o dinheiro fica disponível.';
+    const destino = d.destinoId && db.carteiras.find(c => c.id === d.destinoId && c.tipo !== 'investimento');
+    if (liquidez === 'vencimento' && !destino) return 'Escolha a conta para onde o dinheiro volta.';
+    return {
+      nome, tipo: TIPOS_INV.includes(d.tipo) ? d.tipo : 'outro', indexador, taxa, liquidez, vencimento,
+      destinoId: destino ? destino.id : null,
+    };
+  }
+
+  // as "Previstas" do vencimento (ids fixos por investimento)
+  function removerPrevistas(db, id) {
+    db.transacoes = db.transacoes.filter(t => t.id !== `${id}-vr` && t.id !== `${id}-vt`);
+  }
+
+  // ganho -> receita "Rendimentos" na carteira do investimento; perda -> gasto
+  function lancamentoDoGanho(db, carteira, ganho, data) {
+    const tipo = ganho > 0 ? 'receita' : 'despesa';
+    const nomeCat = ganho > 0 ? 'Rendimentos' : 'Investimentos';
+    let cat = db.categorias.find(c => c.tipo === tipo && mesmoNome(c.nome, nomeCat));
+    if (!cat) {
+      cat = { id: novoId('c'), nome: nomeCat, tipo, icone: 'trending', cor: ganho > 0 ? '#3F7D5C' : '#8C7354', orcamento: null, subcategorias: [] };
+      db.categorias.push(cat);
+    }
+    return {
+      tipo, titulo: `${ganho > 0 ? 'Rendimento' : 'Perda'} · ${carteira.nome}`, descricao: '', valor: Math.abs(ganho), data,
+      categoriaId: cat.id, subcategoriaId: null, carteiraId: carteira.id, forma: 'debito', parcelas: 1,
+      id: novoId('t'), criadoEm: Date.now(),
     };
   }
 
@@ -812,7 +989,11 @@ window.GS = window.GS || {};
       return responder(criadas);
     },
 
-    atualizarTransacao(id, dados) {
+    // escopo: 'esta' (padrão) ou 'proximas' (esta e as seguintes da série)
+    // dados.recorrencia: ausente = a repetição fica como está; null = deixa de repetir;
+    // { frequencia, vezes, semFim } = repete assim a partir deste lançamento. Mudar a repetição
+    // vale sempre para esta e as próximas: as seguintes são refeitas, as anteriores ficam.
+    atualizarTransacao(id, dados, escopo = 'esta') {
       const db = carregar();
       const t = db.transacoes.find(x => x.id === id);
       if (!t) return falhar('Transação não encontrada.');
@@ -823,26 +1004,91 @@ window.GS = window.GS || {};
       if (!novo.titulo || novo.valor <= 0) return falhar('Preencha título e valor.');
       const erroCredito = validarCredito(db, novo);
       if (erroCredito) return falhar(erroCredito);
-      if (t.recorrenciaId) novo.parcelas = 1;
-      Object.assign(t, novo);
+
+      if ('recorrencia' in dados) {
+        const rep = limparRepeticao(dados.recorrencia);
+        if (rep) novo.parcelas = 1;   // recorrente não é parcelado
+        if (t.recorrenciaId) {
+          // as seguintes saem (serão refeitas pela regra nova) e a série antiga para aqui
+          db.transacoes = db.transacoes.filter(x => x.recorrenciaId !== t.recorrenciaId || !depoisDe(t, x));
+          const antiga = regraDe(db, t.recorrenciaId);
+          if (antiga) antiga.semFim = false;
+        }
+        Object.assign(t, novo);
+        delete t.recorrenciaId; delete t.parcela; delete t.totalParcelas;
+        if (rep) comecarSerie(db, t, rep);
+      } else if (escopo === 'proximas' && t.recorrenciaId) {
+        novo.parcelas = 1;
+        const { data, ...campos } = novo;   // as seguintes mantêm cada uma a sua data
+        serieDe(db, t.recorrenciaId).filter(x => depoisDe(t, x)).forEach(x => Object.assign(x, campos));
+        Object.assign(t, novo);
+      } else {
+        if (t.recorrenciaId) novo.parcelas = 1;
+        Object.assign(t, novo);
+      }
+      limparRegras(db);
       salvar();
       return responder(t);
     },
 
+    // como a série de um lançamento se repete (para o formulário e para a exclusão)
+    // { frequencia, semFim, numero, total, seguintes } ou null se não repete
+    infoSerie(id) {
+      const db = carregar();
+      const t = db.transacoes.find(x => x.id === id);
+      if (!t || !t.recorrenciaId) return responder(null);
+      const serie = serieDe(db, t.recorrenciaId).sort((a, b) => (a.parcela || 0) - (b.parcela || 0) || a.data.localeCompare(b.data));
+      const regra = regraDe(db, t.recorrenciaId);
+      let frequencia = regra && regra.frequencia;
+      if (!frequencia) {   // série antiga, sem regra: a distância entre duas datas diz a frequência
+        const outra = serie.find(x => x.id !== t.id);
+        const dias = outra ? Math.abs(Date.parse(outra.data) - Date.parse(t.data)) / 864e5 / Math.max(1, Math.abs((outra.parcela || 0) - (t.parcela || 0)) || 1) : 30;
+        frequencia = dias < 15 ? 'semanal' : dias > 200 ? 'anual' : 'mensal';
+      }
+      return responder({
+        frequencia,
+        semFim: !!(regra && regra.semFim),
+        numero: t.parcela || serie.indexOf(t) + 1,
+        total: serie.length,
+        seguintes: serie.filter(x => depoisDe(t, x)).length,
+      });
+    },
+
     excluirTransacao(id) {
       const db = carregar();
-      lembrarExclusao('transacoes', db.transacoes.filter(x => x.id === id));
+      lembrarExclusao('transacoes', db.transacoes.filter(x => x.id === id), { regras: copia(db.recorrencias) });
       db.transacoes = db.transacoes.filter(x => x.id !== id);
+      limparRegras(db);
       salvar();
       return responder(true);
+    },
+
+    // lançamento de uma série: 'esta' | 'esta-e-proximas' | 'so-proximas' (fica esta, as seguintes saem).
+    // Nos dois últimos a série para de se repetir. As que já passaram nunca são apagadas por aqui.
+    // Devolve quantos saíram.
+    excluirDaSerie(id, modo) {
+      const db = carregar();
+      const t = db.transacoes.find(x => x.id === id);
+      if (!t) return falhar('Transação não encontrada.');
+      const sai = x => x.id === t.id ? modo !== 'so-proximas'
+        : modo !== 'esta' && x.recorrenciaId === t.recorrenciaId && depoisDe(t, x);
+      const removidas = db.transacoes.filter(sai);
+      lembrarExclusao('transacoes', removidas, { regras: copia(db.recorrencias) });
+      db.transacoes = db.transacoes.filter(x => !sai(x));
+      const regra = t.recorrenciaId && regraDe(db, t.recorrenciaId);
+      if (regra && modo !== 'esta') regra.semFim = false;
+      limparRegras(db);
+      salvar();
+      return responder(removidas.length);
     },
 
     // várias de uma vez (ex.: "esta e as próximas" de uma transação recorrente)
     excluirTransacoes(ids) {
       const db = carregar();
       const alvo = new Set(ids);
-      lembrarExclusao('transacoes', db.transacoes.filter(x => alvo.has(x.id)));
+      lembrarExclusao('transacoes', db.transacoes.filter(x => alvo.has(x.id)), { regras: copia(db.recorrencias) });
       db.transacoes = db.transacoes.filter(x => !alvo.has(x.id));
+      limparRegras(db);
       salvar();
       return responder(true);
     },
@@ -856,7 +1102,14 @@ window.GS = window.GS || {};
       const lista = db[u.tipo];
       const jaTem = new Set(lista.map(x => x.id));
       const voltam = u.itens.filter(x => !jaTem.has(x.id));
-      if (u.tipo === 'transacoes') lista.push(...voltam);
+      if (u.tipo === 'transacoes') {
+        lista.push(...voltam);
+        // a regra de cada série que voltou volta como estava (inclusive "Até eu cancelar")
+        const series = new Set(voltam.map(x => x.recorrenciaId).filter(Boolean));
+        (u.regras || []).filter(r => series.has(r.id)).forEach(r => {
+          db.recorrencias = db.recorrencias.filter(x => x.id !== r.id).concat(r);
+        });
+      }
       else lista.splice(Math.min(u.posicao ?? lista.length, lista.length), 0, ...voltam); // volta para o mesmo lugar da lista
       if (u.tipo === 'carteiras') {
         db.carteiras.forEach(c => {
@@ -887,7 +1140,7 @@ window.GS = window.GS || {};
       const novo = limparTransferencia(dados);
       const erro = validarTransferencia(db, novo);
       if (erro) return falhar(erro);
-      Object.assign(t, novo);
+      Object.assign(t, novo, { titulo: t.titulo || novo.titulo });   // "Aplicação · CDB Inter" continua
       salvar();
       return responder(t);
     },
@@ -1090,8 +1343,225 @@ window.GS = window.GS || {};
       const pagavamCom = db.carteiras.filter(c => c.credito && c.credito.pagarComId === id).map(c => c.id);
       lembrarExclusao('carteiras', db.carteiras.filter(c => c.id === id), { posicao, pagavamCom });
       db.carteiras = db.carteiras.filter(c => c.id !== id);
+      db.investimentos = (db.investimentos || []).filter(v => v.id !== id);
+      db.investimentos.forEach(v => { if (v.destinoId === id) v.destinoId = null; });
       // carteiras que pagavam a fatura com esta ficam sem conta definida
       db.carteiras.forEach(c => { if (c.credito && c.credito.pagarComId === id) c.credito.pagarComId = null; });
+      salvar();
+      return responder(true);
+    },
+
+    /* Investimentos (js/investimentos.js, js/indices.js) */
+
+    listarInvestimentos() {
+      return responder(carregar().investimentos);
+    },
+
+    // dados = { nome, tipo, indexador, taxa, valor, data, origemId (null = já estava investido),
+    //           liquidez, vencimento, destinoId }
+    criarInvestimento(dados) {
+      const db = carregar();
+      const inv = limparInvestimento(db, dados);
+      if (typeof inv === 'string') return falhar(inv);
+      const valor = Math.round(Number(dados.valor) || 0);
+      if (valor <= 0) return falhar('Informe o valor aplicado.');
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(dados.data || '')) return falhar('Informe a data da aplicação.');
+      if (inv.liquidez === 'vencimento' && inv.vencimento <= dados.data) return falhar('A data de resgate precisa ser depois da aplicação.');
+      const origem = dados.origemId ? db.carteiras.find(c => c.id === dados.origemId && c.tipo !== 'investimento') : null;
+      if (dados.origemId && !origem) return falhar('Escolha de qual conta o dinheiro saiu.');
+
+      const carteira = {
+        id: novoId('w'), nome: inv.nome, tipo: 'investimento', cor: '#3F7D5C',
+        // já estava investido: o valor entra como saldo inicial e nenhuma conta muda
+        saldoInicial: origem ? 0 : valor,
+        oculta: true,   // fora do saldo também na versão antiga do app
+        credito: null,
+      };
+      db.carteiras.push(carteira);
+      delete inv.nome;
+      inv.id = carteira.id;
+      db.investimentos.push(inv);
+      if (origem) {
+        db.transacoes.push({
+          ...limparTransferencia({ valor, data: dados.data, origemId: origem.id, destinoId: carteira.id }),
+          titulo: `Aplicação · ${carteira.nome}`, id: novoId('t'), criadoEm: Date.now(),
+        });
+        // sem valor informado à mão, o rendimento conta a partir desta transferência
+      } else {
+        inv.valorAtual = valor;
+        inv.valorAtualEm = dados.data;
+      }
+      salvar();
+      return responder({ ...inv, nome: carteira.nome });
+    },
+
+    // muda como o investimento rende, quando resgata e o nome (o valor aplicado não muda aqui)
+    atualizarInvestimento(id, dados) {
+      const db = carregar();
+      const carteira = db.carteiras.find(c => c.id === id && c.tipo === 'investimento');
+      if (!carteira) return falhar('Investimento não encontrado.');
+      const novo = limparInvestimento(db, dados);
+      if (typeof novo === 'string') return falhar(novo);
+      carteira.nome = novo.nome;
+      delete novo.nome;
+      let inv = db.investimentos.find(v => v.id === id);
+      if (!inv) {   // carteira de investimento antiga: ganha o registro agora
+        inv = { id, valorAtual: null, valorAtualEm: null, resgatadoEm: null };
+        db.investimentos.push(inv);
+      }
+      Object.assign(inv, novo);
+      if (inv.liquidez !== 'vencimento') removerPrevistas(db, id);
+      salvar();
+      return responder({ ...inv, nome: carteira.nome });
+    },
+
+    // "Atualizar valor": quanto o investimento vale hoje, segundo o banco (o cálculo segue a partir dele)
+    informarValorAtual(id, valor, data) {
+      const db = carregar();
+      const carteira = db.carteiras.find(c => c.id === id && c.tipo === 'investimento');
+      if (!carteira) return falhar('Investimento não encontrado.');
+      const v = Math.round(Number(valor));
+      if (!(v >= 0)) return falhar('Informe o valor de hoje.');
+      let inv = db.investimentos.find(x => x.id === id);
+      if (!inv) {
+        inv = { id, tipo: 'outro', indexador: 'sem_taxa', taxa: 0, liquidez: 'diaria', vencimento: null, destinoId: null, resgatadoEm: null };
+        db.investimentos.push(inv);
+      }
+      inv.valorAtual = v;
+      inv.valorAtualEm = data || GS.isoData(hoje());
+      salvar();
+      return responder(inv);
+    },
+
+    // resgate: dados = { valor (o que entrou na conta), data, destinoId, total, estimado }
+    // O ganho entra como receita "Rendimentos" (ou a perda como gasto) e o dinheiro volta por transferência.
+    // Parcial (só liquidez diária): o ganho é proporcional ao que saiu.
+    resgatarInvestimento(id, dados) {
+      const db = carregar();
+      const carteira = db.carteiras.find(c => c.id === id && c.tipo === 'investimento');
+      if (!carteira) return falhar('Investimento não encontrado.');
+      const destino = db.carteiras.find(c => c.id === dados.destinoId && c.tipo !== 'investimento');
+      if (!destino) return falhar('Escolha a conta que recebe o dinheiro.');
+      const valor = Math.round(Number(dados.valor) || 0);
+      if (valor <= 0) return falhar('Informe quanto entrou na conta.');
+      const data = dados.data || GS.isoData(hoje());
+      removerPrevistas(db, id);
+      const contabil = GS.calc.saldoCarteira(carteira, db.transacoes, data);
+      const estimado = Math.round(Number(dados.estimado) || 0);
+      const ganho = dados.total ? valor - contabil
+        : estimado > 0 ? Math.round(valor * (estimado - contabil) / estimado) : 0;
+      if (ganho) db.transacoes.push(lancamentoDoGanho(db, carteira, ganho, data));
+      db.transacoes.push({
+        ...limparTransferencia({ valor, data, origemId: carteira.id, destinoId: destino.id }),
+        titulo: `Resgate · ${carteira.nome}`, id: novoId('t'), criadoEm: Date.now() + 1,
+      });
+      let inv = db.investimentos.find(v => v.id === id);
+      if (!inv) {
+        inv = { id, tipo: 'outro', indexador: 'sem_taxa', taxa: 0, liquidez: 'diaria', vencimento: null, destinoId: null, valorAtual: null, valorAtualEm: null, resgatadoEm: null };
+        db.investimentos.push(inv);
+      }
+      if (dados.total) inv.resgatadoEm = data;
+      else if (inv.valorAtual != null) {   // o valor informado à mão diminui o que saiu
+        inv.valorAtual = Math.max(0, estimado - valor);
+        inv.valorAtualEm = data;
+      }
+      salvar();
+      return responder({ ganho });
+    },
+
+    // apaga o investimento e tudo o que foi lançado nele (aplicação, rendimentos, resgates)
+    excluirInvestimento(id) {
+      const db = carregar();
+      if (!db.carteiras.some(c => c.id === id && c.tipo === 'investimento')) return falhar('Investimento não encontrado.');
+      db.transacoes = db.transacoes.filter(t => t.carteiraId !== id && t.destinoId !== id);
+      db.investimentos = db.investimentos.filter(v => v.id !== id);
+      db.carteiras = db.carteiras.filter(c => c.id !== id);
+      db.investimentos.forEach(v => { if (v.destinoId === id) v.destinoId = null; });
+      salvar();
+      return responder(true);
+    },
+
+    // extrato: aplicações e resgates vindos da importação.
+    // novos: [{ chave, dados (como no formulário, sem valor) }] -> investimentos criados sem dinheiro
+    // movimentos: [{ id, chave | investimentoId, mov: 'aplicacao'|'resgate', valor, data, titulo, contaId }]
+    // Aplicação = transferência da conta para o investimento; resgate = do investimento para a conta.
+    // Resgate maior do que havia no investimento: a diferença entra antes como receita "Rendimentos".
+    // Devolve { transacoes: ids criados, investimentos: ids criados } (para o "Desfazer").
+    importarMovimentosInvestimento(novos, movimentos) {
+      const db = carregar();
+      const criadosInv = new Map();
+      for (const n of novos) {
+        const inv = limparInvestimento(db, n.dados);
+        if (typeof inv === 'string') return falhar(inv);
+        const carteira = { id: novoId('w'), nome: inv.nome, tipo: 'investimento', cor: '#3F7D5C', saldoInicial: 0, oculta: true, credito: null };
+        db.carteiras.push(carteira);
+        delete inv.nome;
+        db.investimentos.push({ ...inv, id: carteira.id, valorAtual: null, valorAtualEm: null, resgatadoEm: null });
+        criadosInv.set(n.chave, carteira.id);
+      }
+      const usados = new Set(db.transacoes.map(t => t.id));
+      const criadas = [];
+      let movimentosCriados = 0;
+      const ordem = movimentos.slice().sort((a, b) => a.data.localeCompare(b.data) || (a.mov === 'aplicacao' ? -1 : 1));
+      for (const m of ordem) {
+        const invId = m.investimentoId || criadosInv.get(m.chave);
+        const carteira = db.carteiras.find(c => c.id === invId && c.tipo === 'investimento');
+        const conta = db.carteiras.find(c => c.id === m.contaId && c.tipo !== 'investimento');
+        const valor = Math.round(Number(m.valor) || 0);
+        if (!carteira || !conta || valor <= 0 || usados.has(m.id)) continue;
+        usados.add(m.id);
+        if (m.mov === 'resgate') {
+          const tinha = GS.calc.saldoCarteira(carteira, db.transacoes, m.data);
+          if (valor > tinha) {
+            const ganho = { ...lancamentoDoGanho(db, carteira, valor - Math.max(0, tinha), m.data), id: `${m.id}r` };
+            db.transacoes.push(ganho);
+            criadas.push(ganho.id);
+          }
+        }
+        const de = m.mov === 'resgate' ? carteira.id : conta.id;
+        const para = m.mov === 'resgate' ? conta.id : carteira.id;
+        db.transacoes.push({
+          ...limparTransferencia({ valor, data: m.data, origemId: de, destinoId: para }),
+          titulo: String(m.titulo || (m.mov === 'resgate' ? 'Resgate' : 'Aplicação')).slice(0, 80),
+          id: m.id, criadoEm: Date.now() + criadas.length,
+        });
+        criadas.push(m.id);
+        movimentosCriados++;
+      }
+      if (!criadas.length && !criadosInv.size) return falhar('Nenhum movimento novo de investimento.');
+      salvar();
+      return responder({ transacoes: criadas, investimentos: [...criadosInv.values()], movimentos: movimentosCriados });
+    },
+
+    // mantém o dinheiro do vencimento como "Prevista" na data: o ganho estimado (receita "Rendimentos")
+    // e a volta para a conta (transferência). Só grava se mudou mais de R$ 1. Devolve true se mudou.
+    preverVencimento(id, estimadoNoVencimento) {
+      const db = carregar();
+      const inv = db.investimentos.find(v => v.id === id);
+      const carteira = db.carteiras.find(c => c.id === id);
+      const destino = inv && db.carteiras.find(c => c.id === inv.destinoId);
+      if (!inv || !carteira || inv.resgatadoEm || inv.liquidez !== 'vencimento' || !inv.vencimento || !destino) {
+        const tinha = db.transacoes.some(t => t.id === `${id}-vr` || t.id === `${id}-vt`);
+        if (tinha) { removerPrevistas(db, id); salvar(); }
+        return responder(tinha);
+      }
+      const estimado = Math.round(Number(estimadoNoVencimento) || 0);
+      const outras = db.transacoes.filter(t => t.id !== `${id}-vr` && t.id !== `${id}-vt`);
+      const contabil = GS.calc.saldoCarteira(carteira, outras, inv.vencimento);
+      const ganho = estimado - contabil;
+      const atualT = db.transacoes.find(t => t.id === `${id}-vt`);
+      const atualR = db.transacoes.find(t => t.id === `${id}-vr`);
+      const perto = (a, b) => Math.abs((a || 0) - (b || 0)) < 100;
+      if (atualT && perto(atualT.valor, estimado) && perto(atualR ? atualR.valor : 0, Math.max(0, ganho))
+        && atualT.data === inv.vencimento && atualT.destinoId === destino.id) return responder(false);
+      removerPrevistas(db, id);
+      if (ganho > 0) db.transacoes.push({ ...lancamentoDoGanho(db, carteira, ganho, inv.vencimento), id: `${id}-vr` });
+      if (estimado > 0) {
+        db.transacoes.push({
+          ...limparTransferencia({ valor: estimado, data: inv.vencimento, origemId: carteira.id, destinoId: destino.id }),
+          titulo: `Vencimento · ${carteira.nome}`, descricao: 'Valor estimado, antes de impostos', id: `${id}-vt`, criadoEm: Date.now(),
+        });
+      }
       salvar();
       return responder(true);
     },
@@ -1141,7 +1611,7 @@ window.GS = window.GS || {};
 
     restaurarDemo() {
       if (!confirm('Isto troca TODOS os dados da sua conta pelos fictícios. Continuar?')) return falhar('Cancelado.');
-      cache = { ...dadosDemo(), preferencias: cache.preferencias || {} };
+      cache = { ...dadosDemo(), recorrencias: [], investimentos: [], preferencias: cache.preferencias || {} };
       salvar();
       return responder(true);
     },
@@ -1150,7 +1620,7 @@ window.GS = window.GS || {};
   // licença vencida (js/licenca.js): o app fica só leitura e só estas funções seguem liberadas
   GS.somenteLeitura = false;
   GS.TEXTO_SO_LEITURA = 'Licença vencida: o GSCASH está em modo só leitura.';
-  const LIBERADAS_SO_LEITURA = new Set(['listarTransacoes', 'listarCategorias', 'listarCarteiras', 'obterPreferencias', 'salvarPreferencia']);
+  const LIBERADAS_SO_LEITURA = new Set(['infoSerie', 'listarTransacoes','listarCategorias', 'listarCarteiras', 'obterPreferencias', 'salvarPreferencia']);
 
   // toda chamada espera os dados terem sido carregados do banco
   Object.keys(GS.api).forEach(nome => {

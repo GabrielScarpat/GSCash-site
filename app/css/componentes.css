@@ -510,6 +510,8 @@
 .selo.alerta { color: #9A5B12; border-color: rgba(154, 91, 18, .45); background: rgba(201, 130, 27, .07); }
 .selo.erro   { color: var(--danger); border-color: rgba(194, 57, 43, .45); background: rgba(194, 57, 43, .06); }
 .selo.neutro { color: var(--text-2); border-color: var(--border-strong); background: rgba(0, 0, 0, .02); }
+/* lançamento com data futura: "Prevista" embaixo do valor */
+.tx-value .tx-prevista { display: flex; width: max-content; min-width: 0; height: 20px; margin: 4px 0 0 auto; padding: 0 6px; font-size: 11.5px; font-family: inherit; }
 
 /* ---------- Toast ---------- */
 

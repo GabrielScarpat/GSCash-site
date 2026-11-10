@@ -13,6 +13,8 @@
 
   async function desenhar() {
     ctx = await GS.carregarTudo();
+    // investimentos ficam na aba Investimentos, fora da lista e do total daqui
+    ctx = { ...ctx, carteiras: ctx.carteiras.filter(c => c.tipo !== 'investimento') };
     const saldos = new Map(ctx.carteiras.map(c => [c.id, GS.calc.saldoCarteira(c, ctx.transacoes)]));
     const ocultas = ctx.carteiras.filter(c => c.oculta);
     if (!ocultas.length) mostrarOcultas = false;

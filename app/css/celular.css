@@ -74,16 +74,18 @@
     will-change: transform, width;
   }
 
+  /* 6 abas: as sem nome dividem o espaço que sobra; a aberta fica do tamanho do nome
+     (cabe "Investimentos" até em telas de 320px) */
   .barra-celular .aba {
     position: relative;
     z-index: 1;
-    flex: 0 1 auto;
+    flex: 1 1 0;
     display: flex;
     align-items: center;
     justify-content: center;
     height: 52px;
-    min-width: 42px;
-    padding: 0 13px;
+    min-width: 0;
+    padding: 0;
     border-radius: 18px;
     color: #857F72;
     font-size: 13.5px;
@@ -95,7 +97,7 @@
   .barra-celular .aba svg { width: 22px; height: 22px; flex-shrink: 0; transition: transform .15s; }
   .barra-celular .aba:active svg { transform: scale(.9); }
   .barra-celular .aba .nome { max-width: 0; overflow: hidden; white-space: nowrap; opacity: 0; transition: max-width .3s ease, opacity .2s, margin .3s ease; }
-  .barra-celular .aba.on { color: #fff; }
+  .barra-celular .aba.on { flex: none; padding: 0 13px; color: #fff; }
   .barra-celular .aba.on .nome { max-width: 110px; opacity: 1; margin-left: 7px; }
   .barra-celular .aba.indo { color: var(--primary); }
   .barra-celular .aba.indo svg { transform: scale(.9); }
@@ -308,13 +310,38 @@
 .instalar-ic svg { width: 16px; height: 16px; }
 .instalar-dica { margin: 2px 0 0; padding: 10px 12px; border-radius: 12px; background: var(--surface-2); color: var(--muted); font-size: 13px; line-height: 1.45; }
 
-/* ---------- lembrete diário (js/lembrete.js) ---------- */
-.convite-lembrete .icone-sino { display: grid; place-items: center; width: 44px; height: 44px; flex-shrink: 0; border-radius: 12px;
-  background: var(--primary-soft); color: var(--primary); }
-.convite-lembrete .icone-sino svg { width: 22px; height: 22px; }
-.lembrete-ligado { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 12px; background: #DCEBDC;
-  color: var(--success); font-size: 14.5px; font-weight: 600; }
-.lembrete-ligado svg { width: 18px; height: 18px; flex-shrink: 0; }
+/* ---------- lembrete diário (js/lembrete.js): folha de pré-permissão ---------- */
+/* o título grande e os botões ficam dentro da folha; o cabeçalho da janela some (o título dele
+   continua para leitores de tela) */
+.modal.lem-folha .modal-head { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.modal.lem-folha .modal-foot { display: none; }
+.modal.lem-folha .modal-body { display: grid; justify-items: center; gap: 0; text-align: center; padding: 10px 22px 26px; }
+.lem-puxador { width: 38px; height: 5px; border-radius: 3px; background: var(--border-strong); margin-bottom: 20px; }
+.lem-sino { display: grid; place-items: center; width: 72px; height: 72px; margin-bottom: 18px; border-radius: 22px; background: var(--primary-soft); color: var(--primary); }
+.lem-sino svg { width: 34px; height: 34px; }
+.lem-titulo { margin: 0 0 8px; font-size: 23px; font-weight: 700; line-height: 1.2; letter-spacing: -.02em; color: var(--text); }
+.lem-texto { margin: 0 0 20px; max-width: 330px; color: var(--text-2); font-size: 15.5px; line-height: 1.5; }
+.lem-texto b { color: var(--text); }
+/* prévia da notificação, no jeito do iPhone */
+.lem-notif { display: flex; gap: 11px; align-items: flex-start; width: 100%; margin-bottom: 18px; padding: 12px 14px; border-radius: 20px; text-align: left;
+  background: rgba(245, 243, 238, .92); box-shadow: 0 8px 24px rgba(0, 0, 0, .10), inset 0 0 0 1px rgba(0, 0, 0, .04); }
+.lem-icone-app { flex: none; display: grid; place-items: center; width: 38px; height: 38px; border-radius: 9px; background: #1D3A5E; }
+.lem-icone-app i { width: 22px; height: 22px; background: #F3EFE4; -webkit-mask: var(--marca-simbolo) center / contain no-repeat; mask: var(--marca-simbolo) center / contain no-repeat; }
+.lem-notif-txt { flex: 1; min-width: 0; display: grid; font-size: 14px; line-height: 1.35; color: var(--text); }
+.lem-notif-topo { display: flex; justify-content: space-between; gap: 8px; }
+.lem-notif-topo small { color: var(--muted); font-size: 12.5px; }
+.lem-notif-topo small.app { font-weight: 600; letter-spacing: .02em; }
+.lem-notif-txt b { margin-top: 1px; font-size: 14.5px; font-weight: 600; }
+.lem-vantagens { list-style: none; display: grid; gap: 10px; width: 100%; margin: 0 0 22px; padding: 0; text-align: left; }
+.lem-vantagens li { display: flex; gap: 10px; align-items: flex-start; color: var(--text-2); font-size: 14.5px; line-height: 1.4; }
+.lem-vantagens li svg { flex: none; width: 18px; height: 18px; margin-top: 1px; color: var(--success); }
+.lem-ligado { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; margin-bottom: 18px; padding: 12px; border-radius: 14px;
+  background: rgba(46, 125, 50, .08); border: 1px solid rgba(46, 125, 50, .35); color: var(--success); font-weight: 600; font-size: 15px; }
+.lem-ligado svg { width: 18px; height: 18px; }
+.lem-acao { width: 100%; height: 54px; font-size: 16.5px; border-radius: 16px; }
+.lem-link { margin-top: 14px; font-size: 15px; color: var(--text-2); font-weight: 500; }
+.lem-link.perigo { color: var(--danger); }
+@media (min-width: 761px) { .lem-puxador { display: none; } .modal.lem-folha .modal-body { padding-top: 30px; } }
 .lembrete-aviso { display: flex; gap: 10px; padding: 12px 14px; border-radius: 12px; background: var(--primary-soft); color: var(--primary);
   font-size: 14.5px; line-height: 1.45; }
 .lembrete-aviso svg { width: 18px; height: 18px; flex-shrink: 0; margin-top: 2px; }

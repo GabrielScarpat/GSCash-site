@@ -14,8 +14,8 @@
   .topbar-acoes .btn-outline { width: 44px; padding: 0; }
 }
 
-/* abaixo disso o topo não cabe numa linha: o menu desce para uma segunda linha, como no celular */
-@media (max-width: 960px) {
+/* abaixo disso o topo não cabe numa linha (6 abas desde Investimentos): o menu desce para uma segunda linha */
+@media (max-width: 1080px) {
   .topbar-inner {
     flex-wrap: wrap;
     height: auto;

@@ -6,7 +6,7 @@
 .modal.rel { max-width: 1120px; height: calc(100vh - 48px); }
 .modal.rel .modal-body { flex: 1; min-height: 0; overflow: hidden; }
 
-.rel-corpo { display: grid; grid-template-columns: 280px 1fr; gap: 28px; flex: 1; min-height: 0; }
+.rel-corpo { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 28px; flex: 1; min-height: 0; }
 
 .rel-ops { display: flex; flex-direction: column; gap: 20px; overflow-y: auto; }
 .rel-ops .field-label { display: block; margin-bottom: 8px; }
@@ -33,10 +33,20 @@
 .rel-previa .folha { zoom: .72; flex: none; }
 
 @media (max-width: 960px) {
-  .rel-corpo { grid-template-columns: 1fr; overflow-y: auto; }
+  /* minmax(0, ...): sem ele a prévia empurra a janela para o lado no celular */
+  .rel-corpo { grid-template-columns: minmax(0, 1fr); overflow-y: auto; }
   .modal.rel .modal-body { overflow-y: auto; }
   .rel-previa { overflow: visible; }
   .rel-previa .folha { zoom: .45; }
+}
+
+/* celular: a folha (794 px) reduzida precisa caber na largura da tela */
+@media (max-width: 640px) {
+  .rel-previa { padding: 12px; border-radius: 12px; }
+  .rel-previa .folha { zoom: .38; }
+}
+@media (max-width: 360px) {
+  .rel-previa .folha { zoom: .33; }
 }
 
 /* ---------- Aviso "Relatório salvo" ---------- */

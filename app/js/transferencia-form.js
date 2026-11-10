@@ -19,8 +19,10 @@ window.GS = window.GS || {};
   // transferencia: existente para editar (opcional) · padroes: { origemId, destinoId }
   GS.abrirFormTransferencia = async function (transferencia = null, padroes = {}) {
     const ctx = await GS.carregarTudo();
-    const carteiras = ctx.carteiras;
     const editando = !!transferencia;
+    // investimentos recebem e devolvem dinheiro pela aba Investimentos; aqui só se já faz parte desta transferência
+    const nesta = new Set(transferencia ? [transferencia.carteiraId, transferencia.destinoId] : []);
+    const carteiras = ctx.carteiras.filter(c => c.tipo !== 'investimento' || nesta.has(c.id));
 
     if (carteiras.length < 2) {
       const m = GS.abrirModal({

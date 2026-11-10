@@ -77,9 +77,9 @@ window.GS = window.GS || {};
     const aFim = GS.isoData(anterior.fim);
     const nome = nomeAnterior(modo, anterior);
 
-    // como no Painel: carteiras ocultas não entram no saldo
-    const visiveis = GS.calc.visiveis(ctx.carteiras);
-    const ocultas = ctx.carteiras.length - visiveis.length;
+    // como no Painel: carteiras ocultas e investimentos não entram no saldo
+    const visiveis = GS.calc.disponiveis(ctx.carteiras);
+    const ocultas = ctx.carteiras.filter(c => c.tipo !== 'investimento').length - visiveis.length;
     const saldo = visiveis.reduce((s, c) => s + GS.calc.saldoCarteira(c, ctx.transacoes, vazio ? hojeIso : fim), 0);
 
     // faturas que fecham ou vencem dentro do período

@@ -50,7 +50,10 @@
     });
 
     const tipo = GS.criarSelect({
-      opcoes: Object.entries(GS.TIPOS_CARTEIRA).map(([valor, t]) => ({ valor, rotulo: t.nome, icone: t.icone })),
+      // investimento agora se cadastra na aba Investimentos (o tipo continua para quem já tinha)
+      opcoes: Object.entries(GS.TIPOS_CARTEIRA)
+        .filter(([valor]) => valor !== 'investimento' || (cart && cart.tipo === 'investimento'))
+        .map(([valor, t]) => ({ valor, rotulo: t.nome, icone: t.icone })),
       valor: cart ? cart.tipo : 'corrente',
       rotuloAria: 'Tipo de carteira',
     });

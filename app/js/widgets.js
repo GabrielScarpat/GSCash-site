@@ -16,8 +16,13 @@ window.GS = window.GS || {};
       const cat = ctx.categoria.get(t.categoriaId);
       const cart = ctx.carteira.get(t.carteiraId);
       const receita = t.tipo === 'receita';
+      // série com fim: "3/12"; "Até eu cancelar" não tem total, fica só o ícone
       const recorrente = t.recorrenciaId
-        ? `<span class="sep">·</span><span class="tx-badge" title="Transação recorrente">${icone('repeat')}${t.parcela}/${t.totalParcelas}</span>`
+        ? `<span class="sep">·</span><span class="tx-badge" title="${t.totalParcelas ? 'Transação recorrente' : 'Repete até você cancelar'}">${icone('repeat')}${t.totalParcelas ? `${t.parcela}/${t.totalParcelas}` : ''}</span>`
+        : '';
+      // data ainda não chegou: ainda não mexeu no saldo
+      const prevista = t.data > GS.isoData(GS.hoje()) && !pagamento
+        ? `<span class="selo info tx-prevista" title="Ainda não aconteceu: entra no saldo em ${esc(GS.dataMedia(t.data))}">Prevista</span>`
         : '';
       const credito = t.forma === 'credito' && !naFatura
         ? `<span class="sep">·</span><span class="tx-badge credito" title="Compra no crédito">${icone('card')}Crédito${t.parcelas > 1 ? ` ${t.parcelas}x` : ''}</span>`
@@ -53,7 +58,7 @@ window.GS = window.GS || {};
             </div>
             ${comDescricao && t.descricao && !transferencia ? `<div class="tx-desc">${esc(t.descricao)}</div>` : ''}
           </div>
-          <div class="tx-value num ${receita ? 'income' : ''}">${receita ? '+' : ''}${GS.moeda(valor ?? t.valor)}</div>
+          <div class="tx-value num ${receita ? 'income' : ''}">${receita ? '+' : ''}${GS.moeda(valor ?? t.valor)}${prevista}</div>
           ${comAcoes ? `
           <div class="tx-actions">
             ${pagamento

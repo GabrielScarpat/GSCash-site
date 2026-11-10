@@ -2,7 +2,7 @@
    GSCASH — lembrete diário às 19h (notificação no celular ou no navegador)
    Quem manda é o servidor (Edge Function "lembrete"): às 19h de Brasília, se a
    pessoa ainda não lançou nada no dia. Aqui ficam a chave em Configurações ›
-   Notificações, a janela "Lembrete diário", o convite no Painel do app instalado
+   Notificações, a folha do lembrete, o convite depois do primeiro gasto (app instalado)
    e o service worker (sw.js).
    · iPhone: a Apple só deixa o GSCASH instalado na tela inicial receber notificação.
    · Programa para Windows: fica de fora (o navegador embutido não recebe notificação).
@@ -151,108 +151,141 @@ window.GS = window.GS || {};
     });
   }
 
-  /* ---------- janela "Lembrete diário" ---------- */
+  /* ---------- folha do lembrete (padrão de pré-permissão) ----------
+     Uma folha só para tudo: o convite (uma vez, depois do primeiro gasto salvo), a tela de
+     ligar/desligar das Configurações e os avisos de "bloqueado" e "instale o app". Antes do
+     pedido de permissão do sistema, mostra o benefício e uma prévia da notificação de verdade. */
 
-  const EXPLICA = 'Todo dia às 19h, uma notificação lembra você de lançar os gastos. Nos dias em que você já lançou algo, ela não chega.';
+  const EXPLICA = 'Um lembrete por dia, às 19h. Se você já lançou algo no dia, ele não chega.';
   const AVISO_LIGADO = () => (GS.nativo ? 'Lembrete ligado: todo dia às 19h.' : 'Lembrete ligado. Mandamos uma notificação de teste.');
 
-  async function abrirJanela() {
-    const modal = GS.abrirModal({ titulo: 'Lembrete diário', corpo: '' });
-    const rodape = html => {
-      modal.foot.innerHTML = html;
-      modal.foot.querySelectorAll('[data-fechar]').forEach(b => b.addEventListener('click', () => modal.fechar()));
-    };
+  const previa = () => `
+    <div class="lem-notif" aria-hidden="true">
+      <span class="lem-icone-app"><i></i></span>
+      <span class="lem-notif-txt"><span class="lem-notif-topo"><small class="app">GSCASH</small><small>19:00</small></span>
+        <b>${esc(TITULO)}</b><span>${esc(CORPO)}</span></span>
+    </div>`;
+
+  function abrirJanela({ convite = false } = {}) {
+    const modal = GS.abrirModal({
+      titulo: 'Lembrete diário', corpo: '', tamanho: 'sm lem-folha',
+      aoFechar: () => { if (convite) gravar(CONVITE_VISTO, '1'); },
+    });
+    const b = modal.body;
+    const titulo = t => { modal.el.querySelector('.modal-title').textContent = t; };
     const ocupado = (botao, texto) => {
       botao.disabled = true;
       botao.innerHTML = `<span class="roda-botao" aria-hidden="true"></span>${esc(texto)}`;
     };
+    // o desenho da folha; acao/link = { texto, perigo?, aoTocar }
+    function pintar({ icone: ic = 'sino', h2, texto, extra = '', acao, link }) {
+      titulo(h2);
+      b.innerHTML = `
+        <span class="lem-puxador" aria-hidden="true"></span>
+        <span class="lem-sino">${icone(ic)}</span>
+        <h3 class="lem-titulo">${esc(h2)}</h3>
+        <p class="lem-texto">${texto}</p>
+        ${extra}
+        <button type="button" class="btn btn-primary lem-acao">${acao.icone ? icone(acao.icone) : ''}${esc(acao.texto)}</button>
+        ${link ? `<button type="button" class="link-btn lem-link ${link.perigo ? 'perigo' : ''}">${esc(link.texto)}</button>` : ''}`;
+      b.querySelector('.lem-acao').addEventListener('click', e => acao.aoTocar(e.currentTarget));
+      if (link) b.querySelector('.lem-link').addEventListener('click', e => link.aoTocar(e.currentTarget));
+    }
 
     // iPhone pelo Safari: só funciona instalado
     if (!suportado) {
-      modal.body.innerHTML = `<div class="lembrete-aviso">${icone('alert')}<span>No iPhone, as notificações só funcionam com o GSCASH <b>instalado na tela inicial</b>. Instale e ative o lembrete pelo app.</span></div>`;
-      rodape(`<button type="button" class="btn btn-outline" data-fechar>Fechar</button>
-              <button type="button" class="btn btn-primary" data-instalar>Como instalar</button>`);
-      modal.foot.querySelector('[data-instalar]').addEventListener('click', () => { modal.fechar(); GS.instalar?.abrir(); });
-      return;
+      pintar({
+        icone: 'celular', h2: 'Instale o GSCASH na tela inicial',
+        texto: 'No iPhone, as notificações só funcionam com o GSCASH <b>instalado na tela inicial</b>. Instale e ative o lembrete pelo app.',
+        acao: { texto: 'Como instalar', aoTocar: () => { modal.fechar(); GS.instalar?.abrir(); } },
+        link: { texto: 'Agora não', aoTocar: () => modal.fechar() },
+      });
+      return modal;
     }
 
     function bloqueado() {
       const onde = !GS.nativo ? 'nas configurações do navegador (ou do celular)'
         : window.Capacitor.getPlatform() === 'android' ? 'em <b>Configurações &gt; Apps &gt; GSCASH &gt; Notificações</b>'
         : 'em <b>Ajustes &gt; Notificações &gt; GSCASH</b>';
-      modal.body.innerHTML = `<div class="lembrete-aviso">${icone('alert')}<span>As notificações do GSCASH estão <b>bloqueadas</b> neste aparelho. Libere ${onde} e tente de novo.</span></div>`;
-      rodape('<button type="button" class="btn btn-primary" data-fechar>Entendi</button>');
-      modal.foot.className = 'modal-foot um';
+      pintar({
+        h2: 'Notificações bloqueadas',
+        texto: `As notificações do GSCASH estão bloqueadas neste aparelho. Libere ${onde} e tente de novo.`,
+        acao: { texto: 'Entendi', aoTocar: () => modal.fechar() },
+      });
     }
 
     function desligadoTela() {
-      modal.foot.className = 'modal-foot';
-      modal.body.innerHTML = `<p>${EXPLICA}</p>`;
-      rodape(`<button type="button" class="btn btn-outline" data-fechar>Cancelar</button>
-              <button type="button" class="btn btn-primary" data-ligar>${icone('sino')}Ativar lembrete</button>`);
-      modal.foot.querySelector('[data-ligar]').addEventListener('click', async e => {
-        const b = e.currentTarget;
-        ocupado(b, 'Ativando…');
-        try {
-          if (!(await motor.ligar())) return bloqueado();
-          gravar(CONVITE_VISTO, '1');
-          document.querySelector('.convite-lembrete')?.remove();
-          ligadoTela();
-          GS.toast(AVISO_LIGADO());
-        } catch (err) {
-          console.error('Falha ao ligar o lembrete', err);
-          desligadoTela();
-          GS.toast(err.message || 'Não foi possível ligar o lembrete agora.', 'erro');
-        }
+      pintar({
+        h2: 'Não esqueça de lançar seus gastos', texto: EXPLICA,
+        extra: `${previa()}
+          <ul class="lem-vantagens">
+            <li>${icone('check')}Lançar todo dia mantém o saldo e o orçamento certos</li>
+            <li>${icone('check')}Tocar no lembrete abre direto o Novo gasto</li>
+          </ul>`,
+        acao: {
+          texto: 'Ativar lembrete', icone: 'sino', aoTocar: async botao => {
+            ocupado(botao, 'Ativando…');
+            try {
+              if (!(await motor.ligar())) return bloqueado();
+              gravar(CONVITE_VISTO, '1');
+              ligadoTela();
+              GS.toast(AVISO_LIGADO());
+            } catch (err) {
+              console.error('Falha ao ligar o lembrete', err);
+              desligadoTela();
+              GS.toast(err.message || 'Não foi possível ligar o lembrete agora.', 'erro');
+            }
+          },
+        },
+        link: { texto: 'Agora não', aoTocar: () => modal.fechar() },
       });
     }
 
     function ligadoTela() {
-      modal.foot.className = 'modal-foot even';
-      modal.body.innerHTML = `
-        <div class="lembrete-ligado">${icone('check')}Ligado: todo dia às 19h, neste aparelho</div>
-        <p>${EXPLICA}</p>`;
-      rodape(`<button type="button" class="btn btn-outline" data-desligar>Desligar</button>
-              <button type="button" class="btn btn-primary" data-fechar>Fechar</button>`);
-      modal.foot.querySelector('[data-desligar]').addEventListener('click', async e => {
-        ocupado(e.currentTarget, 'Desligando…');
-        try {
-          await motor.desligar();
-          desligadoTela();
-          GS.toast('Lembrete desligado neste aparelho.');
-        } catch (err) {
-          ligadoTela();
-          GS.toast(err.message, 'erro');
-        }
+      pintar({
+        h2: 'Lembrete diário', texto: 'Todo dia às 19h, neste aparelho. Se você já lançou algo no dia, ele não chega.',
+        extra: `<div class="lem-ligado">${icone('check')}Ligado</div>${previa()}`,
+        acao: { texto: 'Fechar', aoTocar: () => modal.fechar() },
+        link: {
+          texto: 'Desligar lembrete', perigo: true, aoTocar: async botao => {
+            ocupado(botao, 'Desligando…');
+            try {
+              await motor.desligar();
+              desligadoTela();
+              GS.toast('Lembrete desligado neste aparelho.');
+            } catch (err) {
+              ligadoTela();
+              GS.toast(err.message, 'erro');
+            }
+          },
+        },
       });
     }
 
-    if (await motor.negado()) return bloqueado();
-    (await motor.ligado()) ? ligadoTela() : desligadoTela();
+    (async () => {
+      if (await motor.negado()) return bloqueado();
+      (await motor.ligado()) ? ligadoTela() : desligadoTela();
+    })();
+    return modal;
   }
 
-  /* ---------- convite no Painel (uma vez, só no app instalado) ---------- */
+  /* ---------- convite: uma vez, logo depois do primeiro gasto ou receita salvo ----------
+     Só no app instalado (no iPhone o Safari não recebe notificação). Chamado pelo
+     formulário de lançamento (js/transacao-form.js) depois de salvar. */
 
-  async function convite() {
-    await GS.usuarioPronto;
-    if (!suportado || !(GS.nativo || instalado()) || ler(CONVITE_VISTO)) return;
-    const lugar = document.querySelector('main .container');
-    if (!lugar || !document.getElementById('primeirosPassos')) return;  // só no Painel
-    if (await motor.negado() || await motor.ligado()) return;
-    const el = GS.el('div', 'convite-app convite-lembrete');
-    el.setAttribute('role', 'region');
-    el.setAttribute('aria-label', 'Lembrete diário');
-    el.innerHTML = `
-      <span class="icone-sino">${icone('sino')}</span>
-      <span class="txt"><b>Quer um lembrete às 19h?</b><small>Uma notificação para não esquecer de lançar os gastos.</small></span>
-      <button type="button" class="btn btn-primary" data-ativar>Ativar</button>
-      <button type="button" class="convite-fechar" aria-label="Agora não">${icone('x')}</button>`;
-    el.querySelector('[data-ativar]').addEventListener('click', abrirJanela);
-    el.querySelector('.convite-fechar').addEventListener('click', () => {
+  let convidando = false;
+  async function convidar() {
+    if (convidando || !suportado || !(GS.nativo || instalado()) || ler(CONVITE_VISTO)) return;
+    convidando = true;
+    try {
+      if (await motor.negado() || await motor.ligado()) { gravar(CONVITE_VISTO, '1'); return; }
+      await new Promise(r => setTimeout(r, 900));   // deixa o aviso de "Gasto salvo" aparecer antes
+      document.querySelectorAll('.toast').forEach(t => t.remove());   // e tira ele de cima do botão
       gravar(CONVITE_VISTO, '1');
-      el.remove();
-    });
-    lugar.prepend(el);
+      abrirJanela({ convite: true });
+    } finally {
+      convidando = false;
+    }
   }
 
   /* ---------- tocou na notificação: abre direto o Novo gasto ---------- */
@@ -285,6 +318,5 @@ window.GS = window.GS || {};
     return true;
   }
 
-  GS.lembrete = { visivel, suportado, abrir: abrirJanela, ligado: () => motor.ligado(), definir };
-  convite();
+  GS.lembrete = { visivel, suportado, abrir: () => abrirJanela(), convidar, ligado: () => motor.ligado(), definir };
 })();

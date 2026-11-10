@@ -205,6 +205,16 @@ window.GS = window.GS || {};
       return carteiras.filter(c => !c.oculta);
     },
 
+    // dinheiro do dia a dia: carteiras visíveis, sem as de investimento (essas ficam na aba Investimentos)
+    disponiveis(carteiras) {
+      return carteiras.filter(c => !c.oculta && c.tipo !== 'investimento');
+    },
+
+    // investimentos ativos (carteiras do tipo 'investimento' ainda não resgatadas por inteiro)
+    investimentosAtivos(ctx) {
+      return ctx.carteiras.filter(c => c.tipo === 'investimento' && !(ctx.investimento.get(c.id) || {}).resgatadoEm);
+    },
+
     // despesas entre duas datas ISO (inclusive)
     despesasNoPeriodo(transacoes, inicioIso, fimIso) {
       return transacoes.filter(t => t.tipo === 'despesa' && t.data >= inicioIso && t.data <= fimIso);
@@ -341,15 +351,18 @@ window.GS = window.GS || {};
 
   // carrega tudo de uma vez e cria índices por id
   GS.carregarTudo = async function () {
-    const [transacoes, categorias, carteiras] = await Promise.all([
+    const [transacoes, categorias, carteiras, investimentos] = await Promise.all([
       GS.api.listarTransacoes(),
       GS.api.listarCategorias(),
       GS.api.listarCarteiras(),
+      GS.api.listarInvestimentos(),
     ]);
     return {
       transacoes,
       categorias,
       carteiras,
+      investimentos,
+      investimento: new Map(investimentos.map(v => [v.id, v])),
       categoria: new Map(categorias.map(c => [c.id, c])),
       subcategoria: new Map(categorias.flatMap(c => (c.subcategorias || []).map(s => [s.id, { ...s, categoriaId: c.id }]))),
       carteira: new Map(carteiras.map(c => [c.id, c])),

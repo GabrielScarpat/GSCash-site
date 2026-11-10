@@ -128,8 +128,10 @@
     const hojeIso = GS.isoData(hoje);
     const p = periodo();
     const ini = GS.isoData(p.inicio);
-    // os números do Painel contam só o que já aconteceu (lançamentos futuros ficam no "previsto")
-    const fim = GS.isoData(p.fim) > hojeIso ? hojeIso : GS.isoData(p.fim);
+    // os números do Painel contam só o que já aconteceu (lançamentos futuros ficam no "previsto");
+    // um período todo no futuro mostra o que está previsto para ele (contas fixas, salário…)
+    const futuro = GS.isoData(p.inicio) > hojeIso;
+    const fim = futuro || GS.isoData(p.fim) <= hojeIso ? GS.isoData(p.fim) : hojeIso;
 
     pintarOlho();
 
@@ -140,7 +142,9 @@
       b.setAttribute('aria-pressed', ativo);
     });
     $('periodoRotulo').textContent = rotulo(p);
-    $('periodoProximo').disabled = p.fim >= hoje;
+    // dá para avançar até 12 meses à frente (o quanto as séries "Até eu cancelar" já estão gravadas)
+    const limiteFuturo = new Date(hoje.getFullYear(), hoje.getMonth() + 12, hoje.getDate());
+    $('periodoProximo').disabled = estado.modo === 'hoje' ? p.fim >= hoje : p.fim >= limiteFuturo;
 
     desenharSaldo(ctx, hoje);
 
@@ -152,11 +156,14 @@
     // média por dia: conta só os dias que já passaram
     const fimEfetivo = p.fim > hoje && p.inicio <= hoje ? hoje : p.fim;
     const dias = Math.max(1, GS.diasEntre(p.inicio, fimEfetivo) + 1);
-    desenharResultado(p, receitas, total, Math.round(total / dias));
+    desenharResultado(p, receitas, total, Math.round(total / dias), futuro);
+    desenharFixos(ctx, p);
 
     desenharEvolucao(ctx, hoje);
     desenharCategorias(ctx, despesas, total);
-    desenharComparacao(ctx, total, p);
+    // previsto x realizado não é comparação justa: no futuro, fica de fora
+    if (futuro) $('comparacao').innerHTML = '';
+    else desenharComparacao(ctx, total, p);
     desenharCarteiras(ctx, despesas, total);
     desenharUltimos(ctx, ini, fim);
   }
@@ -166,9 +173,10 @@
   function desenharSaldo(ctx, hoje) {
     const fimMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
     const fimMesIso = GS.isoData(fimMes);
-    // carteiras ocultas não entram no saldo
-    const visiveis = GS.calc.visiveis(ctx.carteiras);
-    const ocultas = ctx.carteiras.filter(c => c.oculta);
+    // carteiras ocultas não entram no saldo; investimentos também não (ficam na linha "Investido")
+    const visiveis = GS.calc.disponiveis(ctx.carteiras);
+    const ocultas = ctx.carteiras.filter(c => c.oculta && c.tipo !== 'investimento');
+    desenharInvestido(ctx);
     const atual = visiveis.reduce((s, c) => s + GS.calc.saldoCarteira(c, ctx.transacoes), 0);
 
     // previsto = lançamentos até o fim do mês − faturas em aberto que vencem até lá
@@ -192,11 +200,61 @@
     $('previstoSub').textContent = dif === 0 ? 'nada previsto até o fim do mês' : 'receitas, contas e faturas a vir';
   }
 
+  // linha "Investido · fora do disponível": total estimado e quanto pode ser resgatado hoje.
+  // Os índices vêm guardados do dia (js/indices.js); sem eles, mostra o valor sem rendimento.
+  async function desenharInvestido(ctx) {
+    const el = $('saldoInvestido');
+    const ativos = GS.calc.investimentosAtivos(ctx);
+    el.classList.toggle('hidden', !ativos.length);
+    if (!ativos.length) return;
+    const hojeIso = GS.isoData(GS.hoje());
+    const datas = ativos.flatMap(c => ctx.transacoes.filter(t => t.destinoId === c.id).map(t => t.data)).sort();
+    try { await GS.indices.carregar(datas[0] || hojeIso); } catch (e) { /* sem internet: valor sem rendimento */ }
+    let total = 0, livre = 0;
+    const vencidos = [];
+    ativos.forEach(c => {
+      const inv = ctx.investimento.get(c.id);
+      const valor = GS.indices.estimar(inv, c, ctx.transacoes).hoje;
+      total += valor;
+      const venceu = inv && inv.liquidez === 'vencimento' && inv.vencimento <= hojeIso;
+      if (venceu) vencidos.push(c.nome);
+      if (!inv || inv.liquidez !== 'vencimento' || venceu) livre += valor;
+    });
+    const detalhe = vencidos.length
+      ? `${esc(vencidos[0])}${vencidos.length > 1 ? ` e mais ${vencidos.length - 1}` : ''} venceu: confirme o resgate`
+      : `${GS.moeda(livre)} pode ser resgatado hoje`;
+    el.innerHTML = `
+      <span><small>Investido · fora do disponível</small><b class="num">${GS.moeda(total)}</b><small>${detalhe}</small></span>
+      <span class="seta">${icone('chevron-right')}</span>`;
+  }
+
   /* ---------- Resultado do período ---------- */
 
-  function desenharResultado(p, entrou, saiu, media) {
+  // gasto fixo por dia (Mês e Ano): gastos de séries que se repetem no período inteiro, inclusive os
+  // que ainda vão vencer, ÷ todos os dias do período. É o mínimo que se gasta por dia só com as contas fixas.
+  function desenharFixos(ctx, p) {
+    const el = $('fixosDia');
+    const mostrar = estado.modo === 'mes' || estado.modo === 'ano';
+    el.classList.toggle('hidden', !mostrar);
+    if (!mostrar) return;
+    const ini = GS.isoData(p.inicio), fim = GS.isoData(p.fim);
+    const fixos = ctx.transacoes.filter(t => t.tipo === 'despesa' && t.recorrenciaId && t.data >= ini && t.data <= fim);
+    el.classList.toggle('dica', !fixos.length);
+    if (!fixos.length) {
+      el.textContent = 'Marque contas como Recorrente para ver seu gasto fixo por dia';
+      return;
+    }
+    const total = GS.calc.somar(fixos);
+    const dias = GS.diasEntre(p.inicio, p.fim) + 1;
+    const contas = new Set(fixos.map(t => t.recorrenciaId)).size;
+    el.innerHTML = `fixos: <b class="num">${GS.moeda(Math.round(total / dias))}</b> por dia · ${GS.moeda(total)} no ${estado.modo === 'ano' ? 'ano' : 'mês'} em ${GS.plural(contas, 'conta', 'contas')}`;
+  }
+
+  function desenharResultado(p, entrou, saiu, media, futuro) {
     const sobrou = entrou - saiu;
-    $('resultadoTitulo').textContent = estado.modo === 'mes' ? 'Resultado do mês' : 'Resultado do período';
+    $('resultadoTitulo').textContent = futuro
+      ? (estado.modo === 'mes' ? 'Previsto para o mês' : 'Previsto para o período')
+      : (estado.modo === 'mes' ? 'Resultado do mês' : 'Resultado do período');
     $('resultadoSub').textContent = rotulo(p);
     $('entrou').textContent = GS.moeda(entrou);
     $('saiu').textContent = GS.moeda(saiu);

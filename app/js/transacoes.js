@@ -199,16 +199,17 @@
     if (excluir) {
       const t = ctx.transacoes.find(x => x.id === excluir.dataset.excluir);
       if (!t) return;
-      // recorrente: escolhe só esta, esta e as próximas, ou todas
-      if (t.recorrenciaId && ctx.transacoes.filter(x => x.recorrenciaId === t.recorrenciaId).length > 1) {
-        const ids = await GS.escolherExclusaoRecorrente(t, ctx.transacoes);
-        if (!ids) return;
+      // recorrente: só esta, esta e as próximas, ou só as próximas
+      const modo = t.recorrenciaId ? await GS.escolherExclusaoRecorrente(t) : 'simples';
+      if (!modo) return;
+      if (modo !== 'simples') {
+        let n;
         try {
-          await GS.api.excluirTransacoes(ids);
+          n = await GS.api.excluirDaSerie(t.id, modo);
         } catch (err) {
           return GS.toast(err.message, 'erro');
         }
-        GS.avisarExclusao(ids.length === 1 ? 'Transação excluída' : `${ids.length} transações excluídas`);
+        GS.avisarExclusao(n === 1 ? 'Transação excluída' : `${n} transações excluídas`);
         return GS.notificarMudanca();
       }
       const ok = await GS.confirmar({

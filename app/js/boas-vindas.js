@@ -51,7 +51,7 @@
     const bloco = GS.el('div', 'bv-moeda');
     const desenhar = () => {
       bloco.innerHTML = `
-        <div class="bv-titulo"><b>Em qual moeda você registra seus gastos?</b><small>Dá para trocar depois em Configurações.</small></div>
+        <div class="bv-titulo"><b>Em qual moeda você registra seus gastos?</b><small>É possível alterar depois em Configurações.</small></div>
         <div class="bv-lista" role="radiogroup" aria-label="Moeda do app">
           ${Object.entries(GS.MOEDAS).map(([codigo, m]) => `
             <button type="button" class="bv-op${codigo === escolhida ? ' on' : ''}" role="radio" aria-checked="${codigo === escolhida}" data-moeda="${codigo}">
@@ -97,7 +97,7 @@
       tamanho: 'tour',
       rodapeClasse: 'tour-pe',
       rodape: primeiraVez
-        ? `<small>Dá para rever depois pelo menu da sua conta.</small>
+        ? `<small>É possível rever depois pelo menu da sua conta.</small>
            <span class="tour-botoes"><button type="button" class="btn btn-outline" data-fechar>Ver depois</button>
            <button type="button" class="btn btn-primary" data-fechar>Começar a usar</button></span>`
         : '<button type="button" class="btn btn-primary" data-fechar>Fechar</button>',
@@ -148,7 +148,7 @@
       ${capa('passos-video')}
       <div class="passos-lado">
         <h2 class="passos-titulo">Seus primeiros passos</h2>
-        <p class="passos-sub">${feitos} de ${passos.length} concluído${feitos === 1 ? '' : 's'} · leva uns dois minutos</p>
+        <p class="passos-sub">${feitos} de ${passos.length} concluído${feitos === 1 ? '' : 's'} · duração aproximada: 2 minutos</p>
         <div class="bar passos-barra"><span style="width:${(feitos / passos.length) * 100}%"></span></div>
         <ol class="passos-lista">
           ${passos.map((p, i) => `
