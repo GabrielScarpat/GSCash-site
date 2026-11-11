@@ -95,7 +95,7 @@
   ]
 }
 </script>
-<link rel="stylesheet" href="app/css/fonts.css?v=4872cbf">
+<link rel="stylesheet" href="app/css/fonts.css?v=13dccfb">
 <style>
   /* página pública do GSCASH: o que é, preço e onde usar (também é a "página inicial" do login com Google) */
   :root { --bg:#F3EFE4; --surface:#FDFCF8; --surface-2:#F6F3EB; --border:#ECE7DA; --border-strong:#DDD7C7;
@@ -201,6 +201,29 @@
   footer a { color:var(--primary); }
   footer .links { display:flex; gap:18px; flex-wrap:wrap; }
 
+  /* pop-up "indique e ganhe": abre uma vez por aparelho */
+  .pp-fundo { position:fixed; inset:0; z-index:50; display:grid; place-items:center; padding:24px; background:rgba(27,27,25,.45);
+    opacity:0; transition:opacity .25s; }
+  .pp-fundo.aberto { opacity:1; }
+  .pp { position:relative; width:100%; max-width:440px; max-height:100%; overflow-y:auto; background:var(--surface); border:1px solid var(--border);
+    border-radius:24px; padding:30px 28px 24px; box-shadow:0 30px 80px rgba(28,26,20,.28); transform:translateY(12px); transition:transform .25s; }
+  .pp-fundo.aberto .pp { transform:none; }
+  .pp-fechar { position:absolute; top:14px; right:14px; display:grid; place-items:center; width:36px; height:36px; border:0; border-radius:10px;
+    background:transparent; color:var(--muted); cursor:pointer; }
+  .pp-fechar:hover { background:var(--surface-2); color:var(--text); }
+  .pp-ic { display:grid; place-items:center; width:64px; height:64px; border-radius:18px; background:var(--primary-soft); color:var(--primary); margin-bottom:18px; }
+  .pp-ic svg.i { width:34px; height:34px; stroke-width:1.6; }
+  .pp h3 { margin:0 0 8px; font-size:23px; line-height:1.2; letter-spacing:-.02em; text-wrap:balance; padding-right:28px; }
+  .pp p { margin:0 0 20px; color:var(--text-2); font-size:15.5px; }
+  .pp ol { list-style:none; margin:0 0 24px; padding:0; display:grid; gap:12px; counter-reset:passo; }
+  .pp li { display:flex; gap:12px; align-items:flex-start; font-size:15px; color:var(--text-2); counter-increment:passo; }
+  .pp li::before { content:counter(passo); display:grid; place-items:center; width:26px; height:26px; border-radius:8px; flex-shrink:0;
+    border:1px solid var(--border-strong); color:var(--primary); font-size:13.5px; font-weight:700; }
+  .pp li b { color:var(--text); font-weight:600; }
+  .pp .btn { width:100%; }
+  .pp-depois { display:block; width:100%; margin-top:8px; height:40px; border:0; background:transparent; color:var(--muted); font:inherit; font-size:14.5px; cursor:pointer; }
+  .pp-depois:hover { color:var(--text); }
+
   @media (max-width: 900px) { .grade { grid-template-columns:1fr 1fr; } .duas { grid-template-columns:1fr; } }
   @media (max-width: 560px) {
     .faixa { padding:0 16px; }
@@ -214,6 +237,8 @@
     .duvidas { padding:4px 18px; }
     .duvidas p { padding-right:0; }
     footer .faixa { flex-direction:column; }
+    .pp-fundo { place-items:end center; padding:0; }
+    .pp { max-width:none; border-radius:24px 24px 0 0; padding:26px 20px calc(18px + env(safe-area-inset-bottom)); transform:translateY(40px); }
   }
 </style>
 </head>
@@ -374,6 +399,67 @@
   </div>
 </footer>
 
-<script src="app/js/baixar.js?v=4872cbf"></script>
+<!-- pop-up "indique e ganhe": quem chega pelo link de um amigo (?ref) vê a versão do convite -->
+<div class="pp-fundo" id="indique" hidden>
+  <div class="pp" role="dialog" aria-modal="true" aria-labelledby="indiqueTitulo">
+    <button class="pp-fechar" type="button" aria-label="Fechar" data-fechar><svg class="i" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    <div class="pp-ic"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5C10 3 12 8 12 8s2-5 4.5-5a2.5 2.5 0 0 1 0 5"/></svg></div>
+    <div data-versao="normal">
+      <h3 id="indiqueTitulo">Indique 5 amigos e ganhe 6 meses grátis</h3>
+      <p>Além dos 12 dias de teste, você pode usar o GSCASH por mais 6 meses sem pagar nada.</p>
+      <ol>
+        <li><span><b>Crie sua conta grátis.</b> Leva menos de um minuto.</span></li>
+        <li><span><b>Envie o seu link</b> para os amigos. Ele fica em Configurações.</span></li>
+        <li><span><b>Ganhe 6 meses</b> quando 5 amigos criarem a conta e lançarem o primeiro gasto.</span></li>
+      </ol>
+      <a class="btn btn-primario btn-grande" href="app/entrar.html#criar">Começar grátis</a>
+    </div>
+    <div data-versao="convite" hidden>
+      <h3 id="indiqueTituloConvite">Um amigo te convidou para o GSCASH</h3>
+      <p>Crie sua conta por este link para o convite contar para ele. Você testa 12 dias grátis, sem cartão.</p>
+      <ol>
+        <li><span><b>Crie sua conta</b> e lance o seu primeiro gasto.</span></li>
+        <li><span><b>Depois, indique você também.</b> Com 5 amigos usando, você ganha 6 meses grátis.</span></li>
+      </ol>
+      <a class="btn btn-primario btn-grande" href="app/entrar.html#criar">Aceitar convite</a>
+    </div>
+    <button class="pp-depois" type="button" data-fechar>Agora não</button>
+  </div>
+</div>
+<script>
+  // abre uma vez por aparelho, 3 s depois de carregar. Sem localStorage, não abre (para não aparecer em toda visita).
+  (function () {
+    const CHAVE = 'gscash:viu-indique';
+    const pp = document.getElementById('indique');
+    let ref = '';
+    try {
+      if (localStorage.getItem(CHAVE)) return;
+      ref = localStorage.getItem('gscash:ref') || '';
+    } catch (e) { return; }
+    if (ref) {
+      pp.querySelector('[data-versao=normal]').hidden = true;
+      pp.querySelector('[data-versao=convite]').hidden = false;
+      pp.querySelector('.pp').setAttribute('aria-labelledby', 'indiqueTituloConvite');
+    }
+    let antes = null;
+    function abrir() {
+      try { localStorage.setItem(CHAVE, '1'); } catch (e) {}
+      antes = document.activeElement;
+      pp.hidden = false;
+      requestAnimationFrame(() => pp.classList.add('aberto'));
+      pp.querySelector('[data-versao]:not([hidden]) .btn').focus({ preventScroll: true });
+    }
+    function fechar() {
+      pp.classList.remove('aberto');
+      setTimeout(() => { pp.hidden = true; }, 250);
+      if (antes && antes.focus) antes.focus({ preventScroll: true });
+    }
+    pp.addEventListener('click', e => { if (e.target === pp || e.target.closest('[data-fechar]')) fechar(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && !pp.hidden) fechar(); });
+    setTimeout(abrir, 3000);
+  })();
+</script>
+
+<script src="app/js/baixar.js?v=13dccfb"></script>
 </body>
 </html>
