@@ -146,6 +146,9 @@
   .saldo-card .previsto strong, .saldo-card .previsto .dif b { color: #F3EFE4; }
   .saldo-card .previsto .dif { width: 100%; margin-left: 0; text-align: left; font-size: 13px; }
   .saldo-card .previsto .dif b { display: inline; margin-right: 6px; font-size: 14px; }
+  .saldo-card .saldo-investido { border-top-color: rgba(243, 239, 228, .18); }
+  .saldo-card .saldo-investido small { color: rgba(243, 239, 228, .72); }
+  .saldo-card .saldo-investido .seta { background: rgba(243, 239, 228, .1); }
 
   /* gráfico: sem o "sobrou" embaixo de cada mês (os textos se sobrepunham) */
   .grafico text.sob { display: none; }
