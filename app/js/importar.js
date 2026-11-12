@@ -264,10 +264,11 @@ window.GS = window.GS || {};
   }
 
   const MESES_PDF = ['janeiro', 'fevereiro', 'marco', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
-  const DATA_PDF = /^(\d{2})\/(\d{2})(?:\/(\d{2}|\d{4}))?$|^(\d{2})-(\d{2})-(\d{4})$/;  // "05/09", "05/09/2026", "05-09-2026" (Mercado Pago)
+  // "05/09", "05/09/2026", "05-09-2026" (Mercado Pago), "26/10/2026 00h07" (BTG), "26/05/2026 - 00:00:00" (Caixa)
+  const DATA_PDF = /^(\d{2})\/(\d{2})(?:\/(\d{2}|\d{4}))?(?:\s+(?:-\s+)?\d{2}[h:]\d{2}(?::\d{2})?)?$|^(\d{2})-(\d{2})-(\d{4})$/;
   const partesData = s => { const m = s.match(DATA_PDF); return m[4] ? [m[0], m[4], m[5], m[6]] : m; };
   // "1.234,56", "-R$ 30,00", "1.851,00 (-)" (BB), "150,00 D" / "150,00 C"
-  const VALOR_PDF = /^-?\s*(?:R\$\s*)?-?\(?\d{1,3}(?:\.\d{3})*,\d{2}\)?-?(?:\s*(?:\([+-]\)|[CD]|[+-]))?$/;
+  const VALOR_PDF = /^[-−+]?\s*(?:R\$\s*)?[-−]?\(?\d{1,3}(?:\.\d{3})*,\d{2}\)?-?(?:\s*(?:\([+-]\)|[CD]|[+-]))?$/;
   const SINAL_PDF = /^(?:\([+-]\)|[CD]|[+-])$/;
   const textoDe = itens => itens.map(i => i.s).join(' ').replace(/\s+/g, ' ').trim();
 
@@ -313,8 +314,9 @@ window.GS = window.GS || {};
     // sem o mês por extenso (BB: "Período: 01 a 12/11/2026"), vale a data completa mais recente do topo
     const ultima = (todo.match(/\b\d{1,2} \d{2} 20\d{2}\b/g) || []).map(s => s.split(' ').map(Number))
       .sort((a, b) => (b[2] * 12 + b[1]) - (a[2] * 12 + a[1]))[0];
-    const mesRef = ref ? MESES_PDF.indexOf(ref[1]) + 1 : ultima ? ultima[1] : GS.hoje().getMonth() + 1;
-    const anoRef = ref ? Number(ref[2]) : ultima ? ultima[2] : GS.hoje().getFullYear();
+    const candidatos = [ref && [Number(ref[2]), MESES_PDF.indexOf(ref[1]) + 1], ultima && [ultima[2], ultima[1]]].filter(Boolean)
+      .sort((a, b) => (b[0] * 12 + b[1]) - (a[0] * 12 + a[1]));
+    const [anoRef, mesRef] = candidatos[0] || [GS.hoje().getFullYear(), GS.hoje().getMonth() + 1];
     const completar = (d, m, a) => {
       const ano = a ? (a.length === 2 ? 2000 + Number(a) : Number(a)) : (Number(m) > mesRef ? anoRef - 1 : anoRef);
       return dataValida(ano, Number(m), Number(d));
@@ -341,7 +343,26 @@ window.GS = window.GS || {};
       : vals.find(i => Math.abs(i.x2 - colValor) < 14));
     const valorDe = i => (cabecalhoCD && naColuna(i, cabecalhoCD.d) ? -Math.abs(centavos(i.s, ',')) : centavos(i.s, ','));
     // Inter: a data vem num título por dia ("12 de Outubro de 2026 Saldo do dia: R$ 1.330,33")
-    const DIA_EXTENSO = new RegExp(`^(\\d{1,2}) de (${MESES_PDF.join('|')}) de (20\\d{2})\\b`);
+    const DIA_EXTENSO = new RegExp(`^(\\d{1,2}) de (${MESES_PDF.join('|')}) (?:de )?(20\\d{2})\\b`);
+    // Colunas de texto separadas: o tipo ("Pix recebido") é o principal, o nome vira o detalhe, e a
+    // forma de pagamento e a categoria ficam de fora.
+    //   PicPay: Hora | Tipo | Origem / Destino | Forma de pagamento | Valor
+    //   BTG:    Data e hora | Categoria | Transação | Descrição | Valor
+    const cabOrigem = linhas.map(l => {
+      const achar = re => l.itens.find(i => re.test(norm(i.s)));
+      const transacao = achar(/^transacao$/);
+      return {
+        o: achar(/^origem( destino)?$/) || (transacao && achar(/^descricao$/)),
+        fora: [achar(/^forma de pagamento$/), transacao && achar(/^categoria$/)].filter(Boolean),
+        titulos: l.itens,
+      };
+    }).find(h => h.o);
+    // cada texto pertence à coluna cujo título está mais perto (no BTG os títulos não ficam alinhados com o conteúdo)
+    const colunaDe = i => cabOrigem.titulos.reduce((a, b) => (Math.abs(b.x - i.x) < Math.abs(a.x - i.x) ? b : a));
+    const naOrigem = i => !!cabOrigem && colunaDe(i) === cabOrigem.o;
+    const naForma = i => !!cabOrigem && cabOrigem.fora.includes(colunaDe(i));
+    // origem/destino que não coube numa linha: um pedaço em cima e outro embaixo da linha do lançamento
+    const pedacoDaOrigem = (v, l) => (v && v.itens.length && v.itens.every(naOrigem) ? vizinha(v, l, 1.5) : '');
 
     const lista = linhas.slice(inicio + 1);
     const ehData = l => l && l.itens[0] && DATA_PDF.test(l.itens[0].s) && Math.abs(l.itens[0].x - colData) < 6;
@@ -378,6 +399,9 @@ window.GS = window.GS || {};
       const porExtenso = norm(texto).match(DIA_EXTENSO);
       if (porExtenso) {
         data = dataValida(Number(porExtenso[3]), MESES_PDF.indexOf(porExtenso[2]) + 1, Number(porExtenso[1]));
+        // "Saldo do dia: R$ 1.330,33" (Inter), "Saldo ao final do dia: R$ 0,00" (PicPay)
+        const saldoDia = texto.match(/saldo[^R$]*R\$\s*([-−]?\s*\d{1,3}(?:\.\d{3})*,\d{2})/i);
+        if (saldoDia) anotarSaldo({ s: saldoDia[1] }, false, data);
         atual = null;
         continue;
       }
@@ -419,7 +443,18 @@ window.GS = window.GS || {};
         continue;
       }
       if (temData) { const m = partesData(primeiro.s); data = completar(m[1], m[2], m[3]); itens = itens.slice(1); }
-      let principal = textoDe(descricaoDe(itens, mov));
+      while (itens[0] && itens[0] !== mov && DATA_PDF.test(itens[0].s)) itens = itens.slice(1);
+      const textoDaLinha = textoDe(itens.filter(i => i !== mov && !VALOR_PDF.test(i.s) && !/^(\d{4,}|-)$/.test(i.s)));
+      if (cabOrigem && data && ehSaldo(textoDaLinha)) { anotarSaldo(mov, false, data); atual = null; continue; }
+      let detalheOrigem = '';
+      if (cabOrigem) {
+        itens = itens.filter(i => !/^\d{1,2}:\d{2}$/.test(i.s) && !naForma(i));
+        detalheOrigem = textoDe(itens.filter(i => naOrigem(i) && i !== mov));
+        itens = itens.filter(i => !naOrigem(i));
+      }
+      let principal = textoDe(descricaoDe(itens, mov))
+        // C6: a coluna Tipo ("Saída PIX") repete a descrição que vem logo depois ("Pix enviado para NOME")
+        .replace(/^(sa[ií]da|entrada)\s+(pix|ted|doc)\s+(?=(pix|ted|doc|transf)\w*\b)/i, '');
       if (!principal && data) {
         // histórico em volta da linha (BB): tipo em cima ("Pix - Enviado"), quem e quando embaixo
         // Mercado Pago: o mesmo texto quebrado em duas linhas ("Liberação de dinheiro Venda" / "com Pix")
@@ -429,19 +464,28 @@ window.GS = window.GS || {};
         principal = quebrado ? `${acima} ${abaixo}` : acima || abaixo;
         if (principal && ehSaldo(principal)) anotarSaldo(mov, false, data);
         if (!data || !principal || ehSaldo(principal)) { atual = null; continue; }
-        saida.push({ data, valor: valorDe(mov), principal, detalhe: acima && abaixo && !quebrado ? [abaixo] : [] });
+        saida.push({ data, valor: valorDe(mov), principal, detalhe: acima && abaixo && !quebrado ? [abaixo] : detalheOrigem ? [detalheOrigem] : [] });
         anotarSaldo(valores.find(i => i !== mov && i.x > mov.x2), true);  // coluna de saldo ao lado (Mercado Pago, Bradesco)
         if (abaixo) k++;
         atual = null;
         lancados++;
         continue;
       }
-      if (principal && (/saldo/i.test(norm(principal)) || ehSaldo(principal))) anotarSaldo(mov, false, data);
+      if (data && principal && (/saldo/i.test(norm(principal)) || ehSaldo(principal))) anotarSaldo(mov, false, data);
       // "Total" no fim da tabela (Bradesco) soma o que já foi lido
       if (!data || !principal || /saldo/i.test(norm(principal)) || ehSaldo(principal) || /^(total|totais)\b/i.test(principal)) { atual = null; continue; }
       atual = { data, valor: valorDe(mov), principal, detalhe: [], pagina: l.pagina, ultimoY: l.y, altura: l.altura };
       saida.push(atual);
       anotarSaldo(valores.find(i => i !== mov && i.x > mov.x2), true);
+      if (cabOrigem) {
+        // PicPay: o nome na coluna Origem / Destino, inteiro ou quebrado em cima e embaixo
+        const acima = detalheOrigem ? '' : pedacoDaOrigem(lista[k - 1], l);
+        const abaixo = detalheOrigem ? '' : pedacoDaOrigem(lista[k + 1], l);
+        const nome = detalheOrigem || [acima, abaixo].filter(Boolean).join(' ');
+        if (nome) atual.detalhe.push(nome);
+        if (abaixo) k++;
+        atual = null;
+      }
       lancados++;
     }
 
@@ -460,6 +504,7 @@ window.GS = window.GS || {};
       const cartao = principal.match(/^compra cart[aã]o (?:deb|d[eé]bito|cred|cr[eé]dito)\w*(?: mc| visa| elo| maestro)?\s*(.*)$/i);
       if (cartao) principal = cartao[1];
       if (/^\d{2}\/\d{2}$/.test(detalhe) && !cartao) detalhe = '';  // só a data repetida
+      detalhe = detalhe.replace(/^\d{2,3} \d{3} \d{3}\s+/, '');  // PicPay: pedaço do CPF antes do nome ("61 994 393 NOME")
       const comData = `${principal} ${detalhe}`.trim().match(/^(\d{2})\/(\d{2})(?:\s+(.*))?$/);
       let titulo = `${principal} ${detalhe}`.trim();
       if (comData) {
@@ -476,7 +521,8 @@ window.GS = window.GS || {};
         const d = completar(colada[1], colada[2]);
         if (d && diasEntre(d, data) <= 10) titulo = titulo.slice(0, colada.index).trim();
       }
-      titulo = titulo.replace(/^pix (enviado|recebido)\s+(?!·)/i, (_, q) => `Pix ${q.toLowerCase()} · `)
+      titulo = titulo.replace(/^pix (enviado|recebido)\s+(?:para|de)\s+/i, (_, q) => `Pix ${q.toLowerCase()} · `)
+        .replace(/^pix (enviado|recebido)\s+(?!·)/i, (_, q) => `Pix ${q.toLowerCase()} · `)
         .replace(/^pix (enviado|recebido)/i, (_, q) => `Pix ${q.toLowerCase()}`);
       return { data, valor: t.valor, titulo: titulo.replace(/\s+/g, ' ').trim() || 'Lançamento' };
     });
@@ -678,7 +724,7 @@ window.GS = window.GS || {};
      chave: o nome do produto sem as palavras de movimento ("Aplicação RDB" e "Resgate RDB" -> "rdb"),
      usada para juntar as linhas e para lembrar o investimento nas próximas importações. */
   // Mercado Pago: "Dinheiro reservado <caixinha>" (aplicação) e "Dinheiro retirado <caixinha>" (resgate)
-  const PISTA_INV = /\b(aplic\w*|apl|resgates?|resg|cdb|rdb|lci|lca|tesouro|caixinhas?|porquinho|cofrinho|capitalizacao|invest facil|contamax|rende facil|poupanca|investimentos?|fundos?|dinheiro reservado|dinheiro retirado)\b/;
+  const PISTA_INV = /\b(aplic\w*|apl|resgates?|resg|cdb|rdb|lci|lca|tesouro|caixinhas?|porquinho|cofrinho|capitalizacao|invest facil|contamax|rende facil|poupanca|investimentos?|fundos?|dinheiro reservado|dinheiro retirado|dinheiro guardado|dinheiro resgatado)\b/;
   const NAO_INV = /\b(rendimentos?|rend pago|remuneracao|juros|dividendos?|proventos|salario|tarifa|iof)\b/;
   const AUTOMATICA = /\b(invest facil|contamax|rende facil)\b|\baut\w*\b.*\b(aplic\w*|apl|res|resg)\b|\b(aplic\w*|apl|res|resg)\b.*\baut\w*\b/;
   const SIGLAS = new Set(['cdb', 'rdb', 'lci', 'lca', 'ipca', 'cdi', 'xp', 'btg', 'bb']);
@@ -687,7 +733,7 @@ window.GS = window.GS || {};
     const t = norm(titulo);
     if (!PISTA_INV.test(t) || NAO_INV.test(t)) return null;
     if (AUTOMATICA.test(t)) return { chave: 'aplicacao automatica' };
-    const chave = t.replace(/\b(dinheiro (reservado|retirado)|aplic\w*|apl|res|resgates?|resg|debito|deb|credito|cred|aut\w*|de|da|do|dos|das|em|para|no|na|pix|ted|doc|valor|transf\w*|\d+)\b/g, ' ')
+    const chave = t.replace(/\b(dinheiro (reservado|retirado|guardado|resgatado)|aplic\w*|apl|res|resgates?|resg|debito|deb|credito|cred|aut\w*|de|da|do|dos|das|em|para|no|na|pix|ted|doc|valor|transf\w*|\d+)\b/g, ' ')
       .replace(/\s+/g, ' ').trim();
     // caixinha do Mercado Pago com o nome que a pessoa deu ("Dinheiro reservado GSCASH" -> "caixinha gscash")
     if (/\bdinheiro (reservado|retirado)\b/.test(t) && !/\b(cofrinho|caixinhas?)\b/.test(chave)) return { chave: `caixinha ${chave}`.trim() };
