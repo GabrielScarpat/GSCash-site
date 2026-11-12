@@ -194,6 +194,16 @@ window.GS = window.GS || {};
   // Os números do cartão ficam nos campos do Mercado Pago; o GSCASH só recebe um token de uso único.
   let sdkMP = null;
   function carregarSdkMP() {
+    // identificação do aparelho para o antifraude do Mercado Pago (cria window.MP_DEVICE_SESSION_ID).
+    // Sem ela a compra continua, só com mais chance de ser recusada "por segurança".
+    if (!document.querySelector('script[data-mp-seguranca]')) {
+      const seg = document.createElement('script');
+      seg.src = 'https://www.mercadopago.com/v2/security.js';
+      seg.setAttribute('view', 'checkout');
+      seg.dataset.mpSeguranca = '';
+      seg.onerror = () => seg.remove();
+      document.head.append(seg);
+    }
     if (!sdkMP) {
       sdkMP = new Promise((ok, falha) => {
         const s = document.createElement('script');
@@ -491,6 +501,7 @@ window.GS = window.GS || {};
         const r = await pedirPagamento({
           acao: 'cartao', nome,
           token: dados.token, payment_method_id: dados.payment_method_id, issuer_id: dados.issuer_id, payer: dados.payer,
+          device_id: typeof window.MP_DEVICE_SESSION_ID === 'string' ? window.MP_DEVICE_SESSION_ID : undefined,
         }, MSG_CARTAO);
         if (fechado) return;
         if (r.status === 'aprovado') return mostrarPronto(r, 'cartao');
