@@ -25,7 +25,17 @@ window.GS = window.GS || {};
          "Pix - Enviado" + "03/11 15:05 Ana Souza" -> "Pix enviado · Ana Souza" */
   function tituloDoBanco(principal, detalhe, data, completar) {
     principal = String(principal || '').replace(/\s+/g, ' ').trim().replace(/^pix\s*-\s*/i, 'Pix ');
-    detalhe = String(detalhe || '').replace(/\s+/g, ' ').trim();
+    detalhe = String(detalhe || '').trim();
+    // nome da loja como vem da maquininha: 22 letras do nome, 13 da cidade e o país
+    // ("Araujo Loja           Belo Horizontbra" -> "Araujo Loja")
+    if (/bra$/i.test(detalhe) && detalhe.length >= 36 && detalhe.length <= 44) detalhe = detalhe.slice(0, detalhe.length - 16);
+    detalhe = detalhe.replace(/\s+/g, ' ').trim()
+      .replace(/^cp\s*:\s*\d*\s*-\s*/i, '')                  // Inter: "Cp :00000000-NOME"
+      .replace(/^\d{3,5}\s+\d{5,}\s+/, '')                     // Inter: "00019 23546018 NOME"
+      .replace(/^no estabelecimento\s+/i, '')                   // Inter: "No estabelecimento LOJA"
+      .replace(/^(des|rem|dest|fav|orig)\s*:\s*/i, '')          // Bradesco: "DES: NOME 06/11"
+      .replace(/\s+\d{2}\/\d{2}$/, '');
+    if (/^bco\s*:\s*\d+/i.test(detalhe)) detalhe = '';         // Bradesco: "BCO:237 AGE:00513 CTA:..." (conta, não nome)
     const quando = detalhe.match(/^(\d{2})\/(\d{2})\s+\d{2}:\d{2}(?::\d{2})?\s*(.*)$/);
     if (quando) {
       const d = completar(quando[1], quando[2]);
@@ -33,12 +43,16 @@ window.GS = window.GS || {};
       detalhe = quando[3].replace(/^\d{8,}\s+/, '').trim();  // CPF/conta antes do nome
     }
     let titulo;
-    if (/^compra com cart[aã]o$/i.test(principal) && detalhe) titulo = detalhe;
+    // compra no débito/cartão: o que importa é a loja
+    if (/^compra (com cart[aã]o|no d[eé]bito|no cart[aã]o)$/i.test(principal) && detalhe) titulo = detalhe;
     else titulo = detalhe ? `${principal} · ${detalhe}` : principal;
     titulo = titulo.replace(/^pix (enviado|recebido)\s+(?!·)/i, (_, q) => `Pix ${q.toLowerCase()} · `)
       .replace(/^pix (enviado|recebido)\b/i, (_, q) => `Pix ${q.toLowerCase()}`);
     return { titulo: titulo.replace(/\s+/g, ' ').trim(), data };
   }
+
+  // Inter: 'Pix recebido: "Cp :00000000-NOME"' -> ['Pix recebido', 'Cp :00000000-NOME']
+  const comAspas = t => String(t || '').match(/^([^:"]{3,40}):\s*"(.*)"\s*$/);
 
   // completa "dd/mm" sem ano pela data do lançamento (o mais recente possível até ela)
   const completarPerto = base => (d, m) => {
@@ -140,11 +154,15 @@ window.GS = window.GS || {};
     const tag = (bloco, nome) => ((bloco.match(new RegExp(`<${nome}>([^<\\r\\n]*)`, 'i')) || [])[1] || '').trim();
     const linhas = texto.split(/<STMTTRN>/i).slice(1).map(b => b.split(/<\/STMTTRN>/i)[0]).map(b => {
       const valorTexto = tag(b, 'TRNAMT');
-      const titulo = tag(b, 'MEMO') || tag(b, 'NAME');
+      const data = dataIso(tag(b, 'DTPOSTED'));
+      let titulo = (tag(b, 'MEMO') || tag(b, 'NAME')).replace(/\s+/g, ' ');
+      const aspas = comAspas(titulo);
+      // Inter: MEMO 'Pix enviado: "00019 23546018 IEZICA SOUSA"', NAME 'Iezica Fernanda Cassemiro De Sousa'
+      if (aspas && data) titulo = tituloDoBanco(aspas[1], tag(b, 'NAME') || aspas[2], data, completarPerto(data)).titulo || titulo;
       return {
-        data: dataIso(tag(b, 'DTPOSTED')),
+        data,
         valor: centavos(valorTexto, valorTexto.includes(',') && !valorTexto.includes('.') ? ',' : '.'),
-        titulo: titulo.replace(/\s+/g, ' '),
+        titulo,
         fitid: tag(b, 'FITID'),
       };
     }).filter(l => l.data && l.valor);
@@ -230,7 +248,9 @@ window.GS = window.GS || {};
           const vao = ant ? i.x - ant.x2 : Infinity;
           // o sinal do valor às vezes vem separado: "1.851,00" "(-)", "150,00" "D"
           const sinalSolto = ant && SINAL_PDF.test(i.s) && VALOR_PDF.test(ant.s) && vao < l.altura * 3;
-          if (ant && (vao < l.altura * 0.8 || sinalSolto)) {
+          // a data é uma coluna: nunca se junta ao texto que vem depois (Itaú: "09/10/2026" + "PAG BOLETO...")
+          const depoisDaData = ant && DATA_PDF.test(ant.s) && vao > 1.5;
+          if (ant && !depoisDaData && (vao < l.altura * 0.8 || sinalSolto)) {
             ant.s += (vao > 1.5 ? ' ' : '') + i.s;
             ant.x2 = Math.max(ant.x2, i.x2);
           } else juntos.push({ ...i });
@@ -256,13 +276,30 @@ window.GS = window.GS || {};
      depois dos "pos" primeiros lançamentos. O primeiro saldo é o ponto de partida; cada saldo seguinte tem que
      bater com ele mais o que foi lido até ali. Uma linha que o leitor perdeu (ou leu com o sinal errado) aparece aqui.
      Volta null quando o arquivo não tem saldos suficientes para conferir. */
+  // linha: o saldo é o da coluna de saldo da própria linha (pos - 1), não uma linha de saldo à parte.
+  // Extrato do mais novo para o mais antigo (Itaú, Inter, Santander): o saldo de um ponto é o de
+  // tudo o que vem DEPOIS dele no arquivo, então a soma é feita de baixo para cima.
+  // Linha de saldo com data ("SALDO DO DIA 09/10", "Saldo anterior"): confere pela data, somando tudo o que
+  // aconteceu até aquele dia, qualquer que seja o lugar dela no arquivo (o Itaú põe embaixo dos lançamentos do dia).
+  // Saldo de um dia depois do último lançamento é ignorado: pode incluir rendimento que ainda não virou lançamento.
   function conferirSaldos(valores, saldos, datas = []) {
-    if (saldos.length < 2 || !saldos.some(s => s.pos > saldos[0].pos)) return null;
+    const n = valores.length;
+    const datasLidas = datas.filter(Boolean);
+    const ultimaData = datasLidas.reduce((a, b) => (b > a ? b : a), '');
+    saldos = saldos.filter(s => s.linha || !s.data || !ultimaData || s.data <= ultimaData);
+    if (saldos.length < 2) return null;
+    const invertido = datasLidas.length > 1 && datasLidas[0] > datasLidas[datasLidas.length - 1];
     const acum = [0];
     valores.forEach(v => acum.push(acum[acum.length - 1] + (v || 0)));
-    const base = saldos[0].valor - acum[saldos[0].pos];
+    const ateODia = d => valores.reduce((t, v, i) => t + (datas[i] && datas[i] <= d ? v || 0 : 0), 0);
+    // quanto já foi somado até cada saldo
+    const somado = s => (!s.linha && s.data ? ateODia(s.data)
+      : invertido ? acum[n] - acum[s.linha ? s.pos - 1 : s.pos] : acum[s.pos]);
+    const lugares = new Set(saldos.map(somado));
+    if (lugares.size < 2) return null;  // todos no mesmo ponto: não há o que conferir
+    const base = saldos[0].valor - somado(saldos[0]);
     for (const s of saldos.slice(1)) {
-      const lido = base + acum[s.pos];
+      const lido = base + somado(s);
       if (lido !== s.valor) return { ok: false, diferenca: s.valor - lido, data: datas[Math.max(0, s.pos - 1)] || null, saldo: s.valor };
     }
     const ultimo = saldos[saldos.length - 1];
@@ -295,10 +332,20 @@ window.GS = window.GS || {};
     const colValor = ([...bordas.entries()].sort((a, b) => b[1] - a[1])[0] || [0])[0] * 6;
     const xs = linhas.slice(inicio).map(l => l.itens[0]).filter(i => i && DATA_PDF.test(i.s)).map(i => i.x);
     const colData = xs.length ? Math.min(...xs) : -1;
+    // Bradesco: "Crédito (R$)" e "Débito (R$)" em colunas separadas, valores sem sinal
+    const cabecalhoCD = linhas.slice(0, inicio + 40).map(l => ({
+      c: l.itens.find(i => /^credito\b/.test(norm(i.s))), d: l.itens.find(i => /^debito\b/.test(norm(i.s))),
+    })).find(h => h.c && h.d);
+    const naColuna = (i, col) => col && VALOR_PDF.test(i.s) && Math.abs(i.x2 - col.x2) < 14;
+    const movDe = vals => (cabecalhoCD ? vals.find(i => naColuna(i, cabecalhoCD.c) || naColuna(i, cabecalhoCD.d))
+      : vals.find(i => Math.abs(i.x2 - colValor) < 14));
+    const valorDe = i => (cabecalhoCD && naColuna(i, cabecalhoCD.d) ? -Math.abs(centavos(i.s, ',')) : centavos(i.s, ','));
+    // Inter: a data vem num título por dia ("12 de Outubro de 2026 Saldo do dia: R$ 1.330,33")
+    const DIA_EXTENSO = new RegExp(`^(\\d{1,2}) de (${MESES_PDF.join('|')}) de (20\\d{2})\\b`);
 
     const lista = linhas.slice(inicio + 1);
     const ehData = l => l && l.itens[0] && DATA_PDF.test(l.itens[0].s) && Math.abs(l.itens[0].x - colData) < 6;
-    const ehValor = i => VALOR_PDF.test(i.s) && Math.abs(i.x2 - colValor) < 14;
+    const ehValor = i => !!movDe([i]);
     // sem nada entre a data e o valor na maioria das linhas: a descrição está em volta (Santander novo)
     const comValor = lista.filter(l => ehData(l) && l.itens.some(ehValor));
     const sanduiche = comValor.length > 0 &&
@@ -318,32 +365,48 @@ window.GS = window.GS || {};
     const saida = [];
     // saldos impressos no extrato (linha de saldo ou coluna de saldo): servem para conferir a leitura
     const saldos = [];
-    const anotarSaldo = item => { const v = item && centavos(item.s, ','); if (v !== null && v !== undefined && item) saldos.push({ pos: saida.length, valor: v }); };
+    // linha = true: saldo da coluna de saldo do lançamento que acabou de entrar
+    const anotarSaldo = (item, linha = false, quando = null) => {
+      const v = item && centavos(item.s, ',');
+      if (v !== null && v !== undefined && item) saldos.push({ pos: saida.length, valor: v, linha, data: linha ? null : quando });
+    };
     let data = null, atual = null, lancados = 0;
     for (let k = 0; k < lista.length; k++) {
       const l = lista[k];
       const texto = textoDe(l.itens);
       if (fim.test(semAcento(texto))) { if (saida.length) break; continue; }
+      const porExtenso = norm(texto).match(DIA_EXTENSO);
+      if (porExtenso) {
+        data = dataValida(Number(porExtenso[3]), MESES_PDF.indexOf(porExtenso[2]) + 1, Number(porExtenso[1]));
+        atual = null;
+        continue;
+      }
       let itens = l.itens;
       const primeiro = itens[0];
       const temData = primeiro && DATA_PDF.test(primeiro.s) && Math.abs(primeiro.x - colData) < 6;
       const valores = itens.filter(i => VALOR_PDF.test(i.s));
-      const mov = valores.find(i => Math.abs(i.x2 - colValor) < 14);
+      const mov = movDe(valores);
       if (sanduiche) {
         if (!mov || !temData) continue;
         const m = partesData(primeiro.s);
         const quando = completar(m[1], m[2], m[3]);
         const acima = vizinha(lista[k - 1], l), abaixo = vizinha(lista[k + 1], l);
         const principal = acima || abaixo;
-        if (quando && principal && /saldo/i.test(norm(principal))) anotarSaldo(mov);
+        if (quando && principal && /saldo/i.test(norm(principal))) anotarSaldo(mov, false, quando);
         if (!quando || !principal || /saldo/i.test(norm(principal))) continue;
-        saida.push({ data: quando, valor: centavos(mov.s, ','), principal, detalhe: acima && abaixo ? [abaixo] : [] });
+        saida.push({ data: quando, valor: valorDe(mov), principal, detalhe: acima && abaixo ? [abaixo] : [] });
+        anotarSaldo(valores.find(i => i !== mov && i.x > mov.x2), true);
         continue;
       }
       if (!mov) {
         // "SALDO DO DIA" com o valor na coluna de saldo (Itaú): só pula a linha
         const resto = textoDe(itens.filter(i => !DATA_PDF.test(i.s) && !VALOR_PDF.test(i.s) && !/^\d{4,}$/.test(i.s)));
-        if (/saldo/.test(norm(resto)) || ehSaldo(resto)) { anotarSaldo(valores[valores.length - 1]); atual = null; continue; }
+        if (/saldo/.test(norm(resto)) || ehSaldo(resto)) {
+          const doDia = temData ? (m => completar(m[1], m[2], m[3]))(partesData(primeiro.s)) : data;
+          anotarSaldo(valores[valores.length - 1], false, doDia);
+          atual = null;
+          continue;
+        }
         // linha com data e valor em outra coluna: começou outra tabela (ex.: compras do cartão)
         if (temData && valores.length && lancados >= 3) break;
         if (temData) { const m = partesData(primeiro.s); data = completar(m[1], m[2], m[3]); }
@@ -357,34 +420,39 @@ window.GS = window.GS || {};
       }
       if (temData) { const m = partesData(primeiro.s); data = completar(m[1], m[2], m[3]); itens = itens.slice(1); }
       let principal = textoDe(descricaoDe(itens, mov));
-      if (!principal && temData) {
+      if (!principal && data) {
         // histórico em volta da linha (BB): tipo em cima ("Pix - Enviado"), quem e quando embaixo
         // Mercado Pago: o mesmo texto quebrado em duas linhas ("Liberação de dinheiro Venda" / "com Pix")
         const acima = vizinha(lista[k - 1], l, 1.5), abaixo = vizinha(lista[k + 1], l, 1.5);
-        const quebrado = acima && abaixo && !/^\d{2}\/\d{2}\s/.test(abaixo);
+        // linha de baixo com campo do banco ("DES: NOME", "BCO:237 ...") é detalhe, não o texto continuando
+        const quebrado = acima && abaixo && !/^\d{2}\/\d{2}\s/.test(abaixo) && !/^(des|rem|dest|fav|orig|bco)\s*:/i.test(abaixo);
         principal = quebrado ? `${acima} ${abaixo}` : acima || abaixo;
-        if (principal && ehSaldo(principal)) anotarSaldo(mov);
+        if (principal && ehSaldo(principal)) anotarSaldo(mov, false, data);
         if (!data || !principal || ehSaldo(principal)) { atual = null; continue; }
-        saida.push({ data, valor: centavos(mov.s, ','), principal, detalhe: acima && abaixo && !quebrado ? [abaixo] : [] });
-        anotarSaldo(valores.find(i => i !== mov && i.x > mov.x2));  // coluna de saldo ao lado (Mercado Pago)
+        saida.push({ data, valor: valorDe(mov), principal, detalhe: acima && abaixo && !quebrado ? [abaixo] : [] });
+        anotarSaldo(valores.find(i => i !== mov && i.x > mov.x2), true);  // coluna de saldo ao lado (Mercado Pago, Bradesco)
         if (abaixo) k++;
         atual = null;
         lancados++;
         continue;
       }
-      if (principal && (/saldo/i.test(norm(principal)) || ehSaldo(principal))) anotarSaldo(mov);
-      if (!data || !principal || /saldo/i.test(norm(principal)) || ehSaldo(principal)) { atual = null; continue; }
-      atual = { data, valor: centavos(mov.s, ','), principal, detalhe: [], pagina: l.pagina, ultimoY: l.y, altura: l.altura };
+      if (principal && (/saldo/i.test(norm(principal)) || ehSaldo(principal))) anotarSaldo(mov, false, data);
+      // "Total" no fim da tabela (Bradesco) soma o que já foi lido
+      if (!data || !principal || /saldo/i.test(norm(principal)) || ehSaldo(principal) || /^(total|totais)\b/i.test(principal)) { atual = null; continue; }
+      atual = { data, valor: valorDe(mov), principal, detalhe: [], pagina: l.pagina, ultimoY: l.y, altura: l.altura };
       saida.push(atual);
-      anotarSaldo(valores.find(i => i !== mov && i.x > mov.x2));
+      anotarSaldo(valores.find(i => i !== mov && i.x > mov.x2), true);
       lancados++;
     }
 
     const conferencia = conferirSaldos(saida.map(t => t.valor), saldos, saida.map(t => t.data));
     const lidas = saida.filter(t => t.valor).map(t => {
       let principal = t.principal, detalhe = t.detalhe.join(' ').trim(), data = t.data;
-      // BB: "Compra com Cartão" / "Pix - Enviado" com "03/11 20:47 NOME" embaixo
-      if (/^\d{2}\/\d{2}\s+\d{2}:\d{2}/.test(detalhe) || /^(compra com cart|pix\s*-\s)/i.test(principal)) {
+      const aspas = !detalhe && comAspas(principal);
+      if (aspas) { principal = aspas[1]; detalhe = aspas[2]; }
+      // BB: "Compra com Cartão" / "Pix - Enviado" com "03/11 20:47 NOME" embaixo; Inter (aspas); Bradesco ("DES: NOME")
+      if (aspas || /^\d{2}\/\d{2}\s+\d{2}:\d{2}/.test(detalhe) || /^(des|rem|dest|fav|orig|bco)\s*:/i.test(detalhe)
+        || /^(compra com cart|pix\s*-\s)/i.test(principal)) {
         const r = tituloDoBanco(principal, detalhe, data, (d, m) => completar(d, m));
         return { data: r.data, valor: t.valor, titulo: r.titulo || 'Lançamento' };
       }
@@ -421,7 +489,7 @@ window.GS = window.GS || {};
     const n = norm(texto);
     if (/\bdia lote documento historico valor\b|\bdata lancamento detalhes n documento valor tipo lancamento\b|\bdependencia origem historico data do balancete\b/.test(n)) return 'banco do brasil';
     if (/\brelease date transaction type\b/.test(n)) return 'mercado pago';
-    if (/\bdata lancamento dcto credito r debito r saldo r\b/.test(n)) return 'bradesco';
+    if (/\bdata lancamento dcto credito r debito r saldo r\b|\bdata historico docto credito r debito r saldo r\b/.test(n)) return 'bradesco';
     return '';
   }
 
@@ -485,7 +553,10 @@ window.GS = window.GS || {};
       const tem = p => papeis.includes(p);
       if (tem('data') && (tem('descricao') || tem('valor') || tem('entrada') || tem('saida'))) {
         const vistos = new Set();  // um papel por coluna (o primeiro que aparecer)
-        const unicos = papeis.map(p => (p && !vistos.has(p) && vistos.add(p) ? p : 'ignorar'));
+        const unicos = papeis.map(p => {
+          if (p === 'descricao' && vistos.has('descricao') && !vistos.has('complemento')) { vistos.add('complemento'); return 'complemento'; }
+          return p && !vistos.has(p) && vistos.add(p) ? p : 'ignorar';
+        });
         // só "Detalhes", sem outra descrição: ela é a descrição
         if (!unicos.includes('descricao') && unicos.includes('complemento')) unicos[unicos.indexOf('complemento')] = 'descricao';
         return { inicio: i + 1, papeis: unicos, cabecalho: tabela[i] };
@@ -518,17 +589,21 @@ window.GS = window.GS || {};
     const corpo = tabela.slice(mapa.inicio);
     const dec = separadorDecimal(corpo.flatMap(l => [l[cValor], l[cEnt], l[cSai]]));
     const linhas = [];
+    const datasDoExtrato = [];  // data de cada lançamento como está no extrato (para a conferência)
     // coluna de saldo ("Saldo (R$)", "PARTIAL_BALANCE") e linhas de saldo: para conferir a leitura no fim
     const cSaldo = (mapa.cabecalho || []).findIndex(c => /\b(saldo|balance)\b/.test(norm(c)));
     const saldos = [];
-    const anotarSaldo = v => { const c = v === '' || v === undefined ? null : centavos(v, dec); if (c !== null) saldos.push({ pos: linhas.length, valor: c }); };
+    const anotarSaldo = (v, linha, quando = null) => {
+      const c = v === '' || v === undefined ? null : centavos(v, dec);
+      if (c !== null) saldos.push({ pos: linhas.length, valor: c, linha, data: linha ? null : quando });
+    };
     let anterior = null;
     for (const l of corpo) {
       // "Lançamentos futuros" (Bradesco, BB): ainda não aconteceram, a lista de verdade acabou
       if (/^lancamentos futuros\b|^saldos? (invest|aplic)/.test(norm(l.find(c => String(c ?? '').trim() !== '') || ''))) break;
       const data = dataIso(l[cData]);
       const desc = String(l[cDesc] ?? '').replace(/\s+/g, ' ').trim();
-      const comp = cComp >= 0 ? String(l[cComp] ?? '').replace(/\s+/g, ' ').trim() : '';
+      const comp = cComp >= 0 ? String(l[cComp] ?? '').trim() : '';
       const temValor = [cValor, cEnt, cSai].some(c => c >= 0 && centavos(l[c], dec));
       // Bradesco: o histórico continua na linha de baixo, sem data nem valor ("PIX TRANSF" / "JOAO DA SILVA")
       if (!data && !temValor && anterior && (desc || comp)) {
@@ -537,7 +612,7 @@ window.GS = window.GS || {};
         continue;
       }
       anterior = null;
-      if (desc && ehSaldo(desc)) { anotarSaldo(cSaldo >= 0 && String(l[cSaldo] ?? '').trim() ? l[cSaldo] : l[cValor >= 0 ? cValor : cEnt]); continue; }
+      if (desc && ehSaldo(desc)) { anotarSaldo(cSaldo >= 0 && String(l[cSaldo] ?? '').trim() ? l[cSaldo] : l[cValor >= 0 ? cValor : cEnt], false, data); continue; }
       if (!data || !desc) continue;
       const { titulo, data: quando } = comp || /^pix\s*-\s/i.test(desc)
         ? tituloDoBanco(desc, comp, data, completarPerto(data)) : { titulo: desc, data };
@@ -556,10 +631,12 @@ window.GS = window.GS || {};
       }
       if (!valor) continue;
       anterior = { data: quando, valor, titulo, categoriaTexto: cCat >= 0 ? String(l[cCat] ?? '').trim() : '' };
+      datasDoExtrato.push(data);
       linhas.push(anterior);
-      if (cSaldo >= 0) anotarSaldo(l[cSaldo]);
+      if (cSaldo >= 0) anotarSaldo(l[cSaldo], true);
     }
-    linhas.conferencia = conferirSaldos(linhas.map(t => t.valor), saldos, linhas.map(t => t.data));
+    // a conferência usa a data do lançamento no extrato, não a da compra (que pode ser dias antes)
+    linhas.conferencia = conferirSaldos(linhas.map(t => t.valor), saldos, datasDoExtrato);
     return linhas;
   }
 
