@@ -69,6 +69,17 @@
 .imp-item .cat-slot .select-btn { height: 36px; font-size: 13px; border-radius: 9px; }
 .imp-item .val { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .imp-item .val.e { color: var(--success); }
+/* pagamento de fatura no extrato da conta: no lugar da categoria, o cartão e a fatura que ele paga */
+.imp-fat { display: flex; align-items: center; gap: 6px; width: 100%; height: 36px; padding: 0 10px; border-radius: 9px; border: 1px solid rgba(29, 58, 94, .40);
+  background: rgba(29, 58, 94, .05); color: var(--primary); font: inherit; font-size: 13px; font-weight: 500; text-align: left; }
+.imp-fat svg { width: 15px; height: 15px; flex: none; }
+.imp-fat span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.imp-fat:hover { border-color: var(--primary); }
+.imp-fat.novo { border-style: dashed; border-color: rgba(154, 91, 18, .55); background: rgba(201, 130, 27, .07); color: #8A510F; }
+.imp-fat.novo:hover { border-color: #9A5B12; }
+.imp-item .desc small.fat { color: var(--primary); }
+.imp-item .val.t { color: var(--muted); }
+@media (max-width: 760px) { .imp-fat { height: 32px; font-size: 12.5px; } }
 .imp-legenda { display: flex; align-items: flex-start; gap: 8px; color: var(--muted) !important; font-size: 12.5px; }
 .imp-legenda svg { width: 14px; height: 14px; flex-shrink: 0; margin-top: 2px; }
 

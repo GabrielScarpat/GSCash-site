@@ -17,6 +17,35 @@ window.GS = window.GS || {};
 
   const semAcento = s => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '');
   const norm = s => semAcento(s).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  // linha de saldo ("Saldo anterior", "Saldo do dia", "S A L D O") não é lançamento: só mostra quanto tinha
+  const ehSaldo = s => /^(saldo|s a l d o)\b/.test(norm(s));
+
+  /* Como os bancos escrevem o histórico, juntado num título só:
+     BB: "Compra com Cartão" + "03/11 20:47 EMPORIO DAMIANI" -> "EMPORIO DAMIANI" (com a data da compra)
+         "Pix - Enviado" + "03/11 15:05 Ana Souza" -> "Pix enviado · Ana Souza" */
+  function tituloDoBanco(principal, detalhe, data, completar) {
+    principal = String(principal || '').replace(/\s+/g, ' ').trim().replace(/^pix\s*-\s*/i, 'Pix ');
+    detalhe = String(detalhe || '').replace(/\s+/g, ' ').trim();
+    const quando = detalhe.match(/^(\d{2})\/(\d{2})\s+\d{2}:\d{2}(?::\d{2})?\s*(.*)$/);
+    if (quando) {
+      const d = completar(quando[1], quando[2]);
+      if (d && data && d <= data && diasEntre(d, data) <= 10) data = d;
+      detalhe = quando[3].replace(/^\d{8,}\s+/, '').trim();  // CPF/conta antes do nome
+    }
+    let titulo;
+    if (/^compra com cart[aã]o$/i.test(principal) && detalhe) titulo = detalhe;
+    else titulo = detalhe ? `${principal} · ${detalhe}` : principal;
+    titulo = titulo.replace(/^pix (enviado|recebido)\s+(?!·)/i, (_, q) => `Pix ${q.toLowerCase()} · `)
+      .replace(/^pix (enviado|recebido)\b/i, (_, q) => `Pix ${q.toLowerCase()}`);
+    return { titulo: titulo.replace(/\s+/g, ' ').trim(), data };
+  }
+
+  // completa "dd/mm" sem ano pela data do lançamento (o mais recente possível até ela)
+  const completarPerto = base => (d, m) => {
+    const ano = Number(String(base).slice(0, 4));
+    const mesmoAno = dataValida(ano, Number(m), Number(d));
+    return mesmoAno && mesmoAno <= base ? mesmoAno : dataValida(ano - 1, Number(m), Number(d));
+  };
 
   function decodificar(buf) {
     const bytes = new Uint8Array(buf);
@@ -66,7 +95,7 @@ window.GS = window.GS || {};
     if (typeof v === 'number') return Number.isFinite(v) ? Math.round(v * 100) : null;
     let s = String(v ?? '').trim();
     if (!s) return null;
-    const negativo = /^\(.*\)$/.test(s) || /[-−]/.test(s) || /\sD$/i.test(s);
+    const negativo = /^\(.*\)$/.test(s) || /[-−]/.test(s) || /\d\s*D$/i.test(s);
     s = s.replace(/[^\d.,]/g, '');
     if (!/\d/.test(s)) return null;
     // separador que aparece mais de uma vez, ou com 3 dígitos depois, é de milhar, não de centavos:
@@ -171,7 +200,13 @@ window.GS = window.GS || {};
   // páginas -> linhas [{ pagina, y, altura, itens: [{ s, x, x2 }] }], de cima para baixo
   async function linhasDoPdf(buf) {
     const lib = await carregarPdf();
-    const pdf = await lib.getDocument({ data: buf }).promise;
+    let pdf;
+    try {
+      pdf = await lib.getDocument({ data: buf }).promise;
+    } catch (e) {
+      if (e && e.name === 'PasswordException') throw new Error('Esse PDF tem senha. Abra o extrato, salve uma cópia sem senha (em Imprimir, escolha "Salvar como PDF") e tente de novo.');
+      throw e;
+    }
     const linhas = [];
     for (let n = 1; n <= pdf.numPages; n++) {
       const pagina = await pdf.getPage(n);
@@ -193,7 +228,9 @@ window.GS = window.GS || {};
         l.itens.forEach(i => {
           const ant = juntos[juntos.length - 1];
           const vao = ant ? i.x - ant.x2 : Infinity;
-          if (ant && vao < l.altura * 0.8) {
+          // o sinal do valor às vezes vem separado: "1.851,00" "(-)", "150,00" "D"
+          const sinalSolto = ant && SINAL_PDF.test(i.s) && VALOR_PDF.test(ant.s) && vao < l.altura * 3;
+          if (ant && (vao < l.altura * 0.8 || sinalSolto)) {
             ant.s += (vao > 1.5 ? ' ' : '') + i.s;
             ant.x2 = Math.max(ant.x2, i.x2);
           } else juntos.push({ ...i });
@@ -202,20 +239,45 @@ window.GS = window.GS || {};
         linhas.push(l);
       });
     }
+    if (!linhas.length) throw new Error('Esse PDF é uma imagem (foto ou digitalização), sem texto para ler. Baixe o extrato direto do app ou do site do banco, de preferência em OFX ou CSV.');
     return linhas;
   }
 
   const MESES_PDF = ['janeiro', 'fevereiro', 'marco', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
-  const DATA_PDF = /^(\d{2})\/(\d{2})(?:\/(\d{2}|\d{4}))?$/;
-  const VALOR_PDF = /^-?\s*(?:R\$\s*)?-?\(?\d{1,3}(?:\.\d{3})*,\d{2}\)?-?$/;  // "1.234,56", "-R$ 30,00"
+  const DATA_PDF = /^(\d{2})\/(\d{2})(?:\/(\d{2}|\d{4}))?$|^(\d{2})-(\d{2})-(\d{4})$/;  // "05/09", "05/09/2026", "05-09-2026" (Mercado Pago)
+  const partesData = s => { const m = s.match(DATA_PDF); return m[4] ? [m[0], m[4], m[5], m[6]] : m; };
+  // "1.234,56", "-R$ 30,00", "1.851,00 (-)" (BB), "150,00 D" / "150,00 C"
+  const VALOR_PDF = /^-?\s*(?:R\$\s*)?-?\(?\d{1,3}(?:\.\d{3})*,\d{2}\)?-?(?:\s*(?:\([+-]\)|[CD]|[+-]))?$/;
+  const SINAL_PDF = /^(?:\([+-]\)|[CD]|[+-])$/;
   const textoDe = itens => itens.map(i => i.s).join(' ').replace(/\s+/g, ' ').trim();
+
+  /* ---------- conferência pelos saldos do extrato ----------
+     valores: centavos de cada lançamento lido, na ordem do arquivo; saldos: [{ pos, valor }], o saldo impresso
+     depois dos "pos" primeiros lançamentos. O primeiro saldo é o ponto de partida; cada saldo seguinte tem que
+     bater com ele mais o que foi lido até ali. Uma linha que o leitor perdeu (ou leu com o sinal errado) aparece aqui.
+     Volta null quando o arquivo não tem saldos suficientes para conferir. */
+  function conferirSaldos(valores, saldos, datas = []) {
+    if (saldos.length < 2 || !saldos.some(s => s.pos > saldos[0].pos)) return null;
+    const acum = [0];
+    valores.forEach(v => acum.push(acum[acum.length - 1] + (v || 0)));
+    const base = saldos[0].valor - acum[saldos[0].pos];
+    for (const s of saldos.slice(1)) {
+      const lido = base + acum[s.pos];
+      if (lido !== s.valor) return { ok: false, diferenca: s.valor - lido, data: datas[Math.max(0, s.pos - 1)] || null, saldo: s.valor };
+    }
+    const ultimo = saldos[saldos.length - 1];
+    return { ok: true, saldo: ultimo.valor, conferidos: saldos.length - 1 };
+  }
 
   function extratoDoPdf(linhas) {
     const todo = norm(linhas.slice(0, 80).map(l => textoDe(l.itens)).join(' '));
     // mês e ano do extrato ("setembro/2026"), para completar datas "05/09"
     const ref = todo.match(new RegExp(`(${MESES_PDF.join('|')}) ?(?:de )?(20\\d{2})`));
-    const mesRef = ref ? MESES_PDF.indexOf(ref[1]) + 1 : GS.hoje().getMonth() + 1;
-    const anoRef = ref ? Number(ref[2]) : GS.hoje().getFullYear();
+    // sem o mês por extenso (BB: "Período: 01 a 12/11/2026"), vale a data completa mais recente do topo
+    const ultima = (todo.match(/\b\d{1,2} \d{2} 20\d{2}\b/g) || []).map(s => s.split(' ').map(Number))
+      .sort((a, b) => (b[2] * 12 + b[1]) - (a[2] * 12 + a[1]))[0];
+    const mesRef = ref ? MESES_PDF.indexOf(ref[1]) + 1 : ultima ? ultima[1] : GS.hoje().getMonth() + 1;
+    const anoRef = ref ? Number(ref[2]) : ultima ? ultima[2] : GS.hoje().getFullYear();
     const completar = (d, m, a) => {
       const ano = a ? (a.length === 2 ? 2000 + Number(a) : Number(a)) : (Number(m) > mesRef ? anoRef - 1 : anoRef);
       return dataValida(ano, Number(m), Number(d));
@@ -223,7 +285,8 @@ window.GS = window.GS || {};
 
     let inicio = linhas.findIndex(l => /movimenta|movimentos/i.test(norm(textoDe(l.itens))));
     if (inicio < 0) inicio = 0;
-    const fim = /n.mero do cart.o|comprovantes? de pagamento|aplica..o n|investimentos|resumo do m.s|saldo final|indicadores/i;
+    // onde a lista de lançamentos acaba (só vale depois do primeiro lançamento: antes pode ser o cabeçalho)
+    const fim = /n.mero do cart.o|comprovantes? de pagamento|aplica..o n|investimentos|resumo do m.s|saldo final|indicadores|informa..es adicionais|lan.amentos futuros/i;
 
     // coluna dos valores: a borda direita que mais se repete entre as linhas com valor
     const bordas = new Map();
@@ -241,15 +304,26 @@ window.GS = window.GS || {};
     const sanduiche = comValor.length > 0 &&
       comValor.filter(l => l.itens.length - 1 - l.itens.filter(i => VALOR_PDF.test(i.s)).length === 0).length > comValor.length / 2;
     // linha só de texto, colada (acima ou abaixo) na linha da data
-    const vizinha = (v, l) => v && v.pagina === l.pagina && !ehData(v) && !v.itens.some(i => VALOR_PDF.test(i.s)) &&
-      Math.abs(v.y - l.y) < l.altura * 1.1 ? textoDe(v.itens) : '';
+    const vizinha = (v, l, folga = 1.1) => v && v.pagina === l.pagina && !ehData(v) && !v.itens.some(i => VALOR_PDF.test(i.s)) &&
+      Math.abs(v.y - l.y) < l.altura * folga ? textoDe(v.itens) : '';
+    // o que fica entre a data e o valor, sem lote e nº do documento (BB: "99008 174848")
+    const descricaoDe = (itens, mov) => itens.filter(i => i.x2 <= mov.x + 1 && i !== mov && !/^(\d{4,}|-)$/.test(i.s));
+    // linha com data e valor, mas sem histórico nela: o histórico está nas linhas de cima e de baixo (BB)
+    const semHistorico = l => {
+      if (!ehData(l)) return false;
+      const mov = l.itens.find(ehValor);
+      return !!mov && !descricaoDe(l.itens.slice(1), mov).length;
+    };
 
     const saida = [];
+    // saldos impressos no extrato (linha de saldo ou coluna de saldo): servem para conferir a leitura
+    const saldos = [];
+    const anotarSaldo = item => { const v = item && centavos(item.s, ','); if (v !== null && v !== undefined && item) saldos.push({ pos: saida.length, valor: v }); };
     let data = null, atual = null, lancados = 0;
     for (let k = 0; k < lista.length; k++) {
       const l = lista[k];
       const texto = textoDe(l.itens);
-      if (fim.test(semAcento(texto))) break;
+      if (fim.test(semAcento(texto))) { if (saida.length) break; continue; }
       let itens = l.itens;
       const primeiro = itens[0];
       const temData = primeiro && DATA_PDF.test(primeiro.s) && Math.abs(primeiro.x - colData) < 6;
@@ -257,35 +331,63 @@ window.GS = window.GS || {};
       const mov = valores.find(i => Math.abs(i.x2 - colValor) < 14);
       if (sanduiche) {
         if (!mov || !temData) continue;
-        const m = primeiro.s.match(DATA_PDF);
+        const m = partesData(primeiro.s);
         const quando = completar(m[1], m[2], m[3]);
         const acima = vizinha(lista[k - 1], l), abaixo = vizinha(lista[k + 1], l);
         const principal = acima || abaixo;
+        if (quando && principal && /saldo/i.test(norm(principal))) anotarSaldo(mov);
         if (!quando || !principal || /saldo/i.test(norm(principal))) continue;
         saida.push({ data: quando, valor: centavos(mov.s, ','), principal, detalhe: acima && abaixo ? [abaixo] : [] });
         continue;
       }
       if (!mov) {
+        // "SALDO DO DIA" com o valor na coluna de saldo (Itaú): só pula a linha
+        const resto = textoDe(itens.filter(i => !DATA_PDF.test(i.s) && !VALOR_PDF.test(i.s) && !/^\d{4,}$/.test(i.s)));
+        if (/saldo/.test(norm(resto)) || ehSaldo(resto)) { anotarSaldo(valores[valores.length - 1]); atual = null; continue; }
         // linha com data e valor em outra coluna: começou outra tabela (ex.: compras do cartão)
         if (temData && valores.length && lancados >= 3) break;
-        if (temData) { const m = primeiro.s.match(DATA_PDF); data = completar(m[1], m[2], m[3]); }
+        if (temData) { const m = partesData(primeiro.s); data = completar(m[1], m[2], m[3]); }
+        // texto colado em cima de uma linha de data sem histórico: é o começo do próximo lançamento
+        const proxima = lista[k + 1];
+        if (proxima && semHistorico(proxima) && proxima.pagina === l.pagina && Math.abs(proxima.y - l.y) < proxima.altura * 1.5) { atual = null; continue; }
         const perto = atual && atual.pagina === l.pagina && atual.ultimoY - l.y < atual.altura * 2.8;
         if (perto && !valores.length && atual.detalhe.length < 2) { atual.detalhe.push(texto); atual.ultimoY = l.y; }
         else atual = null;
         continue;
       }
-      if (temData) { const m = primeiro.s.match(DATA_PDF); data = completar(m[1], m[2], m[3]); itens = itens.slice(1); }
-      const desc = itens.filter(i => i.x2 <= mov.x + 1 && i !== mov);
-      while (desc.length && /^(\d{4,}|-)$/.test(desc[desc.length - 1].s)) desc.pop();  // nº do documento
-      const principal = textoDe(desc);
-      if (!data || !principal || /saldo/i.test(norm(principal))) { atual = null; continue; }
+      if (temData) { const m = partesData(primeiro.s); data = completar(m[1], m[2], m[3]); itens = itens.slice(1); }
+      let principal = textoDe(descricaoDe(itens, mov));
+      if (!principal && temData) {
+        // histórico em volta da linha (BB): tipo em cima ("Pix - Enviado"), quem e quando embaixo
+        // Mercado Pago: o mesmo texto quebrado em duas linhas ("Liberação de dinheiro Venda" / "com Pix")
+        const acima = vizinha(lista[k - 1], l, 1.5), abaixo = vizinha(lista[k + 1], l, 1.5);
+        const quebrado = acima && abaixo && !/^\d{2}\/\d{2}\s/.test(abaixo);
+        principal = quebrado ? `${acima} ${abaixo}` : acima || abaixo;
+        if (principal && ehSaldo(principal)) anotarSaldo(mov);
+        if (!data || !principal || ehSaldo(principal)) { atual = null; continue; }
+        saida.push({ data, valor: centavos(mov.s, ','), principal, detalhe: acima && abaixo && !quebrado ? [abaixo] : [] });
+        anotarSaldo(valores.find(i => i !== mov && i.x > mov.x2));  // coluna de saldo ao lado (Mercado Pago)
+        if (abaixo) k++;
+        atual = null;
+        lancados++;
+        continue;
+      }
+      if (principal && (/saldo/i.test(norm(principal)) || ehSaldo(principal))) anotarSaldo(mov);
+      if (!data || !principal || /saldo/i.test(norm(principal)) || ehSaldo(principal)) { atual = null; continue; }
       atual = { data, valor: centavos(mov.s, ','), principal, detalhe: [], pagina: l.pagina, ultimoY: l.y, altura: l.altura };
       saida.push(atual);
+      anotarSaldo(valores.find(i => i !== mov && i.x > mov.x2));
       lancados++;
     }
 
-    return saida.filter(t => t.valor).map(t => {
+    const conferencia = conferirSaldos(saida.map(t => t.valor), saldos, saida.map(t => t.data));
+    const lidas = saida.filter(t => t.valor).map(t => {
       let principal = t.principal, detalhe = t.detalhe.join(' ').trim(), data = t.data;
+      // BB: "Compra com Cartão" / "Pix - Enviado" com "03/11 20:47 NOME" embaixo
+      if (/^\d{2}\/\d{2}\s+\d{2}:\d{2}/.test(detalhe) || /^(compra com cart|pix\s*-\s)/i.test(principal)) {
+        const r = tituloDoBanco(principal, detalhe, data, (d, m) => completar(d, m));
+        return { data: r.data, valor: t.valor, titulo: r.titulo || 'Lançamento' };
+      }
       // compra no cartão de débito: a loja e a data da compra vêm na linha de baixo ("05/09 PADARIA X")
       const cartao = principal.match(/^compra cart[aã]o (?:deb|d[eé]bito|cred|cr[eé]dito)\w*(?: mc| visa| elo| maestro)?\s*(.*)$/i);
       if (cartao) principal = cartao[1];
@@ -300,10 +402,27 @@ window.GS = window.GS || {};
       // código de controle do banco ("ICK48462523") não é nome de ninguém
       if (!cartao && detalhe && !/^(?=.*\d)[A-Z0-9]{6,}$/i.test(detalhe) && !/^[A-Z0-9]{6,}$/.test(detalhe)) titulo = `${principal} · ${detalhe}`;
       else if (!cartao) titulo = principal;
+      // Itaú: "PIX TRANSF JOAO S01/10" -> a data do Pix colada no nome sai do título
+      const colada = /^(pix|ted|doc|transf)/i.test(titulo) && titulo.match(/\s?(\d{2})\/(\d{2})$/);
+      if (colada) {
+        const d = completar(colada[1], colada[2]);
+        if (d && diasEntre(d, data) <= 10) titulo = titulo.slice(0, colada.index).trim();
+      }
       titulo = titulo.replace(/^pix (enviado|recebido)\s+(?!·)/i, (_, q) => `Pix ${q.toLowerCase()} · `)
         .replace(/^pix (enviado|recebido)/i, (_, q) => `Pix ${q.toLowerCase()}`);
       return { data, valor: t.valor, titulo: titulo.replace(/\s+/g, ' ').trim() || 'Lançamento' };
     });
+    lidas.conferencia = conferencia;
+    return lidas;
+  }
+
+  // bancos que não escrevem o próprio nome no arquivo (o PDF do BB só tem o logo): reconhecidos pelas colunas
+  function bancoPeloLayout(texto) {
+    const n = norm(texto);
+    if (/\bdia lote documento historico valor\b|\bdata lancamento detalhes n documento valor tipo lancamento\b|\bdependencia origem historico data do balancete\b/.test(n)) return 'banco do brasil';
+    if (/\brelease date transaction type\b/.test(n)) return 'mercado pago';
+    if (/\bdata lancamento dcto credito r debito r saldo r\b/.test(n)) return 'bradesco';
+    return '';
   }
 
   async function lerArquivo(arquivo) {
@@ -313,7 +432,7 @@ window.GS = window.GS || {};
     if (/\.pdf$/i.test(nome) || new TextDecoder('ascii').decode(new Uint8Array(buf.slice(0, 5))) === '%PDF-') {
       const linhas = await linhasDoPdf(buf);
       const texto = linhas.slice(0, 60).map(l => textoDe(l.itens)).join(' ');
-      return { tipo: 'ofx', formato: 'pdf', nome, cartao: false, banco: texto, linhas: extratoDoPdf(linhas) };
+      return { tipo: 'ofx', formato: 'pdf', nome, cartao: false, banco: `${bancoPeloLayout(texto)} ${texto}`, linhas: extratoDoPdf(linhas) };
     }
     if (/\.(xlsx|xls|ods)$/i.test(nome)) {
       const X = await carregarXlsx();
@@ -335,14 +454,23 @@ window.GS = window.GS || {};
   const PAPEIS = [
     ['ignorar', 'Ignorar'], ['data', 'Data'], ['descricao', 'Descrição'], ['valor', 'Valor'],
     ['entrada', 'Entrada'], ['saida', 'Saída'], ['categoria', 'Categoria'], ['tipo', 'Tipo (entrada/saída)'],
+    ['complemento', 'Complemento da descrição'],
   ];
 
   function papelPeloNome(cab) {
     const n = norm(cab);
     if (!n) return null;
+    // Mercado Pago: RELEASE_DATE;TRANSACTION_TYPE;REFERENCE_ID;TRANSACTION_NET_AMOUNT;PARTIAL_BALANCE
+    if (/^(release date|money release date|date created)$/.test(n)) return 'data';
+    if (/^transaction type$/.test(n)) return 'descricao';
+    if (/^(transaction net amount|settlement net amount|net amount)$/.test(n)) return 'valor';
+    if (/\b(saldo|balance)\b/.test(n)) return null;
     if (/^(data|date|dt)\b|data (da |de )?(compra|transacao|lancamento|movimento)/.test(n)) return 'data';
     if (/categoria|category/.test(n)) return 'categoria';
-    if (/^(tipo|natureza|d c|c d|debito credito)$/.test(n)) return 'tipo';
+    // BB: "Tipo Lançamento" (Entrada/Saída)
+    if (/^(tipo|natureza|d c|c d|debito credito)$|^tipo (de )?(lancamento|transacao|movimento|operacao)$/.test(n)) return 'tipo';
+    // BB: "Detalhes" traz quem recebeu ou a loja ("03/11 20:47 EMPORIO DAMIANI")
+    if (/^(detalhes?|complemento|informacoes? (complementares?|adicionais))$/.test(n)) return 'complemento';
     if (/^(entrada|entradas|credito|creditos|receita|receitas)( r)?$/.test(n)) return 'entrada';
     if (/^(saida|saidas|debito|debitos|despesa|despesas)( r)?$/.test(n)) return 'saida';
     if (/^(valor|amount|value|quantia|montante|vlr|valor r|valor rs|preco)/.test(n)) return 'valor';
@@ -357,7 +485,10 @@ window.GS = window.GS || {};
       const tem = p => papeis.includes(p);
       if (tem('data') && (tem('descricao') || tem('valor') || tem('entrada') || tem('saida'))) {
         const vistos = new Set();  // um papel por coluna (o primeiro que aparecer)
-        return { inicio: i + 1, papeis: papeis.map(p => (p && !vistos.has(p) && vistos.add(p) ? p : 'ignorar')), cabecalho: tabela[i] };
+        const unicos = papeis.map(p => (p && !vistos.has(p) && vistos.add(p) ? p : 'ignorar'));
+        // só "Detalhes", sem outra descrição: ela é a descrição
+        if (!unicos.includes('descricao') && unicos.includes('complemento')) unicos[unicos.indexOf('complemento')] = 'descricao';
+        return { inicio: i + 1, papeis: unicos, cabecalho: tabela[i] };
       }
     }
     const largura = Math.max(...tabela.slice(0, 20).map(l => l.length));
@@ -383,18 +514,37 @@ window.GS = window.GS || {};
   // linhas no formato comum: { data, valor (centavos; negativo = saída), titulo, categoriaTexto }
   function linhasDaTabela(tabela, mapa, sinal) {
     const col = p => mapa.papeis.indexOf(p);
-    const [cData, cDesc, cValor, cEnt, cSai, cCat, cTipo] = ['data', 'descricao', 'valor', 'entrada', 'saida', 'categoria', 'tipo'].map(col);
+    const [cData, cDesc, cValor, cEnt, cSai, cCat, cTipo, cComp] = ['data', 'descricao', 'valor', 'entrada', 'saida', 'categoria', 'tipo', 'complemento'].map(col);
     const corpo = tabela.slice(mapa.inicio);
     const dec = separadorDecimal(corpo.flatMap(l => [l[cValor], l[cEnt], l[cSai]]));
     const linhas = [];
-    corpo.forEach(l => {
+    // coluna de saldo ("Saldo (R$)", "PARTIAL_BALANCE") e linhas de saldo: para conferir a leitura no fim
+    const cSaldo = (mapa.cabecalho || []).findIndex(c => /\b(saldo|balance)\b/.test(norm(c)));
+    const saldos = [];
+    const anotarSaldo = v => { const c = v === '' || v === undefined ? null : centavos(v, dec); if (c !== null) saldos.push({ pos: linhas.length, valor: c }); };
+    let anterior = null;
+    for (const l of corpo) {
+      // "Lançamentos futuros" (Bradesco, BB): ainda não aconteceram, a lista de verdade acabou
+      if (/^lancamentos futuros\b|^saldos? (invest|aplic)/.test(norm(l.find(c => String(c ?? '').trim() !== '') || ''))) break;
       const data = dataIso(l[cData]);
-      const titulo = String(l[cDesc] ?? '').replace(/\s+/g, ' ').trim();
-      if (!data || !titulo) return;
+      const desc = String(l[cDesc] ?? '').replace(/\s+/g, ' ').trim();
+      const comp = cComp >= 0 ? String(l[cComp] ?? '').replace(/\s+/g, ' ').trim() : '';
+      const temValor = [cValor, cEnt, cSai].some(c => c >= 0 && centavos(l[c], dec));
+      // Bradesco: o histórico continua na linha de baixo, sem data nem valor ("PIX TRANSF" / "JOAO DA SILVA")
+      if (!data && !temValor && anterior && (desc || comp)) {
+        anterior.titulo = `${anterior.titulo} · ${desc || comp}`.slice(0, 200);
+        anterior = null;
+        continue;
+      }
+      anterior = null;
+      if (desc && ehSaldo(desc)) { anotarSaldo(cSaldo >= 0 && String(l[cSaldo] ?? '').trim() ? l[cSaldo] : l[cValor >= 0 ? cValor : cEnt]); continue; }
+      if (!data || !desc) continue;
+      const { titulo, data: quando } = comp || /^pix\s*-\s/i.test(desc)
+        ? tituloDoBanco(desc, comp, data, completarPerto(data)) : { titulo: desc, data };
       let valor = null;
       if (cValor >= 0) {
         valor = centavos(l[cValor], dec);
-        if (valor === null) return;
+        if (valor === null) continue;
         const tipo = cTipo >= 0 ? norm(l[cTipo]) : '';
         if (/^(receita|entrada|credito|c|cr)\b/.test(tipo)) valor = Math.abs(valor);
         else if (/^(despesa|saida|debito|d|db)\b/.test(tipo)) valor = -Math.abs(valor);
@@ -404,9 +554,12 @@ window.GS = window.GS || {};
         const s = cSai >= 0 ? Math.abs(centavos(l[cSai], dec) || 0) : 0;
         valor = e ? e : -s;
       }
-      if (!valor) return;
-      linhas.push({ data, valor, titulo, categoriaTexto: cCat >= 0 ? String(l[cCat] ?? '').trim() : '' });
-    });
+      if (!valor) continue;
+      anterior = { data: quando, valor, titulo, categoriaTexto: cCat >= 0 ? String(l[cCat] ?? '').trim() : '' };
+      linhas.push(anterior);
+      if (cSaldo >= 0) anotarSaldo(l[cSaldo]);
+    }
+    linhas.conferencia = conferirSaldos(linhas.map(t => t.valor), saldos, linhas.map(t => t.data));
     return linhas;
   }
 
@@ -447,7 +600,8 @@ window.GS = window.GS || {};
      entre a conta e um investimento. "Rendimento"/"juros" continuam receita (categoria Rendimentos).
      chave: o nome do produto sem as palavras de movimento ("Aplicação RDB" e "Resgate RDB" -> "rdb"),
      usada para juntar as linhas e para lembrar o investimento nas próximas importações. */
-  const PISTA_INV = /\b(aplic\w*|apl|resgates?|resg|cdb|rdb|lci|lca|tesouro|caixinhas?|porquinho|cofrinho|capitalizacao|invest facil|contamax|rende facil|poupanca|investimentos?|fundos?)\b/;
+  // Mercado Pago: "Dinheiro reservado <caixinha>" (aplicação) e "Dinheiro retirado <caixinha>" (resgate)
+  const PISTA_INV = /\b(aplic\w*|apl|resgates?|resg|cdb|rdb|lci|lca|tesouro|caixinhas?|porquinho|cofrinho|capitalizacao|invest facil|contamax|rende facil|poupanca|investimentos?|fundos?|dinheiro reservado|dinheiro retirado)\b/;
   const NAO_INV = /\b(rendimentos?|rend pago|remuneracao|juros|dividendos?|proventos|salario|tarifa|iof)\b/;
   const AUTOMATICA = /\b(invest facil|contamax|rende facil)\b|\baut\w*\b.*\b(aplic\w*|apl|res|resg)\b|\b(aplic\w*|apl|res|resg)\b.*\baut\w*\b/;
   const SIGLAS = new Set(['cdb', 'rdb', 'lci', 'lca', 'ipca', 'cdi', 'xp', 'btg', 'bb']);
@@ -456,9 +610,29 @@ window.GS = window.GS || {};
     const t = norm(titulo);
     if (!PISTA_INV.test(t) || NAO_INV.test(t)) return null;
     if (AUTOMATICA.test(t)) return { chave: 'aplicacao automatica' };
-    const chave = t.replace(/\b(aplic\w*|apl|res|resgates?|resg|debito|deb|credito|cred|aut\w*|de|da|do|dos|das|em|para|no|na|pix|ted|doc|valor|transf\w*|\d+)\b/g, ' ')
+    const chave = t.replace(/\b(dinheiro (reservado|retirado)|aplic\w*|apl|res|resgates?|resg|debito|deb|credito|cred|aut\w*|de|da|do|dos|das|em|para|no|na|pix|ted|doc|valor|transf\w*|\d+)\b/g, ' ')
       .replace(/\s+/g, ' ').trim();
+    // caixinha do Mercado Pago com o nome que a pessoa deu ("Dinheiro reservado GSCASH" -> "caixinha gscash")
+    if (/\bdinheiro (reservado|retirado)\b/.test(t) && !/\b(cofrinho|caixinhas?)\b/.test(chave)) return { chave: `caixinha ${chave}`.trim() };
     return { chave: chave || 'investimento' };
+  }
+
+  /* ---------- pagamento de fatura no extrato da conta ----------
+     "Pagamento de fatura", "PAG FATURA", "Pgto cartão de crédito": é dinheiro da conta quitando a fatura, não um
+     gasto novo (as compras já estão na fatura). Compra no débito ("Compra com cartão") e boleto não entram. */
+  function pagamentoDeFatura(titulo) {
+    const t = norm(titulo);
+    if (/\b(compra|qr|boleto|estorno|devolucao)\b|\bcom cart/.test(t)) return false;
+    // conta de luz, água e telefone também chegam como "fatura"
+    if (/\b(energia|luz|agua|gas|telefone|telefonia|internet|celular|condominio|aluguel|cemig|enel|copel|celesc|coelba|light|equatorial|sabesp|copasa|cedae|comgas|vivo|claro|tim|oi)\b/.test(t)) return false;
+    return (/\bfaturas?\b/.test(t) && /\b(pag\w*|pgto|pgt|debito automatico|deb aut\w*|liquidacao)\b/.test(t))
+      || /\b(pag\w*|pgto|pgt)\s+(do |de |da )?cart(ao|oes)?\s+(de )?credito\b/.test(t)
+      || /\bpag fat\b/.test(t);
+  }
+
+  // a fatura que um pagamento quita: a última que fechou antes dele (quem paga adiantado ou atrasado troca na revisão)
+  function faturaDoPagamento(cartao, data) {
+    return GS.faturas.somarMeses(GS.faturas.cicloDe(cartao, data), -1);
   }
 
   const nomeBonito = chave => chave.split(' ').map(p => (SIGLAS.has(p) ? p.toUpperCase() : p.charAt(0).toUpperCase() + p.slice(1))).join(' ');
@@ -556,7 +730,28 @@ window.GS = window.GS || {};
     [/inter\b|\b077\b/i, 'inter'], [/santander|\b033\b/i, 'santander'], [/caixa|\b104\b/i, 'caixa'],
     [/banco do brasil|\b001\b/i, 'brasil'], [/c6|\b336\b/i, 'c6'], [/pagbank|pagseguro|\b290\b/i, 'pag'],
     [/mercado pago|\b323\b/i, 'mercado pago'], [/picpay|\b380\b/i, 'picpay'], [/sicoob|\b756\b/i, 'sicoob'], [/sicredi|\b748\b/i, 'sicredi'],
+    [/\bneon\b|\b536\b/i, 'neon'], [/banco pan\b|\b623\b/i, 'pan'], [/btg|\b208\b/i, 'btg'], [/agibank|\b121\b/i, 'agi'],
+    [/banrisul|\b041\b/i, 'banrisul'], [/banco original|\b212\b/i, 'original'], [/\bxp\b|\b102\b/i, 'xp'],
   ];
+
+  /* Quando o PDF não dá certo: outro formato que o banco oferece para conta de pessoa física, só onde a ajuda
+     ou o atendimento do próprio banco confirma (opções de conta de empresa não contam). É só o caminho: não
+     promete que o arquivo vai ser lido. Bradesco, Caixa, C6, Sicoob e os outros ficam com a mensagem geral. */
+  const DICAS = {
+    nubank: 'No app do Nubank dá para pedir o extrato também em OFX, que chega por e-mail. Tente por ele.',
+    itau: 'O Itaú também oferece o extrato em OFX, se aparecer a opção. Tente por ele.',
+    inter: 'No Super Extrato do Inter dá para exportar em OFX ou CSV. Tente por um deles.',
+    santander: 'No app do Santander dá para exportar o extrato em CSV ou Excel, se aparecer a opção. Tente por um deles.',
+    brasil: 'O Banco do Brasil também exporta o extrato em CSV, se aparecer a opção. Tente por ele.',
+    pag: 'O PagBank também exporta o extrato da conta em OFX, CSV ou Excel. Tente por um deles.',
+    'mercado pago': 'O Mercado Pago também exporta o extrato em CSV ou Excel (XLSX). Tente por um deles.',
+    picpay: 'O PicPay também exporta o extrato em CSV (períodos a partir de janeiro de 2025). Tente por ele.',
+    btg: 'O BTG também exporta o extrato em Excel. Tente por ele.',
+  };
+  function dicaDoBanco(texto) {
+    const pista = (BANCOS.find(([re]) => re.test(texto)) || [])[1];
+    return DICAS[pista] || 'Se o banco tiver a opção, exporte o extrato em OFX ou CSV e tente de novo.';
+  }
 
   function abrir() {
     if (GS.somenteLeitura) return GS.toast(GS.TEXTO_SO_LEITURA, 'erro');
@@ -623,9 +818,9 @@ window.GS = window.GS || {};
           arq.sinalIncerto = !mapa.papeis.includes('tipo') && mapa.papeis.includes('valor') && vals.length > 0 && vals.every(v => v > 0);
           const cab = norm((mapa.cabecalho || []).join(' '));
           arq.cartao = /^date title amount$/.test(cab);  // fatura do Nubank: "date,title,amount"
-          arq.banco = arq.cartao ? 'nubank' : `${arq.nome}`;
+          arq.banco = arq.cartao ? 'nubank' : `${bancoPeloLayout(arq.tabela.slice(0, 10).map(l => l.join(' ')).join(' '))} ${arq.nome}`;
         } else if (!arq.linhas.length) {
-          throw new Error(arq.formato === 'pdf' ? 'Não encontramos a lista de lançamentos nesse PDF. Se o banco tiver a opção, exporte o extrato em OFX ou CSV.' : 'Não encontramos lançamentos nesse arquivo OFX.');
+          throw new Error(arq.formato === 'pdf' ? `Não conseguimos ler a lista de lançamentos desse PDF. ${dicaDoBanco(`${arq.banco || ''} ${arq.nome}`)}` : 'Não encontramos lançamentos nesse arquivo OFX.');
         }
         destino = destinoProvavel();
         passoDestino();
@@ -804,6 +999,8 @@ window.GS = window.GS || {};
       if (cartao && !fatura) opcoesFatura();
 
       let linhas = linhasAtuais();
+      // conferência pelos saldos impressos (só extrato de conta; fatura não tem saldo)
+      const conferencia = cartao ? null : linhas.conferencia || null;
       let foraDaFatura = 0;
       if (cartao) {
         // na fatura, o que domina são as compras (no Nubank vêm positivas); o resto é pagamento ou estorno
@@ -828,6 +1025,13 @@ window.GS = window.GS || {};
         const t = norm(titulo);
         return t.includes(meuNome[0]) && t.includes(meuNome[meuNome.length - 1].slice(0, 5));
       };
+
+      // pagamento de fatura no extrato da conta: qual cartão ele paga. O configurado para ser pago por esta conta,
+      // o cartão da própria carteira ou o único cartão; sem como saber, a pessoa escolhe na revisão
+      const cartoesFat = cartao ? [] : GS.faturas.cartoes(carteiras);
+      const cartaoDaConta = cartoesFat.find(c => c.credito.pagarComId === destino.carteira.id)
+        || cartoesFat.find(c => c.id === destino.carteira.id) || (cartoesFat.length === 1 ? cartoesFat[0] : null);
+      const pagamentosDaConta = transacoes.filter(t => t.tipo === 'pagamento' && t.carteiraId === destino.carteira.id);
 
       const itens = linhas.map((l, n) => {
         const tipo = l.valor < 0 ? 'despesa' : 'receita';
@@ -854,8 +1058,18 @@ window.GS = window.GS || {};
           }
         }
         const s = sugerir(l.titulo, tipo, l.categoriaTexto);
+        const fat = tipo === 'despesa' && cartoesFat.length && pagamentoDeFatura(l.titulo)
+          ? { cartaoId: cartaoDaConta ? cartaoDaConta.id : null, fatura: cartaoDaConta ? faturaDoPagamento(cartaoDaConta, l.data) : null }
+          : null;
+        if (fat && !repetido) {
+          const igual = pagamentosDaConta.find(t => !usados.has(t.id) && t.valor === valor && diasEntre(t.data, l.data) <= 3);
+          if (igual) {
+            usados.add(igual.id);
+            repetido = `Já está no GSCASH (${GS.dataCurta ? GS.dataCurta(igual.data) : igual.data}, ${fmt(igual.valor)})`;
+          }
+        }
         // aplicação ou resgate (só em conta; fatura de cartão não tem)
-        const achado = !cartao && investimentoDaLinha(l.titulo);
+        const achado = !cartao && !fat && investimentoDaLinha(l.titulo);
         const inv = achado ? { chave: achado.chave, invId: investimentoDaChave(achado.chave), mov: tipo === 'despesa' ? 'aplicacao' : 'resgate' } : null;
         if (inv && !repetido) {
           const igual = transfInv.find(t => !usados.has(t.id) && t.valor === valor && diasEntre(t.data, l.data) <= 2
@@ -867,7 +1081,7 @@ window.GS = window.GS || {};
         }
         return {
           n, id, tipo, valor, data, titulo: l.titulo.slice(0, 80), nota, parcela: parcela ? `${parcela[1]}/${parcela[2]}` : '',
-          marcado: !repetido, repetido, inv,
+          marcado: !repetido, repetido, inv, fat,
           cat: s.nova ? `nova:${s.nova}` : `${s.categoriaId}${s.subcategoriaId ? '|' + s.subcategoriaId : ''}`,
           sugerida: s.sugerida,
         };
@@ -904,7 +1118,13 @@ window.GS = window.GS || {};
       // investimento novo desta revisão: configurado (tem dados) ou ainda por configurar
       const pendente = i => i.inv && !i.inv.invId && !novosInv.has(i.inv.chave);
 
+      const nomeCartao = id => (carteiras.find(c => c.id === id) || {}).nome || 'Cartão';
+      const mesFatura = k => GS.mesAnoDeIso(k).split(' ')[0].toLowerCase();
       function slotHtml(i) {
+        if (i.fat) {
+          if (!i.fat.cartaoId) return `<button type="button" class="imp-fat novo">${icone('plus')}<span>Escolher o cartão</span></button>`;
+          return `<button type="button" class="imp-fat">${icone('cartao')}<span>${esc(nomeCartao(i.fat.cartaoId))} · fatura de ${esc(mesFatura(i.fat.fatura))}</span></button>`;
+        }
         if (!i.inv) return `<button type="button" class="imp-cat">${rotuloCat(i.tipo, i.cat)}${i.sugerida ? `<span class="sug" title="Categoria sugerida">${icone('brilho')}</span>` : ''}</button>`;
         if (pendente(i)) return `<button type="button" class="imp-inv novo">${icone('plus')}<span>Investimento novo · configurar</span></button>`;
         const nome = i.inv.invId ? nomeInv(i.inv.invId) : novosInv.get(i.inv.chave).nome;
@@ -913,6 +1133,7 @@ window.GS = window.GS || {};
       }
       function linhaHtml(i) {
         const sub = i.repetido ? `<small class="aviso">${esc(i.repetido)}</small>`
+          : i.fat ? '<small class="fat">Paga a fatura do cartão, não é gasto</small>'
           : i.inv ? `<small class="inv">${i.inv.mov === 'aplicacao' ? 'Sai da conta para o investimento' : 'Volta do investimento para a conta'}</small>`
           : i.nota ? `<small>${esc(i.nota)}</small>` : '';
         return `
@@ -921,13 +1142,20 @@ window.GS = window.GS || {};
             <span class="data">${esc(GS.dataCurta ? GS.dataCurta(i.data) : i.data)}</span>
             <span class="desc"><b title="${esc(i.titulo)}">${esc(i.titulo)}</b>${sub}</span>
             <span class="cat-slot">${slotHtml(i)}</span>
-            <span class="val ${i.tipo === 'receita' ? 'e' : ''}">${i.tipo === 'receita' ? '+ ' : ''}${fmt(i.valor)}</span>
+            <span class="val ${i.tipo === 'receita' ? 'e' : i.fat ? 't' : ''}">${i.tipo === 'receita' ? '+ ' : ''}${fmt(i.valor)}</span>
           </div>`;
       }
 
+      const dataDe = d => (GS.dataCurta ? GS.dataCurta(d) : d.split('-').reverse().join('/'));
+      const avisoSaldo = conferencia && !conferencia.ok
+        ? `<p class="imp-erro">${icone('alert')}<span>O que lemos não fecha com o saldo impresso no extrato: diferença de ${fmt(conferencia.diferenca)}${conferencia.data ? ` até ${esc(dataDe(conferencia.data))}` : ''}. Pode ter ficado alguma linha de fora. Confira com o extrato antes de importar.</span></p>`
+        : '';
       modal.body.innerHTML = `
+        ${avisoSaldo}
         <div class="imp-resumo">
           <span class="chip-r"><b data-conta></b> para importar</span>
+          ${conferencia && conferencia.ok ? `<span class="chip-r" title="Somamos os lançamentos lidos e chegamos nos mesmos saldos que o banco imprimiu no extrato">${icone('check')}Confere com o saldo do extrato</span>` : ''}
+          <span class="chip-r hidden" data-chip-fat>${icone('cartao')}<b></b></span>
           <span class="chip-r inv hidden" data-chip-inv>${icone('trending')}<b></b> de investimento</span>
           <span class="chip-r aviso hidden" data-chip-pend>${icone('alert')}<b></b></span>
           ${repetidos ? `<span class="chip-r aviso">${icone('alert')}<b>${repetidos}</b> já ${repetidos === 1 ? 'estava' : 'estavam'} no GSCASH</span>` : ''}
@@ -950,6 +1178,11 @@ window.GS = window.GS || {};
         const total = marcados.reduce((s, i) => s + (i.tipo === 'receita' ? i.valor : -i.valor), 0);
         modal.body.querySelector('[data-conta]').textContent = marcados.length;
         modal.body.querySelector('[data-total]').textContent = `${total > 0 ? '+ ' : total < 0 ? '− ' : ''}${fmt(total)}`;
+        const deFat = marcados.filter(i => i.fat).length;
+        const chipFat = modal.body.querySelector('[data-chip-fat]');
+        chipFat.classList.toggle('hidden', !deFat);
+        chipFat.querySelector('b').textContent = deFat === 1 ? '1 pagamento de fatura' : `${deFat} pagamentos de fatura`;
+        const semCartao = marcados.filter(i => i.fat && !i.fat.cartaoId).length;
         const deInv = marcados.filter(i => i.inv).length;
         const pend = new Set(marcados.filter(pendente).map(i => i.inv.chave)).size;
         const chipInv = modal.body.querySelector('[data-chip-inv]');
@@ -961,6 +1194,7 @@ window.GS = window.GS || {};
         const b = botaoImportar();
         b.disabled = !marcados.length;   // com investimento por configurar, o botão abre a configuração
         b.innerHTML = pend ? `Configure ${GS.plural(pend, 'investimento', 'investimentos')}`
+          : semCartao ? 'Escolha o cartão'
           : `${icone('subir')}Importar ${GS.plural(marcados.length, 'lançamento', 'lançamentos')}`;
       }
 
@@ -988,7 +1222,25 @@ window.GS = window.GS || {};
         porN.get(Number(linha.dataset.n)).marcado = e.target.checked;
         atualizar();
       });
+      // pagamento de fatura: outro cartão, a fatura do mês anterior ou seguinte, ou "é um gasto"
+      function menuFatura(bf, item) {
+        const escolher = (cartaoId, fatura) => { item.fat = { cartaoId, fatura }; redesenhar(item); atualizar(); };
+        const atual = item.fat.cartaoId && carteiras.find(c => c.id === item.fat.cartaoId);
+        GS.abrirMenu(bf, [
+          ...cartoesFat.filter(c => c.id !== item.fat.cartaoId).map(c => {
+            const k = faturaDoPagamento(c, item.data);
+            return { rotulo: `${c.nome} · fatura de ${mesFatura(k)}`, icone: 'cartao', acao: () => escolher(c.id, k) };
+          }),
+          ...(atual ? [-1, 1].map(n => GS.faturas.somarMeses(item.fat.fatura, n)).map(k => ({
+            rotulo: `Fatura de ${mesFatura(k)}`, icone: 'calendar', acao: () => escolher(atual.id, k),
+          })) : []),
+          { rotulo: 'Não é pagamento de fatura (gasto)', icone: 'x', acao: () => { item.fat = null; redesenhar(item); atualizar(); } },
+        ]);
+      }
+
       lista.addEventListener('click', e => {
+        const bf = e.target.closest('.imp-fat');
+        if (bf) return menuFatura(bf, porN.get(Number(bf.closest('.imp-item').dataset.n)));
         const bi = e.target.closest('.imp-inv');
         if (bi) {
           const item = porN.get(Number(bi.closest('.imp-item').dataset.n));
@@ -1028,6 +1280,15 @@ window.GS = window.GS || {};
       botaoImportar().addEventListener('click', () => {
         const falta = itens.find(i => i.marcado && pendente(i));
         if (falta) return configurar(falta.inv.chave);
+        const semCartao = itens.find(i => i.marcado && i.fat && !i.fat.cartaoId);
+        if (semCartao) {
+          const bf = lista.querySelector(`[data-n="${semCartao.n}"] .imp-fat`);
+          // o menu fecha com qualquer rolagem: rola até a linha só se ela estiver fora de vista, e abre depois
+          const r = bf.getBoundingClientRect(), caixa = modal.body.getBoundingClientRect();
+          if (r.top >= caixa.top && r.bottom <= caixa.bottom) return menuFatura(bf, semCartao);
+          bf.scrollIntoView({ block: 'nearest' });
+          return setTimeout(() => menuFatura(bf, semCartao), 350);
+        }
         importar(itens.filter(i => i.marcado), categorias, novosInv);
       });
       atualizar();
@@ -1039,8 +1300,9 @@ window.GS = window.GS || {};
       const b = modal.foot.querySelector('[data-importar]');
       b.disabled = true;
       b.innerHTML = '<span class="roda-botao" aria-hidden="true"></span>Importando…';
-      const escolhidos = todos.filter(i => !i.inv);
+      const escolhidos = todos.filter(i => !i.inv && !i.fat);
       const deInvestimento = todos.filter(i => i.inv);
+      const deFatura = todos.filter(i => i.fat && i.fat.cartaoId);
       try {
         // aplicações e resgates: transferências entre a conta e o investimento (os novos são criados juntos)
         let inv = { transacoes: [], investimentos: [], movimentos: 0 };
@@ -1053,8 +1315,16 @@ window.GS = window.GS || {};
               valor: i.valor, data: i.data, titulo: i.titulo, contaId: destino.carteira.id,
             })));
         }
+        // pagamentos de fatura: o mesmo registro do "Pagar fatura" (a fatura do cartão aparece como paga)
+        let pagos = [];
+        if (deFatura.length) {
+          pagos = await GS.api.importarPagamentosFatura(deFatura.map(i => ({
+            id: i.id, cartaoId: i.fat.cartaoId, fatura: i.fat.fatura, valor: i.valor, data: i.data, contaId: destino.carteira.id,
+          })));
+        }
+        const idsPagos = pagos.map(t => t.id);
         if (!escolhidos.length) {
-          return concluir([], inv);
+          return concluir(idsPagos, inv);
         }
         // categorias que ainda não existem (da planilha, ou "Outros"): criadas uma vez cada
         const novas = new Map();
@@ -1075,7 +1345,7 @@ window.GS = window.GS || {};
           };
         });
         const criadas = await GS.api.importarTransacoes(lista);
-        concluir(criadas.map(t => t.id), inv);
+        concluir([...idsPagos, ...criadas.map(t => t.id)], inv);
       } catch (err) {
         console.error('Falha ao importar', err);
         b.disabled = false;
@@ -1109,7 +1379,7 @@ window.GS = window.GS || {};
     passoArquivo();
   }
 
-  GS.importar = { abrir, _testes: { investimentoDaLinha, sugestaoDeInvestimento, linhasDoPdf, extratoDoPdf, lerCsv, lerOfx, dataIso, centavos, separadorDecimal, adivinharColunas, linhasDaTabela, motorDeCategorias } };
+  GS.importar = { abrir, _testes: { investimentoDaLinha, sugestaoDeInvestimento, linhasDoPdf, extratoDoPdf, lerCsv, lerOfx, dataIso, centavos, separadorDecimal, adivinharColunas, linhasDaTabela, motorDeCategorias, conferirSaldos, dicaDoBanco, bancoPeloLayout, pagamentoDeFatura } };
 
   // botão "Importar" da tela Transações
   document.getElementById('importar')?.addEventListener('click', abrir);

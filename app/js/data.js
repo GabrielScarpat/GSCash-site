@@ -1194,6 +1194,43 @@ window.GS = window.GS || {};
       return responder(t);
     },
 
+    // pagamentos de fatura vindos de um extrato importado: o mesmo registro do "Pagar fatura", com o id fixo
+    // da importação (importar de novo não repete; o "Desfazer" da importação tira). ids já usados ficam de fora
+    // lista = [{ id, cartaoId, fatura: 'AAAA-MM', valor, data, contaId }]
+    importarPagamentosFatura(lista) {
+      const db = carregar();
+      const usados = new Set(db.transacoes.map(t => t.id));
+      const criados = [];
+      for (const dados of lista) {
+        const cartao = db.carteiras.find(c => c.id === dados.cartaoId);
+        const conta = db.carteiras.find(c => c.id === dados.contaId);
+        const valor = Math.round(Number(dados.valor) || 0);
+        const id = String(dados.id || '');
+        if (!id || usados.has(id) || !cartao || !cartao.credito || !conta || valor <= 0) continue;
+        if (!/^\d{4}-\d{2}$/.test(dados.fatura || '') || !/^\d{4}-\d{2}-\d{2}$/.test(dados.data || '')) continue;
+        usados.add(id);
+        const t = {
+          id,
+          tipo: 'pagamento',
+          titulo: `Fatura ${cartao.nome} · ${GS.mesAnoDeIso(dados.fatura).split(' ')[0].toLowerCase()}`,
+          descricao: '',
+          valor,
+          data: dados.data,
+          categoriaId: null,
+          carteiraId: conta.id,
+          cartaoId: cartao.id,
+          fatura: dados.fatura,
+          forma: 'debito',
+          parcelas: 1,
+          criadoEm: Date.now() + criados.length,
+        };
+        db.transacoes.push(t);
+        criados.push(t);
+      }
+      if (criados.length) salvar();
+      return responder(criados);
+    },
+
     // remove todos os pagamentos de uma fatura
     desfazerPagamentos(cartaoId, fatura) {
       const db = carregar();
