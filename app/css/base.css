@@ -43,6 +43,11 @@
 *::before,
 *::after { box-sizing: border-box; }
 
+/* toque duplo não dá zoom (tocar duas vezes rápido num botão, como as setas do calendário, aumentava a
+   tela no celular). A pinça com dois dedos continua funcionando. Vai em todo elemento porque o
+   navegador só olha os ancestrais até a primeira área com rolagem (modal, rodas do calendário). */
+* { touch-action: manipulation; }
+
 html { -webkit-text-size-adjust: 100%; }
 
 body {

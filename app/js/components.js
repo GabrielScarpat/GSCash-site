@@ -582,11 +582,16 @@ window.GS = window.GS || {};
     };
   };
 
-  /* ---------- Campo de data (mostra "30 set 2026") ---------- */
+  /* ---------- Campo de data (mostra "30 set 2026") ----------
+     Tocar no título ("Novembro 2026") troca os dias por duas rodas de rolar, uma de mês e uma de ano,
+     para pular para longe sem ir mês por mês. Teclado: nos dias, as setas andam pelos dias, PageUp e
+     PageDown trocam o mês e Enter escolhe; nas rodas, cima e baixo mudam o valor, esquerda e direita
+     trocam entre mês e ano, e Enter volta para os dias. */
 
   GS.campoData = function (iso, aoMudar) {
     const SEMANA = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
     const MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+    const ALT = 44;   // altura de cada item das rodas (igual ao .roda button do calendario.css)
 
     const botao = el('button', 'input select-btn');
     botao.type = 'button';
@@ -599,11 +604,34 @@ window.GS = window.GS || {};
     let mes = null;   // primeiro dia do mês exibido
     let foco = null;  // dia com foco do teclado
     let pop = null;
+    let modo = 'dias';           // 'dias' ou 'rodas'
+    let rodaAtiva = 'mes';       // a roda que as setas do teclado mexem
+    let rodas = {};              // { mes, ano }, cada uma com ir(i) e passo(n)
+    let anos = [];
 
     const pintar = () => { rotulo.textContent = GS.dataMedia(atual); };
     const inicioDoMes = d => new Date(d.getFullYear(), d.getMonth(), 1);
+    const ultimoDia = (a, m) => new Date(a, m + 1, 0).getDate();
+
+    // anos das rodas: 20 para trás e 10 para frente de hoje, alargado para caber o dia escolhido
+    function listaDeAnos() {
+      const h = GS.hoje().getFullYear();
+      const a = Number(String(atual || '').slice(0, 4)) || h;
+      const de = Math.min(h - 20, a), ate = Math.max(h + 10, a);
+      return Array.from({ length: ate - de + 1 }, (_, i) => de + i);
+    }
+
+    const tituloHtml = () => `
+      <button type="button" class="cal-title-btn" data-trocar aria-expanded="${modo === 'rodas'}"
+        aria-label="${GS.mesAno(mes)}: escolher mês e ano"><span>${GS.mesAno(mes)}</span>${icone('chevron-down')}</button>`;
+    const setasHtml = `
+      <div class="cal-nav">
+        <button type="button" data-mes="-1" aria-label="Mês anterior">${icone('chevron-left')}</button>
+        <button type="button" data-mes="1" aria-label="Próximo mês">${icone('chevron-right')}</button>
+      </div>`;
 
     function desenhar() {
+      if (modo === 'rodas') return desenharRodas();
       const hoje = GS.isoData(GS.hoje());
       const inicio = GS.somarDias(mes, -mes.getDay());
       const focoIso = GS.isoData(foco);
@@ -619,19 +647,107 @@ window.GS = window.GS || {};
       }).join('');
 
       pop.innerHTML = `
-        <div class="cal-head">
-          <span class="cal-title" aria-live="polite">${GS.mesAno(mes)}</span>
-          <div class="cal-nav">
-            <button type="button" data-mes="-1" aria-label="Mês anterior">${icone('chevron-left')}</button>
-            <button type="button" data-mes="1" aria-label="Próximo mês">${icone('chevron-right')}</button>
-          </div>
-        </div>
+        <div class="cal-head" aria-live="polite">${tituloHtml()}${setasHtml}</div>
         <div class="cal-week" aria-hidden="true">${SEMANA.map(s => `<span>${s}</span>`).join('')}</div>
         <div class="cal-grid">${dias}</div>
         <div class="cal-foot">
           <button type="button" class="chip-btn" data-ir="${hoje}">Hoje</button>
           <button type="button" class="chip-btn" data-ir="${GS.isoData(GS.somarDias(GS.hoje(), -1))}">Ontem</button>
         </div>`;
+    }
+
+    function desenharRodas() {
+      anos = listaDeAnos();
+      if (!anos.includes(mes.getFullYear())) mes = new Date(mes.getFullYear() < anos[0] ? anos[0] : anos[anos.length - 1], mes.getMonth(), 1);
+      pop.innerHTML = `
+        <div class="cal-head" aria-live="polite">${tituloHtml()}${setasHtml}</div>
+        <div class="rodas">
+          <div class="roda" data-roda="mes" role="listbox" aria-label="Mês">${MESES.map((n, i) =>
+            `<button type="button" data-i="${i}" tabindex="-1" role="option">${n[0].toUpperCase() + n.slice(1)}</button>`).join('')}</div>
+          <div class="roda" data-roda="ano" role="listbox" aria-label="Ano">${anos.map((a, i) =>
+            `<button type="button" data-i="${i}" tabindex="-1" role="option">${a}</button>`).join('')}</div>
+        </div>
+        <div class="cal-foot"><button type="button" class="btn btn-primary btn-block" data-pronto>Ver os dias</button></div>`;
+      rodas = {
+        mes: ligarRoda(pop.querySelector('[data-roda="mes"]'), mes.getMonth(), i => { mes = new Date(mes.getFullYear(), i, 1); atualizarTitulo(); }),
+        ano: ligarRoda(pop.querySelector('[data-roda="ano"]'), anos.indexOf(mes.getFullYear()), i => { mes = new Date(anos[i], mes.getMonth(), 1); atualizarTitulo(); }),
+      };
+      marcarRoda();
+    }
+
+    function atualizarTitulo() {
+      const t = pop && pop.querySelector('[data-trocar]');
+      if (!t) return;
+      t.querySelector('span').textContent = GS.mesAno(mes);
+      t.setAttribute('aria-label', `${GS.mesAno(mes)}: escolher mês e ano`);
+    }
+
+    const marcarRoda = () => pop.querySelectorAll('.roda').forEach(r => r.classList.toggle('ativa', r.dataset.roda === rodaAtiva));
+
+    // roda de rolar: o item parado no meio é o escolhido; tocar num item leva ele para o meio
+    function ligarRoda(roda, inicial, aoMudarRoda) {
+      const itens = [...roda.children];
+      let escolhido = inicial, espera, alvo = null, vez = 0;
+      const limitar = i => Math.max(0, Math.min(itens.length - 1, i));
+      const marcar = i => itens.forEach((b, j) => {
+        b.classList.toggle('no-centro', j === i);
+        b.setAttribute('aria-selected', j === i);
+      });
+      roda.scrollTop = inicial * ALT;
+      marcar(inicial);
+
+      roda.addEventListener('scroll', () => {
+        const i = limitar(Math.round(roda.scrollTop / ALT));
+        marcar(i);
+        clearTimeout(espera);
+        if (alvo !== null) { if (i === alvo) alvo = null; return; }   // girando por seta: não troca no meio do caminho
+        espera = setTimeout(() => { if (i !== escolhido) { escolhido = i; aoMudarRoda(i); } }, 80);
+      });
+      roda.addEventListener('click', e => {
+        const b = e.target.closest('button');
+        if (!b) return;
+        e.stopPropagation();
+        rodaAtiva = roda.dataset.roda;
+        marcarRoda();
+        roda.scrollTo({ top: Number(b.dataset.i) * ALT, behavior: 'smooth' });
+      });
+
+      return {
+        // gira até o item sem avisar de volta (quem chamou já trocou o mês)
+        ir(i) {
+          escolhido = i;
+          const minha = ++vez;   // vários cliques seguidos: só o último vale
+          alvo = Math.round(roda.scrollTop / ALT) === i ? null : i;
+          roda.scrollTo({ top: i * ALT, behavior: 'smooth' });
+          // se a animação não andar (aba em segundo plano, movimento reduzido), pula direto
+          setTimeout(() => {
+            if (minha !== vez) return;
+            if (Math.round(roda.scrollTop / ALT) !== i) roda.scrollTop = i * ALT;
+            alvo = null;
+            marcar(i);
+          }, 450);
+        },
+        // seta do teclado: um item para cima ou para baixo
+        passo(n) {
+          const i = limitar(escolhido + n);
+          if (i === escolhido) return;
+          this.ir(i);
+          aoMudarRoda(i);
+        },
+      };
+    }
+
+    function trocarModo(novo) {
+      modo = novo;
+      rodaAtiva = 'mes';
+      if (modo === 'dias') {
+        // volta para o mês escolhido nas rodas, com o foco no mesmo dia (ou no último, se o mês for mais curto)
+        foco = new Date(mes.getFullYear(), mes.getMonth(), Math.min(foco.getDate(), ultimoDia(mes.getFullYear(), mes.getMonth())));
+      }
+      desenhar();
+      posicionar();
+      if (modo === 'dias') focarDia();
+      else pop.querySelector('[data-trocar]').focus();
     }
 
     function posicionar() {
@@ -669,6 +785,7 @@ window.GS = window.GS || {};
       // sempre abre no dia de hoje (o dia escolhido continua marcado)
       foco = GS.hoje();
       mes = inicioDoMes(foco);
+      modo = 'dias';
       pop = el('div', 'cal-pop');
       pop.setAttribute('role', 'dialog');
       pop.setAttribute('aria-label', 'Escolher data');
@@ -682,17 +799,43 @@ window.GS = window.GS || {};
       pop.addEventListener('click', e => {
         const b = e.target.closest('button');
         if (!b) return;
-        if (b.dataset.mes) {
-          mes = new Date(mes.getFullYear(), mes.getMonth() + Number(b.dataset.mes), 1);
-          foco = new Date(mes.getFullYear(), mes.getMonth(), Math.min(foco.getDate(), new Date(mes.getFullYear(), mes.getMonth() + 1, 0).getDate()));
-          desenhar();
-          pop.querySelector(`[data-mes="${b.dataset.mes}"]`).focus();
+        if (b.hasAttribute('data-trocar')) trocarModo(modo === 'dias' ? 'rodas' : 'dias');
+        else if (b.hasAttribute('data-pronto')) trocarModo('dias');
+        else if (b.dataset.mes) {
+          const n = Number(b.dataset.mes);
+          mes = new Date(mes.getFullYear(), mes.getMonth() + n, 1);
+          if (modo === 'dias') {
+            foco = new Date(mes.getFullYear(), mes.getMonth(), Math.min(foco.getDate(), ultimoDia(mes.getFullYear(), mes.getMonth())));
+            desenhar();
+            pop.querySelector(`[data-mes="${n}"]`).focus();
+          } else if (!anos.includes(mes.getFullYear())) {
+            mes = new Date(mes.getFullYear(), mes.getMonth() - n, 1);   // fim da lista de anos: fica onde está
+          } else {
+            rodas.mes.ir(mes.getMonth());
+            rodas.ano.ir(anos.indexOf(mes.getFullYear()));
+            atualizarTitulo();
+          }
         }
-        if (b.dataset.dia) escolher(b.dataset.dia);
-        if (b.dataset.ir) escolher(b.dataset.ir);
+        else if (b.dataset.dia) escolher(b.dataset.dia);
+        else if (b.dataset.ir) escolher(b.dataset.ir);
       });
 
       pop.addEventListener('keydown', e => {
+        if (modo === 'rodas') {
+          const nasSetas = e.target.closest('.cal-nav');
+          if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+            e.preventDefault();
+            rodas[rodaAtiva].passo(e.key === 'ArrowUp' ? -1 : 1);
+          } else if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && !nasSetas) {
+            e.preventDefault();
+            rodaAtiva = e.key === 'ArrowLeft' ? 'mes' : 'ano';
+            marcarRoda();
+          } else if (e.key === 'Enter' && !nasSetas) {
+            e.preventDefault();
+            trocarModo('dias');
+          }
+          return;
+        }
         if (!e.target.dataset.dia) return;
         const passos = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 };
         if (passos[e.key]) { e.preventDefault(); irPara(GS.somarDias(foco, passos[e.key])); }

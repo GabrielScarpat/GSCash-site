@@ -37,6 +37,66 @@
 .cal-nav button:hover { background: var(--surface-2); color: var(--text); }
 .cal-nav svg { width: 17px; height: 17px; }
 
+/* o título é um botão: abre as rodas de mês e ano */
+.cal-title-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 34px;
+  padding: 0 8px;
+  border-radius: 9px;
+  font-size: 16.5px;
+  font-weight: 600;
+  letter-spacing: -.01em;
+  color: var(--text);
+}
+.cal-title-btn:hover { background: var(--surface-2); }
+.cal-title-btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+.cal-title-btn svg { width: 16px; height: 16px; color: var(--text-2); transition: transform .15s; }
+.cal-title-btn[aria-expanded="true"] svg { transform: rotate(180deg); }
+
+/* rodas de rolar: mês e ano (cada item tem 44px, o mesmo ALT do components.js) */
+.rodas { position: relative; display: grid; grid-template-columns: 1.4fr 1fr; gap: 8px; height: 282px; }
+.rodas::before {   /* faixa do item escolhido */
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 44px;
+  transform: translateY(-50%);
+  background: var(--surface-2);
+  border-radius: 11px;
+  pointer-events: none;
+}
+.rodas::after {    /* esmaece em cima e embaixo */
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(#fff 0%, rgba(255, 255, 255, 0) 32%, rgba(255, 255, 255, 0) 68%, #fff 100%);
+}
+.roda {
+  position: relative;
+  overflow-y: auto;
+  scroll-snap-type: y mandatory;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  padding: 119px 0;   /* (282 - 44) / 2: o primeiro e o último item conseguem chegar no meio */
+}
+.roda::-webkit-scrollbar { display: none; }
+.roda button {
+  display: block;
+  width: 100%;
+  height: 44px;
+  scroll-snap-align: center;
+  font-size: 16px;
+  color: var(--muted);
+  transition: color .12s;
+}
+.roda button.no-centro { color: var(--text); font-weight: 600; font-size: 17px; }
+.roda.ativa button.no-centro { color: var(--primary); }   /* a roda que as setas do teclado mexem */
+
 .cal-week, .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); }
 .cal-week span { padding: 4px 0 8px; text-align: center; color: var(--muted); font-size: 12.5px; font-weight: 500; }
 .cal-grid { gap: 2px 0; }
