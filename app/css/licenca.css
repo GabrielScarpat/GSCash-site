@@ -206,3 +206,42 @@ details.pix-dobra[open] .pix-qr { margin-top: 12px; }
 .cartao-recusado .ic { background: #F4DCD6; color: var(--danger); }
 .cartao-analise .ic { background: #F6E6CF; color: #9A5B12; }
 .desafio-quadro { display: block; width: 100%; height: 440px; max-height: 60vh; border: 1px solid var(--line, #e3e0d8); border-radius: 10px; background: #fff; }
+
+/* =========================================================
+   Convite do "Indique e ganhe" (js/avisos-app.js): uma vez por conta, ao entrar.
+   Mesmo desenho do pop-up do site; o título fica no corpo, como no aviso de bônus.
+   ========================================================= */
+
+.modal.convite-indique { max-width: 440px; }
+.modal.convite-indique .modal-head { display: none; }
+.modal.convite-indique .modal-body { padding-top: 30px; }
+.ci-corpo { display: grid; gap: 0; }
+.ci-icone { display: grid; place-items: center; width: 64px; height: 64px; border-radius: 18px; background: var(--primary-soft); color: var(--primary); margin-bottom: 18px; }
+.ci-icone svg { width: 34px; height: 34px; stroke-width: 1.6; }
+.ci-titulo { margin: 0 0 8px; font-size: 23px; font-weight: 600; line-height: 1.2; letter-spacing: -.02em; text-wrap: balance; }
+.ci-corpo p { margin: 0 0 18px; color: var(--text-2); font-size: 15px; line-height: 1.5; }
+.ci-link { display: flex; align-items: center; gap: 10px; padding: 12px 14px; margin-bottom: 12px; border: 1px solid var(--border-strong); border-radius: 12px; background: var(--surface-2); }
+.ci-link svg { width: 18px; height: 18px; flex-shrink: 0; color: var(--muted); }
+.ci-link span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14.5px; }
+.ci-link small { color: var(--muted); font-size: 12.5px; }
+.ci-prog { display: flex; align-items: center; gap: 10px; font-size: 13.5px; color: var(--text-2); }
+.ci-prog .barra { flex: 1; height: 8px; border-radius: 99px; background: var(--surface-2); overflow: hidden; }
+.ci-prog .barra i { display: block; height: 100%; min-width: 0; background: var(--primary); border-radius: 99px; }
+.ci-prog b { color: var(--text); font-weight: 600; }
+.modal-foot.ci-rodape { display: grid; grid-template-columns: 1fr; gap: 4px; }
+.modal-foot.ci-rodape .btn { width: 100%; justify-content: center; }
+.ci-depois { height: 40px; border: 0; background: transparent; color: var(--muted); font: inherit; font-size: 14.5px; cursor: pointer; }
+.ci-depois:hover { color: var(--text); }
+
+/* =========================================================
+   Atualização obrigatória no celular (js/avisos-app.js): tela inteira, sem fechar
+   ========================================================= */
+
+.atualizar-obrigatorio { position: fixed; inset: 0; z-index: 400; display: grid; place-items: center; padding: calc(24px + env(safe-area-inset-top)) 28px calc(24px + env(safe-area-inset-bottom)); background: var(--bg); text-align: center; }
+.atualizar-obrigatorio .ao-corpo { display: grid; justify-items: center; max-width: 320px; }
+.atualizar-obrigatorio .ao-icone { display: grid; place-items: center; width: 72px; height: 72px; border-radius: 20px; background: var(--primary); color: #F3EFE4; margin-bottom: 22px; }
+.atualizar-obrigatorio .ao-icone svg { width: 36px; height: 36px; }
+.atualizar-obrigatorio h2 { margin: 0 0 10px; font-size: 24px; line-height: 1.2; letter-spacing: -.02em; }
+.atualizar-obrigatorio p { margin: 0 0 26px; color: var(--text-2); font-size: 15.5px; line-height: 1.5; }
+.atualizar-obrigatorio .btn { width: 100%; justify-content: center; }
+.sem-rolagem, .sem-rolagem body { overflow: hidden; }
