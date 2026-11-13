@@ -201,11 +201,14 @@
       { rotulo: 'Editar', icone: 'pencil', escrita: true, acao: () => abrirForm(cart) },
       {
         rotulo: 'Excluir', icone: 'trash', perigo: true, escrita: true, acao: async () => {
-          const usadas = ctx.transacoes.filter(t => t.carteiraId === cart.id).length;
-          if (usadas) {
-            return GS.toast(`Não dá para excluir: ${GS.plural(usadas, 'transação usa', 'transações usam')} esta carteira.`, 'erro');
-          }
-          const ok = await GS.confirmar({ titulo: 'Excluir carteira?', mensagem: `A carteira <strong>${esc(cart.nome)}</strong> será removida.` });
+          // conta tudo que sai junto: a carteira pode ser a de origem, o cartão ou o destino de uma transferência
+          const usadas = ctx.transacoes.filter(t => t.carteiraId === cart.id || t.cartaoId === cart.id || t.destinoId === cart.id).length;
+          const ok = await GS.confirmar(usadas
+            ? {
+              titulo: 'Excluir carteira?', botao: 'Apagar mesmo assim',
+              mensagem: `Hoje a carteira <strong>${esc(cart.nome)}</strong> possui <strong>${GS.plural(usadas, 'transação', 'transações')}</strong>. Apagá-la irá apagar permanentemente todas as transações dela.`,
+            }
+            : { titulo: 'Excluir carteira?', mensagem: `A carteira <strong>${esc(cart.nome)}</strong> será removida.` });
           if (!ok) return;
           try {
             await GS.api.excluirCarteira(cart.id);

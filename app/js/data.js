@@ -1133,6 +1133,13 @@ window.GS = window.GS || {};
         db.carteiras.forEach(c => {
           if (u.pagavamCom.includes(c.id) && c.credito && !c.credito.pagarComId) c.credito.pagarComId = u.itens[0].id;
         });
+        // as transações que saíram junto com a carteira voltam, e as regras de repetição delas também
+        const tem = new Set(db.transacoes.map(x => x.id));
+        db.transacoes.push(...(u.transacoes || []).filter(x => !tem.has(x.id)));
+        const series = new Set((u.transacoes || []).map(x => x.recorrenciaId).filter(Boolean));
+        (u.regras || []).filter(r => series.has(r.id)).forEach(r => {
+          db.recorrencias = db.recorrencias.filter(x => x.id !== r.id).concat(r);
+        });
       }
       salvar();
       return responder(true);
@@ -1388,15 +1395,17 @@ window.GS = window.GS || {};
       return responder(c);
     },
 
+    // apaga a carteira e todas as transações que usam ela (como carteira, cartão ou destino de transferência)
     excluirCarteira(id) {
       const db = carregar();
-      const usadas = db.transacoes.filter(t => t.carteiraId === id || t.cartaoId === id || t.destinoId === id).length;
-      if (usadas) {
-        return falhar(`Não dá para excluir: ${usadas} ${usadas === 1 ? 'transação usa' : 'transações usam'} esta carteira.`);
-      }
+      const usa = t => t.carteiraId === id || t.cartaoId === id || t.destinoId === id;
+      const transacoes = db.transacoes.filter(usa);
       const posicao = db.carteiras.findIndex(c => c.id === id);
       const pagavamCom = db.carteiras.filter(c => c.credito && c.credito.pagarComId === id).map(c => c.id);
-      lembrarExclusao('carteiras', db.carteiras.filter(c => c.id === id), { posicao, pagavamCom });
+      lembrarExclusao('carteiras', db.carteiras.filter(c => c.id === id),
+        { posicao, pagavamCom, transacoes: copia(transacoes), regras: copia(db.recorrencias) });
+      db.transacoes = db.transacoes.filter(t => !usa(t));
+      limparRegras(db);
       db.carteiras = db.carteiras.filter(c => c.id !== id);
       db.investimentos = (db.investimentos || []).filter(v => v.id !== id);
       db.investimentos.forEach(v => { if (v.destinoId === id) v.destinoId = null; });
