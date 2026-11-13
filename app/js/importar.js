@@ -325,7 +325,7 @@ window.GS = window.GS || {};
     let inicio = linhas.findIndex(l => /movimenta|movimentos/i.test(norm(textoDe(l.itens))));
     if (inicio < 0) inicio = 0;
     // onde a lista de lançamentos acaba (só vale depois do primeiro lançamento: antes pode ser o cabeçalho)
-    const fim = /n.mero do cart.o|comprovantes? de pagamento|aplica..o n|investimentos|resumo do m.s|saldo final|indicadores|informa..es adicionais|lan.amentos futuros/i;
+    const fim = /n.mero do cart.o|comprovantes? de pagamento|aplica..o n|investimentos|resumo do m.s|saldo final|indicadores|informa..es adicionais|lan.amentos futuros|^\s*resumo\s*$/i;
 
     // coluna dos valores: a borda direita que mais se repete entre as linhas com valor
     const bordas = new Map();
@@ -341,9 +341,15 @@ window.GS = window.GS || {};
     const naColuna = (i, col) => col && VALOR_PDF.test(i.s) && Math.abs(i.x2 - col.x2) < 14;
     const movDe = vals => (cabecalhoCD ? vals.find(i => naColuna(i, cabecalhoCD.c) || naColuna(i, cabecalhoCD.d))
       : vals.find(i => Math.abs(i.x2 - colValor) < 14));
-    const valorDe = i => (cabecalhoCD && naColuna(i, cabecalhoCD.d) ? -Math.abs(centavos(i.s, ',')) : centavos(i.s, ','));
+    const valorDe = i => {
+      if (cabecalhoCD && naColuna(i, cabecalhoCD.d)) return -Math.abs(centavos(i.s, ','));
+      // sem sinal escrito, dentro de uma seção de entradas ou de saídas (Nubank)
+      if (sinalSecao && !/[-−+]|\d\s*[CD]$|\([+-]\)/i.test(i.s)) return sinalSecao * Math.abs(centavos(i.s, ','));
+      return centavos(i.s, ',');
+    };
     // Inter: a data vem num título por dia ("12 de Outubro de 2026 Saldo do dia: R$ 1.330,33")
-    const DIA_EXTENSO = new RegExp(`^(\\d{1,2}) de (${MESES_PDF.join('|')}) (?:de )?(20\\d{2})\\b`);
+    const DIA_EXTENSO = /^(\d{1,2}) (?:de )?(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)[a-z]* (?:de )?(20\d{2})\b/;
+    const MESES_CURTOS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
     // Colunas de texto separadas: o tipo ("Pix recebido") é o principal, o nome vira o detalhe, e a
     // forma de pagamento e a categoria ficam de fora.
     //   PicPay: Hora | Tipo | Origem / Destino | Forma de pagamento | Valor
@@ -391,14 +397,18 @@ window.GS = window.GS || {};
       const v = item && centavos(item.s, ',');
       if (v !== null && v !== undefined && item) saldos.push({ pos: saida.length, valor: v, linha, data: linha ? null : quando });
     };
-    let data = null, atual = null, lancados = 0;
+    let data = null, atual = null, lancados = 0, sinalSecao = 0;
     for (let k = 0; k < lista.length; k++) {
       const l = lista[k];
       const texto = textoDe(l.itens);
       if (fim.test(semAcento(texto))) { if (saida.length) break; continue; }
+      const secao = norm(textoDe(l.itens.filter(i => !DATA_PDF.test(i.s)))).match(/^total de (entradas|saidas)\b/);
+      if (secao && !DIA_EXTENSO.test(norm(texto))) { sinalSecao = secao[1] === 'entradas' ? 1 : -1; atual = null; continue; }
       const porExtenso = norm(texto).match(DIA_EXTENSO);
       if (porExtenso) {
-        data = dataValida(Number(porExtenso[3]), MESES_PDF.indexOf(porExtenso[2]) + 1, Number(porExtenso[1]));
+        data = dataValida(Number(porExtenso[3]), MESES_CURTOS.indexOf(porExtenso[2]) + 1, Number(porExtenso[1]));
+        const secaoNoDia = norm(texto).match(/\btotal de (entradas|saidas)\b/);  // Nubank: o dia começa na seção
+        if (secaoNoDia) sinalSecao = secaoNoDia[1] === 'entradas' ? 1 : -1;
         // "Saldo do dia: R$ 1.330,33" (Inter), "Saldo ao final do dia: R$ 0,00" (PicPay)
         const saldoDia = texto.match(/saldo[^R$]*R\$\s*([-−]?\s*\d{1,3}(?:\.\d{3})*,\d{2})/i);
         if (saldoDia) anotarSaldo({ s: saldoDia[1] }, false, data);
@@ -455,6 +465,19 @@ window.GS = window.GS || {};
       let principal = textoDe(descricaoDe(itens, mov))
         // C6: a coluna Tipo ("Saída PIX") repete a descrição que vem logo depois ("Pix enviado para NOME")
         .replace(/^(sa[ií]da|entrada)\s+(pix|ted|doc)\s+(?=(pix|ted|doc|transf)\w*\b)/i, '');
+      const proxSaldo = lista[k + 1];
+      if (!principal && proxSaldo && proxSaldo.pagina === l.pagina && Math.abs(proxSaldo.y - l.y) < l.altura * 1.5
+        && !proxSaldo.itens.some(i => VALOR_PDF.test(i.s)) && ehSaldo(textoDe(proxSaldo.itens.filter(i => !DATA_PDF.test(i.s))))) {
+        let valorSaldo = mov.s;
+        const sinal = lista[k + 2];
+        if (sinal && sinal.pagina === l.pagina && sinal.itens.length === 1 && SINAL_PDF.test(sinal.itens[0].s)
+          && Math.abs(sinal.y - proxSaldo.y) < l.altura * 1.5) { valorSaldo += ' ' + sinal.itens[0].s; k++; }
+        const doDia = ehData(proxSaldo) ? (m => completar(m[1], m[2], m[3]))(partesData(proxSaldo.itens[0].s)) : data;
+        anotarSaldo({ s: valorSaldo }, false, doDia);
+        k++;
+        atual = null;
+        continue;
+      }
       if (!principal && data) {
         // histórico em volta da linha (BB): tipo em cima ("Pix - Enviado"), quem e quando embaixo
         // Mercado Pago: o mesmo texto quebrado em duas linhas ("Liberação de dinheiro Venda" / "com Pix")
@@ -489,9 +512,28 @@ window.GS = window.GS || {};
       lancados++;
     }
 
+    if (saida.length && !saldos.length) {
+      const doResumo = re => {
+        const l = linhas.slice(0, inicio + 1).find(x => x.itens.some(i => re.test(norm(i.s))) && x.itens.some(i => VALOR_PDF.test(i.s)));
+        return l && l.itens.find(i => VALOR_PDF.test(i.s));
+      };
+      const ini = doResumo(/^saldo inicial$/), fin = doResumo(/^saldo final do periodo$/);
+      if (ini && fin) {
+        saldos.push({ pos: 0, valor: centavos(ini.s, ','), linha: false, data: null });
+        saldos.push({ pos: saida.length, valor: centavos(fin.s, ','), linha: false, data: null });
+      }
+    }
     const conferencia = conferirSaldos(saida.map(t => t.valor), saldos, saida.map(t => t.data));
     const lidas = saida.filter(t => t.valor).map(t => {
-      let principal = t.principal, detalhe = t.detalhe.join(' ').trim(), data = t.data;
+      const ruido = d => /^doc\.?\s*:/i.test(d) || /^\*{3}\.\d{3}\.\d{3}-\*{2}$/.test(d)
+        || /^\d{2}\.\d{3}\.\d{3}[ /]\d{4}-\d{2}$/.test(d);
+      let principal = t.principal, detalhe = t.detalhe.filter(d => !ruido(d.trim())).join(' ').trim(), data = t.data;
+      detalhe = detalhe.replace(/^(fav|favorecido)\.?\s*:\s*/i, '');  // Sicoob: FAV.: NOME
+      const nu = `${principal} ${detalhe}`.replace(/\s+/g, ' ').trim().match(/^transfer[eê]ncia (recebida|enviada) pelo pix\s+(.*)$/i);
+      if (nu) {
+        const nome = nu[2].split(/\s+-\s+(?=[•*]|\d{3}\.)/)[0].trim();
+        return { data, valor: t.valor, titulo: `Pix ${nu[1].toLowerCase() === 'recebida' ? 'recebido' : 'enviado'}${nome ? ` · ${nome}` : ''}` };
+      }
       const aspas = !detalhe && comAspas(principal);
       if (aspas) { principal = aspas[1]; detalhe = aspas[2]; }
       // BB: "Compra com Cartão" / "Pix - Enviado" com "03/11 20:47 NOME" embaixo; Inter (aspas); Bradesco ("DES: NOME")
