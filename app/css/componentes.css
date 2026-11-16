@@ -80,6 +80,12 @@
 
 .bar.bare { background: transparent; }
 
+/* limite do cartão: usado hoje (cheio) + previsto até o fechamento (claro) */
+.bar.duas { display: flex; }
+.bar.duas > span { border-radius: 99px 0 0 99px; }
+.bar.duas > span:only-child { border-radius: 99px; }
+.bar.duas > span.prev { opacity: .32; border-radius: 0 99px 99px 0; }
+
 .stacked-bar {
   display: flex;
   gap: 3px;

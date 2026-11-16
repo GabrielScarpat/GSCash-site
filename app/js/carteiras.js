@@ -61,15 +61,14 @@
     if (!GS.faturas.temCredito(c)) return '';
     const faturas = GS.faturas.listar(c, ctx.transacoes);
     const atual = faturas.find(f => f.atual);
-    const usado = faturas.reduce((s, f) => s + f.restante, 0);
+    const uso = GS.faturas.limite(c, ctx.transacoes);
     const limite = c.credito.limite;
-    const uso = limite ? usado / limite : 0;
     const mes = GS.mesAnoDeIso(atual.chave).split(' ')[0].toLowerCase();
     return `
       <a class="invoice" href="faturas.html?cartao=${encodeURIComponent(c.id)}">
         <div class="invoice-line"><span class="invoice-title">${icone('card')}Crédito · fatura de ${mes}</span><strong class="num">${GS.moeda(atual.restante)}</strong></div>
-        ${limite ? `<div class="bar"><span class="${uso >= 0.9 ? 'danger' : ''}" style="width:${Math.min(100, uso * 100)}%"></span></div>` : ''}
-        <div class="invoice-line"><span>Fecha em ${GS.dataCurta(atual.fechamento)}</span>${limite ? `<span class="num">${GS.moeda(usado)} / ${GS.moeda(limite)}</span>` : ''}</div>
+        ${limite ? GS.faturas.barra(uso, limite) : ''}
+        <div class="invoice-line"><span>Fecha em ${GS.dataCurta(atual.fechamento)}</span>${limite ? `<span class="num">${GS.moeda(uso.previsto)} / ${GS.moeda(limite)}</span>` : ''}</div>
       </a>`;
   }
 

@@ -335,9 +335,31 @@ window.GS = window.GS || {};
         .sort((x, y) => y.chave.localeCompare(x.chave));
     },
 
-    // quanto do limite está comprometido (inclui parcelas futuras)
-    limiteUsado(cartao, transacoes) {
-      return GS.faturas.listar(cartao, transacoes).reduce((s, f) => s + f.restante, 0);
+    // quanto do limite está comprometido:
+    //   usado    = compras feitas até hoje (as parcelas futuras delas contam inteiras, como no banco)
+    //   previsto = usado + o que já está lançado com data até o fechamento da fatura aberta
+    //              (ex.: a assinatura que cai antes de fechar)
+    // lançamentos com data mais à frente, como os próximos meses de uma assinatura,
+    // só passam a usar o limite quando chega o dia deles
+    limite(cartao, transacoes, hoje = GS.hoje()) {
+      const faturas = GS.faturas.listar(cartao, transacoes, hoje);
+      const atual = faturas.find(f => f.atual);
+      const hojeIso = GS.isoData(hoje);
+      const fechamentoIso = GS.isoData(atual.fechamento);
+      const ate = (f, dataIso) => Math.max(0, f.itens.reduce((s, i) => s + (i.transacao.data <= dataIso ? i.valor : 0), 0) - f.pago);
+      return {
+        usado: faturas.reduce((s, f) => s + ate(f, hojeIso), 0),
+        previsto: faturas.reduce((s, f) => s + ate(f, fechamentoIso), 0),
+        fechamento: atual.fechamento,
+      };
+    },
+
+    // barra do limite em duas partes: usado hoje (cheio) + previsto até o fechamento (claro)
+    barra({ usado, previsto }, limite) {
+      const pUsado = Math.min(100, (usado / limite) * 100);
+      const pPrev = Math.min(100 - pUsado, ((previsto - usado) / limite) * 100);
+      const cor = previsto / limite >= 0.9 ? 'danger' : '';
+      return `<div class="bar duas"><span class="${cor}" style="width:${pUsado}%"></span>${pPrev > 0 ? `<span class="prev ${cor}" style="width:${pPrev}%"></span>` : ''}</div>`;
     },
 
     STATUS: {

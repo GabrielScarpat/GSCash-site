@@ -36,7 +36,10 @@
 
     const cartao = cartoes.find(c => c.id === estado.cartaoId) || cartoes[0];
     estado.cartaoId = cartao.id;
-    const faturas = GS.faturas.listar(cartao, ctx.transacoes);
+    // faturas futuras ficam escondidas (aparecem sozinhas quando a anterior fecha);
+    // só fica a que já recebeu um pagamento adiantado, para ele não sumir da tela
+    const faturas = GS.faturas.listar(cartao, ctx.transacoes)
+      .filter(f => f.status !== 'futura' || f.pagamentos.length);
 
     // fatura padrão: a mais antiga que precisa ser paga; senão, a aberta
     if (!faturas.some(f => f.chave === estado.chave)) {
@@ -68,7 +71,8 @@
   function hero(cartao, faturas, f) {
     const hoje = GS.hoje();
     const i = faturas.indexOf(f);
-    const usado = faturas.reduce((s, x) => s + x.restante, 0);
+    const uso = GS.faturas.limite(cartao, ctx.transacoes, hoje);
+    const { usado, previsto } = uso;
     const limite = cartao.credito.limite;
 
     const dias = GS.diasEntre(hoje, f.fechamento);
@@ -112,9 +116,9 @@
         </div>
         ${limite ? `
         <div class="fat-limite">
-          <div class="fat-limite-line"><span>Limite usado</span><span class="num"><strong>${GS.moeda(usado)}</strong> de ${GS.moeda(limite)}</span></div>
-          <div class="bar"><span class="${usado / limite >= 0.9 ? 'danger' : ''}" style="width:${Math.min(100, (usado / limite) * 100)}%"></span></div>
-          <div class="fat-limite-line"><span class="muted">Inclui parcelas futuras</span><span class="muted num">Disponível ${GS.moeda(Math.max(0, limite - usado))}</span></div>
+          <div class="fat-limite-line"><span>${previsto > usado ? `Limite previsto até ${GS.dataCurta(uso.fechamento)}` : 'Limite usado'}</span><span class="num"><strong>${GS.moeda(previsto)}</strong> de ${GS.moeda(limite)}</span></div>
+          ${GS.faturas.barra(uso, limite)}
+          <div class="fat-limite-line"><span class="muted">${previsto > usado ? `Usado hoje <span class="num">${GS.moeda(usado)}</span>` : 'Inclui parcelas futuras'}</span><span class="muted num">Disponível ${GS.moeda(Math.max(0, limite - previsto))}</span></div>
         </div>` : ''}
         <div class="fat-acoes">${acoes}</div>
       </section>`;
