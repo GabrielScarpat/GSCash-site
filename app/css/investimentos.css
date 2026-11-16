@@ -38,7 +38,8 @@
 
 /* lista */
 .inv-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); align-items: start; }
-.inv-apl { display: grid; gap: 12px; }
+.inv-apl { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; min-width: 0; }
+.inv-apl > * { min-width: 0; }
 .inv-topo { display: flex; gap: 12px; align-items: flex-start; }
 .inv-topo .tile { flex: none; }
 .inv-nome { flex: 1; min-width: 0; }
