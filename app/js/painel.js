@@ -156,7 +156,7 @@
     // média por dia: conta só os dias que já passaram
     const fimEfetivo = p.fim > hoje && p.inicio <= hoje ? hoje : p.fim;
     const dias = Math.max(1, GS.diasEntre(p.inicio, fimEfetivo) + 1);
-    const investido = movimentosInvestimento(ctx, ini, fim);
+    const investido = GS.calc.investimentosNoPeriodo(ctx.carteiras, ctx.transacoes, ini, fim);
     desenharResultado(p, receitas, total, Math.round(total / dias), futuro, investido);
     desenharFixos(ctx, p);
 
@@ -251,20 +251,6 @@
     el.innerHTML = `fixos: <b class="num">${GS.moeda(Math.round(total / dias))}</b> por dia · ${GS.moeda(total)} no ${estado.modo === 'ano' ? 'ano' : 'mês'} em ${GS.plural(contas, 'conta', 'contas')}`;
   }
 
-  // dinheiro que foi das contas para investimentos (aplicações) e voltou (resgates) entre as datas
-  function movimentosInvestimento(ctx, ini, fim) {
-    const ehInv = new Set(ctx.carteiras.filter(c => c.tipo === 'investimento').map(c => c.id));
-    const r = { aplicado: 0, resgatado: 0, aplicacoes: 0, resgates: 0 };
-    ctx.transacoes.forEach(t => {
-      if (t.tipo !== 'transferencia' || t.data < ini || t.data > fim) return;
-      const sai = ehInv.has(t.carteiraId), entra = ehInv.has(t.destinoId);
-      if (entra && !sai) { r.aplicado += t.valor; r.aplicacoes++; }
-      else if (sai && !entra) { r.resgatado += t.valor; r.resgates++; }
-    });
-    r.liquido = r.aplicado - r.resgatado;
-    return r;
-  }
-
   // Sobrou = Entrou − Saiu − Investiu: o que ficou nas contas no período
   function desenharResultado(p, entrou, saiu, media, futuro, inv) {
     const comInv = inv.aplicacoes + inv.resgates > 0;
@@ -331,6 +317,8 @@
         nome: GS.mesAno(inicio),
         entrou: GS.calc.somar(GS.calc.receitasNoPeriodo(ctx.transacoes, ini, fim)),
         saiu: GS.calc.somar(GS.calc.despesasNoPeriodo(ctx.transacoes, ini, fim)),
+        // aplicações − resgates do mês: sai do "sobrou", como no card Resultado
+        investiu: GS.calc.investimentosNoPeriodo(ctx.carteiras, ctx.transacoes, ini, fim).liquido,
         parcial,
       };
     });
@@ -394,7 +382,7 @@
 
     dados.forEach((d, i) => {
       const centro = ml + grupo * i + grupo / 2;
-      const sobra = d.entrou - d.saiu;
+      const sobra = d.entrou - d.saiu - d.investiu;
       svg += `<rect class="faixa" data-i="${i}" tabindex="0" aria-label="${d.nome}: entrou ${GS.moeda(d.entrou)}, saiu ${GS.moeda(d.saiu)}"
         x="${ml + grupo * i + 3}" y="${mt}" width="${grupo - 6}" height="${H - mt - mb + 44}" rx="10"/>`;
       svg += barra(centro - bw - 1, d.entrou, 'var(--entrou)', d.parcial);
@@ -412,11 +400,12 @@
     const tip = caixa.querySelector('.tip');
     const mostrar = f => {
       const d = dados[Number(f.dataset.i)];
-      const sobra = d.entrou - d.saiu;
+      const sobra = d.entrou - d.saiu - d.investiu;
       caixa.querySelectorAll('.faixa').forEach(x => x.classList.toggle('on', x === f));
       tip.innerHTML = `<b>${d.nome}${d.parcial ? ' · até hoje' : ''}</b>
         <div><span><i class="sq sq-entrou"></i>Entrou</span><span class="num">${GS.moeda(d.entrou)}</span></div>
         <div><span><i class="sq sq-saiu"></i>Saiu</span><span class="num">${GS.moeda(d.saiu)}</span></div>
+        ${d.investiu ? `<div><span><i class="sq sq-investiu"></i>${d.investiu < 0 ? 'Resgatou' : 'Investiu'}</span><span class="num">${d.investiu < 0 ? '+' : ''}${GS.moeda(Math.abs(d.investiu))}</span></div>` : ''}
         <div class="tot"><span>${sobra < 0 ? 'Faltou' : 'Sobrou'}</span><span class="num">${GS.moeda(Math.abs(sobra))}</span></div>`;
       const r = f.getBoundingClientRect(), base = caixa.getBoundingClientRect();
       tip.style.left = Math.max(0, Math.min(r.left - base.left + r.width / 2 - 100, base.width - 210)) + 'px';

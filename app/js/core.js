@@ -224,6 +224,21 @@ window.GS = window.GS || {};
       return transacoes.filter(t => t.tipo === 'receita' && t.data >= inicioIso && t.data <= fimIso);
     },
 
+    // dinheiro que foi das contas para investimentos (aplicações) e voltou (resgates) entre duas datas ISO;
+    // liquido = aplicado − resgatado (é o que sai do "Sobrou": Entrou − Saiu − liquido)
+    investimentosNoPeriodo(carteiras, transacoes, inicioIso, fimIso) {
+      const ehInv = new Set(carteiras.filter(c => c.tipo === 'investimento').map(c => c.id));
+      const r = { aplicado: 0, resgatado: 0, aplicacoes: 0, resgates: 0 };
+      transacoes.forEach(t => {
+        if (t.tipo !== 'transferencia' || t.data < inicioIso || t.data > fimIso) return;
+        const sai = ehInv.has(t.carteiraId), entra = ehInv.has(t.destinoId);
+        if (entra && !sai) { r.aplicado += t.valor; r.aplicacoes++; }
+        else if (sai && !entra) { r.resgatado += t.valor; r.resgates++; }
+      });
+      r.liquido = r.aplicado - r.resgatado;
+      return r;
+    },
+
     somar(transacoes) {
       return transacoes.reduce((s, t) => s + t.valor, 0);
     },

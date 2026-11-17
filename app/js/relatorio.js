@@ -72,6 +72,8 @@ window.GS = window.GS || {};
     const receitas = vazio ? [] : GS.calc.receitasNoPeriodo(ctx.transacoes, ini, fim);
     const saiu = GS.calc.somar(despesas);
     const entrou = GS.calc.somar(receitas);
+    // aplicações − resgates: sai do "Sobrou", como no Painel
+    const investiu = vazio ? 0 : GS.calc.investimentosNoPeriodo(ctx.carteiras, ctx.transacoes, ini, fim).liquido;
 
     const aIni = GS.isoData(anterior.inicio);
     const aFim = GS.isoData(anterior.fim);
@@ -102,7 +104,7 @@ window.GS = window.GS || {};
       modo, ctx, hoje, ateHoje, vazio, fimData, kicker, titulo, arquivo,
       sub: `${intervalo(p.inicio, vazio ? p.fim : fimData)}${ateHoje && !vazio ? ' (até hoje)' : ''} · gerado em ${GS.dataMedia(hoje)}`,
       tituloCurto: titulo,
-      entrou, saiu, saldo, visiveis: visiveis.length, ocultas,
+      entrou, saiu, investiu, saldo, visiveis: visiveis.length, ocultas,
       comparar: {
         entrou: comparar(entrou, GS.calc.somar(GS.calc.receitasNoPeriodo(ctx.transacoes, aIni, aFim)), nome, true),
         saiu: comparar(saiu, GS.calc.somar(GS.calc.despesasNoPeriodo(ctx.transacoes, aIni, aFim)), nome, false),
@@ -126,7 +128,7 @@ window.GS = window.GS || {};
 
   function folhaResumo(d, op, n, total) {
     const { ctx } = d;
-    const sobrou = d.entrou - d.saiu;
+    const sobrou = d.entrou - d.saiu - d.investiu;
     const cmp = c => (op.comparar && c.texto ? `<span class="${c.classe}">${c.texto}</span>` : '');
     const vazioSec = texto => `<p class="f-vazio">${texto}</p>`;
 
@@ -196,7 +198,9 @@ window.GS = window.GS || {};
           <div class="f-kpi"><small><i class="saiu"></i>Saiu</small><strong>${moeda(d.saiu)}</strong>${cmp(d.comparar.saiu)}</div>
           <div class="f-kpi"><small><i class="sobrou"></i>${sobrou < 0 ? 'Faltou' : 'Sobrou'}</small>
             <strong class="${sobrou < 0 ? 'ruim' : 'bom'}">${moeda(Math.abs(sobrou))}</strong>
-            <span>${d.entrou > 0 ? `${pct(Math.abs(sobrou), d.entrou)}% do que entrou` : ''}</span></div>
+            <span>${d.investiu
+              ? `${d.investiu > 0 ? 'depois de investir' : 'com o resgate de'} ${moeda(Math.abs(d.investiu))}`
+              : d.entrou > 0 ? `${pct(Math.abs(sobrou), d.entrou)}% do que entrou` : ''}</span></div>
         </div>
         <p class="f-saldo">${saldoTexto}: <b>${moeda(d.saldo)}</b> em ${GS.plural(d.visiveis, 'carteira', 'carteiras')}${d.ocultas
           ? ` (${GS.plural(d.ocultas, 'carteira oculta fica', 'carteiras ocultas ficam')} de fora)` : ''}.</p>
@@ -228,18 +232,20 @@ window.GS = window.GS || {};
         <td>${esc(cart ? cart.nome : '—')}${t.forma === 'credito' ? ' <span class="f-lim">· crédito</span>' : ''}</td>
         <td class="r ${receita ? 'bom' : 'ruim'}">${receita ? '+' : '−'} ${moeda(t.valor)}</td></tr>`;
     });
-    const sobrou = d.entrou - d.saiu;
+    const sobrou = d.entrou - d.saiu - d.investiu;
     const totais = `
       <table class="f-tab f-totais"><tbody>
         <tr><td>Entrou</td><td class="r bom">+ ${moeda(d.entrou)}</td></tr>
         <tr><td>Saiu</td><td class="r ruim">− ${moeda(d.saiu)}</td></tr>
+        ${d.investiu > 0 ? `<tr><td>Investiu</td><td class="r">− ${moeda(d.investiu)}</td></tr>` : ''}
+        ${d.investiu < 0 ? `<tr><td>Resgatou de investimentos</td><td class="r">+ ${moeda(-d.investiu)}</td></tr>` : ''}
         <tr><td>${sobrou < 0 ? 'Faltou' : 'Sobrou'}</td><td class="r">${moeda(Math.abs(sobrou))}</td></tr>
       </tbody></table>`;
 
     const blocos = [];
     for (let i = 0; i < linhas.length; i += LINHAS_POR_FOLHA) blocos.push(linhas.slice(i, i + LINHAS_POR_FOLHA));
-    // os totais ocupam umas 4 linhas: se não couberem na última folha, vão para uma nova
-    const ultimaCheia = blocos.length && blocos[blocos.length - 1].length > LINHAS_POR_FOLHA - 4;
+    // os totais ocupam umas 4 ou 5 linhas: se não couberem na última folha, vão para uma nova
+    const ultimaCheia = blocos.length && blocos[blocos.length - 1].length > LINHAS_POR_FOLHA - linhasTotais(d);
 
     const folhas = blocos.map((bloco, i) => {
       const ultima = i === blocos.length - 1;
@@ -272,7 +278,12 @@ window.GS = window.GS || {};
     if (!d.lancamentos.length) return 0;
     const blocos = Math.ceil(d.lancamentos.length / LINHAS_POR_FOLHA);
     const naUltima = d.lancamentos.length - (blocos - 1) * LINHAS_POR_FOLHA;
-    return blocos + (naUltima > LINHAS_POR_FOLHA - 4 ? 1 : 0);
+    return blocos + (naUltima > LINHAS_POR_FOLHA - linhasTotais(d) ? 1 : 0);
+  }
+
+  // linhas que a tabela de totais ocupa (uma a mais quando houve aplicação ou resgate)
+  function linhasTotais(d) {
+    return d.investiu ? 5 : 4;
   }
 
   function montarFolhas(d, op) {
