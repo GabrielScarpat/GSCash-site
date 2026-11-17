@@ -14,14 +14,14 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="GSCASH">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <link rel="stylesheet" href="css/fonts.css?v=96f669b">
-  <link rel="stylesheet" href="css/estilos.css?v=96f669b">
-  <script src="js/vendor/capacitor.js?v=96f669b"></script>
-  <script src="js/vendor/supabase.js?v=96f669b"></script>
-  <script src="js/supabase.js?v=96f669b"></script>
+  <link rel="stylesheet" href="css/fonts.css?v=b97d7bd">
+  <link rel="stylesheet" href="css/estilos.css?v=b97d7bd">
+  <script src="js/vendor/capacitor.js?v=b97d7bd"></script>
+  <script src="js/vendor/supabase.js?v=b97d7bd"></script>
+  <script src="js/supabase.js?v=b97d7bd"></script>
 </head>
 <body>
-<script src="js/abertura.js?v=96f669b"></script>
+<script src="js/abertura.js?v=b97d7bd"></script>
 
 <header class="topbar">
   <div class="topbar-inner">
@@ -94,7 +94,14 @@
           <div class="res-item"><small><span class="sq sq-entrou"></span>Entrou</small><strong class="num" id="entrou">—</strong></div>
           <div class="res-item"><small><span class="sq sq-saiu"></span>Saiu</small><strong class="num" id="saiu">—</strong></div>
         </div>
-        <div class="sobrou"><span id="sobrouRotulo">Sobrou</span><strong class="num" id="sobrou">—</strong></div>
+        <!-- aplicações − resgates do período: só aparece quando houve algum (js/painel.js) -->
+        <a class="investiu hidden" id="investiu" href="investimentos.html">
+          <span class="tile"><span data-icon="trending"></span></span>
+          <div><small id="investiuRotulo">Investiu</small><strong class="num" id="investiuValor"></strong></div>
+          <span class="info"><span id="investiuInfo"></span><span data-icon="chevron-right"></span></span>
+        </a>
+        <div class="sobrou"><span class="rot"><span id="sobrouRotulo">Sobrou</span><small class="hidden" id="sobrouSub"></small></span><strong class="num" id="sobrou">—</strong></div>
+        <p class="aviso-saldo hidden" id="avisoInvestiu"></p>
         <div class="uso">
           <div class="bar"><span id="usoBarra"></span></div>
           <p><span id="usoTexto"></span><span class="num" id="mediaDia"></span></p>
@@ -155,28 +162,28 @@
   </div>
 </main>
 
-<script src="js/data.js?v=96f669b"></script>
-<script src="js/core.js?v=96f669b"></script>
-<script src="js/components.js?v=96f669b"></script>
-<script src="js/widgets.js?v=96f669b"></script>
-<script src="js/carteira-form.js?v=96f669b"></script>
-<script src="js/boas-vindas.js?v=96f669b"></script>
-<script src="js/transacao-form.js?v=96f669b"></script>
-<script src="js/transferencia-form.js?v=96f669b"></script>
-<script src="js/licenca.js?v=96f669b"></script>
-<script src="js/avisos-app.js?v=96f669b"></script>
-<script src="js/compra-loja.js?v=96f669b"></script>
-<script src="js/baixar.js?v=96f669b"></script>
-<script src="js/atualizacao.js?v=96f669b"></script>
-<script src="js/instalar.js?v=96f669b"></script>
-<script src="js/lembrete.js?v=96f669b"></script>
-<script src="js/indices.js?v=96f669b"></script>
-<script src="js/investimento-form.js?v=96f669b"></script>
-<script src="js/importar.js?v=96f669b"></script>
-<script src="js/excluir-conta.js?v=96f669b"></script>
-<script src="js/duas-etapas.js?v=96f669b"></script>
-<script src="js/relatorio.js?v=96f669b"></script>
-<script src="js/relatorio-categorias.js?v=96f669b"></script>
-<script src="js/painel.js?v=96f669b"></script>
+<script src="js/data.js?v=b97d7bd"></script>
+<script src="js/core.js?v=b97d7bd"></script>
+<script src="js/components.js?v=b97d7bd"></script>
+<script src="js/widgets.js?v=b97d7bd"></script>
+<script src="js/carteira-form.js?v=b97d7bd"></script>
+<script src="js/boas-vindas.js?v=b97d7bd"></script>
+<script src="js/transacao-form.js?v=b97d7bd"></script>
+<script src="js/transferencia-form.js?v=b97d7bd"></script>
+<script src="js/licenca.js?v=b97d7bd"></script>
+<script src="js/avisos-app.js?v=b97d7bd"></script>
+<script src="js/compra-loja.js?v=b97d7bd"></script>
+<script src="js/baixar.js?v=b97d7bd"></script>
+<script src="js/atualizacao.js?v=b97d7bd"></script>
+<script src="js/instalar.js?v=b97d7bd"></script>
+<script src="js/lembrete.js?v=b97d7bd"></script>
+<script src="js/indices.js?v=b97d7bd"></script>
+<script src="js/investimento-form.js?v=b97d7bd"></script>
+<script src="js/importar.js?v=b97d7bd"></script>
+<script src="js/excluir-conta.js?v=b97d7bd"></script>
+<script src="js/duas-etapas.js?v=b97d7bd"></script>
+<script src="js/relatorio.js?v=b97d7bd"></script>
+<script src="js/relatorio-categorias.js?v=b97d7bd"></script>
+<script src="js/painel.js?v=b97d7bd"></script>
 </body>
 </html>

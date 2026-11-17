@@ -166,9 +166,26 @@
 .sobrou { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding-top: 16px; border-top: 1px solid var(--border); }
 .sobrou span { color: var(--text-2); font-size: 15px; }
 .sobrou strong { font-size: 32px; font-weight: 700; letter-spacing: -.03em; }
+.sobrou .rot small { display: block; margin-top: 2px; color: var(--muted); font-size: 13px; }
 .uso { margin-top: 14px; }
 .uso .bar { height: 10px; }
-.uso .bar span { background: var(--saiu); }
+/* uma linha só: o gasto passa para o investido num degradê curto no encontro (--corte) */
+.uso .bar span { --corte: 104%; background: linear-gradient(90deg,
+  var(--saiu) 0, var(--saiu) calc(var(--corte) - 4%), var(--investiu) calc(var(--corte) + 4%), var(--investiu) 100%); }
+
+/* quanto foi investido no período (aplicações − resgates) */
+.resultado { --investiu: #E9A21B; --investiu-texto: #A86E06; --investiu-soft: #FBF1DC; }
+.investiu { display: flex; align-items: center; gap: 12px; margin: 0 0 16px; padding: 12px 14px; border-radius: 14px; background: var(--investiu-soft); color: inherit; text-decoration: none; transition: filter .12s; }
+.investiu:hover { filter: brightness(.98); }
+.investiu .tile { flex: none; width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center; background: #fff; color: var(--investiu-texto); }
+.investiu .tile svg { width: 19px; height: 19px; }
+.investiu small { display: block; color: var(--text-2); font-size: 13.5px; }
+.investiu strong { display: block; font-size: 20px; font-weight: 700; letter-spacing: -.02em; color: var(--investiu-texto); }
+.investiu .info { margin-left: auto; display: flex; align-items: center; gap: 6px; color: var(--text-2); font-size: 13.5px; white-space: nowrap; }
+.investiu .info svg { flex: none; width: 16px; height: 16px; }
+.aviso-saldo { display: flex; gap: 8px; margin-top: 10px; color: var(--text-2); font-size: 13.5px; line-height: 1.45; }
+.aviso-saldo svg { flex: none; width: 16px; height: 16px; margin-top: 1px; color: var(--muted); }
+.aviso-saldo b { color: var(--text); font-weight: 600; white-space: nowrap; }
 .uso p { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 8px; color: var(--text-2); font-size: 14px; }
 .uso b { color: var(--text); font-weight: 600; }
 .uso p.fixos-dia { display: block; margin-top: 4px; font-size: 13.5px; color: var(--muted); }
@@ -218,5 +235,6 @@
 @media (max-width: 760px) {
   .res-item strong { font-size: 22px; }
   .sobrou strong { font-size: 26px; }
+  .investiu .info #investiuInfo { display: none; }   /* sem espaço: fica só a seta */
   .legenda-evo { order: 3; width: 100%; }
 }

@@ -156,7 +156,8 @@
     // média por dia: conta só os dias que já passaram
     const fimEfetivo = p.fim > hoje && p.inicio <= hoje ? hoje : p.fim;
     const dias = Math.max(1, GS.diasEntre(p.inicio, fimEfetivo) + 1);
-    desenharResultado(p, receitas, total, Math.round(total / dias), futuro);
+    const investido = movimentosInvestimento(ctx, ini, fim);
+    desenharResultado(p, receitas, total, Math.round(total / dias), futuro, investido);
     desenharFixos(ctx, p);
 
     desenharEvolucao(ctx, hoje);
@@ -250,22 +251,64 @@
     el.innerHTML = `fixos: <b class="num">${GS.moeda(Math.round(total / dias))}</b> por dia · ${GS.moeda(total)} no ${estado.modo === 'ano' ? 'ano' : 'mês'} em ${GS.plural(contas, 'conta', 'contas')}`;
   }
 
-  function desenharResultado(p, entrou, saiu, media, futuro) {
-    const sobrou = entrou - saiu;
+  // dinheiro que foi das contas para investimentos (aplicações) e voltou (resgates) entre as datas
+  function movimentosInvestimento(ctx, ini, fim) {
+    const ehInv = new Set(ctx.carteiras.filter(c => c.tipo === 'investimento').map(c => c.id));
+    const r = { aplicado: 0, resgatado: 0, aplicacoes: 0, resgates: 0 };
+    ctx.transacoes.forEach(t => {
+      if (t.tipo !== 'transferencia' || t.data < ini || t.data > fim) return;
+      const sai = ehInv.has(t.carteiraId), entra = ehInv.has(t.destinoId);
+      if (entra && !sai) { r.aplicado += t.valor; r.aplicacoes++; }
+      else if (sai && !entra) { r.resgatado += t.valor; r.resgates++; }
+    });
+    r.liquido = r.aplicado - r.resgatado;
+    return r;
+  }
+
+  // Sobrou = Entrou − Saiu − Investiu: o que ficou nas contas no período
+  function desenharResultado(p, entrou, saiu, media, futuro, inv) {
+    const comInv = inv.aplicacoes + inv.resgates > 0;
+    const investiu = comInv ? inv.liquido : 0;
+    const sobrou = entrou - saiu - investiu;
     $('resultadoTitulo').textContent = futuro
       ? (estado.modo === 'mes' ? 'Previsto para o mês' : 'Previsto para o período')
       : (estado.modo === 'mes' ? 'Resultado do mês' : 'Resultado do período');
     $('resultadoSub').textContent = rotulo(p);
     $('entrou').textContent = GS.moeda(entrou);
     $('saiu').textContent = GS.moeda(saiu);
-    $('sobrouRotulo').textContent = sobrou < 0 ? 'Faltou' : 'Sobrou';
-    $('sobrou').textContent = GS.moeda(Math.abs(sobrou));
-    $('sobrou').className = 'num ' + (sobrou < 0 ? 'neg' : 'pos');
 
-    const uso = entrou > 0 ? saiu / entrou : (saiu > 0 ? 1 : 0);
-    $('usoBarra').style.width = `${Math.min(100, uso * 100)}%`;
+    $('investiu').classList.toggle('hidden', !comInv);
+    if (comInv) {
+      $('investiuRotulo').textContent = investiu < 0 ? 'Resgatou de investimentos' : 'Investiu';
+      $('investiuValor').textContent = (investiu < 0 ? '+' : '') + GS.moeda(Math.abs(investiu));
+      $('investiuInfo').textContent = [
+        inv.aplicacoes ? GS.plural(inv.aplicacoes, 'aplicação', 'aplicações') : '',
+        inv.resgates ? GS.plural(inv.resgates, 'resgate', 'resgates') : '',
+      ].filter(Boolean).join(' · ');
+    }
+
+    $('sobrouRotulo').textContent = sobrou < 0 ? 'Faltou' : 'Sobrou';
+    $('sobrouSub').textContent = sobrou < 0 ? 'saiu das contas' : 'ficou nas contas';
+    $('sobrouSub').classList.toggle('hidden', !comInv);
+    $('sobrou').textContent = GS.moeda(Math.abs(sobrou));
+    $('sobrou').className = 'num ' + (sobrou < 0 ? 'neg' : sobrou > 0 ? 'pos' : '');
+
+    // faltou porque investiu mais do que sobrava: a diferença saiu do saldo que já estava nas contas
+    const aMais = investiu > 0 && sobrou < 0 ? Math.min(investiu, -sobrou) : 0;
+    $('avisoInvestiu').classList.toggle('hidden', !aMais);
+    if (aMais) {
+      $('avisoInvestiu').innerHTML = `${icone('wallet')}<span>Você investiu <b class="num">${GS.moeda(aMais)}</b> a mais do que sobrou ${estado.modo === 'mes' ? 'do mês' : 'no período'}, tirados do saldo que já estava nas contas.</span>`;
+    }
+
+    // barra: o gasto e, logo depois, o investido (cada um em % do que entrou)
+    const parte = v => (entrou > 0 ? v / entrou : 0);
+    const inv100 = Math.max(0, investiu);
+    const uso = entrou > 0 ? parte(saiu) : (saiu > 0 ? 1 : 0);
+    const cheio = entrou > 0 ? parte(saiu + inv100) : uso;
+    $('usoBarra').style.width = `${Math.min(100, cheio * 100)}%`;
+    $('usoBarra').style.setProperty('--corte', inv100 && entrou > 0 ? `${(saiu / (saiu + inv100)) * 100}%` : '104%');
     $('usoTexto').textContent = entrou > 0
-      ? `Gastou ${Math.round(uso * 100)}% do que entrou`
+      ? `Gastou ${Math.round(uso * 100)}%${inv100 ? ` e investiu ${Math.round(parte(inv100) * 100)}%` : ''} do que entrou`
       : (saiu > 0 ? 'Nenhuma receita no período' : 'Nenhuma transação no período');
     $('mediaDia').innerHTML = `média de <b>${GS.moeda(media)}</b> por dia`;
   }
