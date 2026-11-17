@@ -23,14 +23,20 @@ window.GS = window.GS || {};
       GS.toast('Pagamentos de fatura não podem ser editados.', 'erro');
       return;
     }
-    const [categorias, todasCarteiras, serie] = await Promise.all([
+    const [categorias, todasCarteiras, serie, investimentos] = await Promise.all([
       GS.api.listarCategorias(), GS.api.listarCarteiras(),
       transacao && transacao.recorrenciaId ? GS.api.infoSerie(transacao.id) : null,
+      GS.api.listarInvestimentos(),
     ]);
     // investimentos não entram na lista (a não ser que este lançamento já seja de um)
     const carteiras = todasCarteiras.filter(c => c.tipo !== 'investimento' || (transacao && c.id === transacao.carteiraId));
     const cartoes = GS.faturas.cartoes(carteiras);
     const editando = !!transacao;
+    // "Aplicação" (dinheiro novo num investimento que já existe) só em lançamento novo;
+    // editar uma aplicação é editar a transferência dela
+    const comAplicacao = !editando;
+    const infoInv = new Map(investimentos.map(v => [v.id, v]));
+    const ativos = todasCarteiras.filter(c => c.tipo === 'investimento' && !(infoInv.get(c.id) || {}).resgatadoEm);
     const t = transacao || {
       tipo: 'despesa',
       titulo: '',
@@ -59,12 +65,12 @@ window.GS = window.GS || {};
     corpo.noValidate = true;
     corpo.style.display = 'contents';
     corpo.innerHTML = `
-      <div class="toggle" role="group" aria-label="Frequência">
+      <div class="toggle" role="group" aria-label="Frequência" data-so-lancamento>
         <button type="button" data-rec="0" class="active" aria-pressed="true">${icone('clock')}Única</button>
         <button type="button" data-rec="1" aria-pressed="false">${icone('repeat')}Recorrente</button>
       </div>
 
-      <div class="recurring-box hidden" data-recbox>
+      <div class="recurring-box hidden" data-recbox data-so-lancamento>
         <div class="field"><span class="field-label">Repetir</span><div data-slot="freq"></div></div>
         <div class="field">
           <span class="field-label">Até quando</span>
@@ -82,25 +88,34 @@ window.GS = window.GS || {};
 
       <div class="field">
         <span class="field-label">Tipo</span>
-        <div class="toggle" role="group" aria-label="Tipo">
+        <div class="toggle${comAplicacao ? ' tres' : ''}" role="group" aria-label="Tipo">
           <button type="button" data-tipo="despesa">${icone('arrow-down')}Gasto</button>
           <button type="button" data-tipo="receita">${icone('arrow-up')}Receita</button>
+          ${comAplicacao ? `<button type="button" data-tipo="aplicacao">${icone('trending')}Aplicação</button>` : ''}
         </div>
       </div>
 
-      <div class="row-2 empilhar">
+      <div class="field hidden" data-campo-investimento>
+        <span class="field-label">Investimento</span><div data-slot="investimento"></div>
+        <div class="sem-carteira hidden" data-sem-investimento>
+          <p>Você ainda não cadastrou nenhum investimento. Cadastre o primeiro dizendo como ele rende (CDI, Selic, IPCA...) e de qual conta o dinheiro saiu.</p>
+          <button type="button" class="btn btn-primary" data-cadastrar-investimento>${icone('plus')}Cadastrar investimento</button>
+        </div>
+      </div>
+
+      <div class="row-2 empilhar" data-so-lancamento>
         <div class="field"><span class="field-label">Categoria</span><div data-slot="categoria"></div></div>
         <div class="field"><span class="field-label">Subcategoria <span class="opt">(opcional)</span></span><div data-slot="subcategoria"></div></div>
       </div>
 
-      <div class="field">
+      <div class="field" data-so-lancamento>
         <label for="txTitulo" data-rotulo-titulo>Título</label>
         <div class="input" data-wrap="titulo"><input id="txTitulo" maxlength="80" placeholder="Ex.: Almoço, Uber, Mercado" value="${esc(tituloInicial)}" autofocus></div>
         <span class="field-hint hidden" data-dica-titulo></span>
         <span class="field-hint hidden" data-dica-receita>Recebe todo mês? Em <b>Mais opções</b>, escolha <b>Recorrente</b>: ela se repete até você cancelar.</span>
       </div>
 
-      <div class="field">
+      <div class="field" data-so-lancamento>
         <label for="txDesc">Descrição <span class="opt">(opcional)</span></label>
         <div class="input"><input id="txDesc" maxlength="200" placeholder="Adicione detalhes, se quiser" value="${esc(t.descricao)}"></div>
       </div>
@@ -140,17 +155,23 @@ window.GS = window.GS || {};
         ${icone('calendar')}
         <div><strong data-info-titulo></strong><span data-info-texto></span></div>
       </div>
+
+      <div class="info-aplicacao hidden" data-info-aplicacao>
+        ${icone('wallet')}
+        <span data-aplicacao-texto></span>
+      </div>
     `;
 
     const rodape = `
       <button type="button" class="btn btn-outline" data-fechar>Cancelar</button>
       <button type="button" class="btn btn-primary" data-salvar>${icone('check')}<span data-rotulo-salvar>${editando ? 'Salvar alterações' : 'Salvar gasto'}</span></button>
-      ${!editando && GS.importar && !GS.somenteLeitura ? `<p class="dica-importar">Tem muitos para lançar? <button type="button" class="link-btn" data-ir-importar>${icone('subir')}Importe o extrato</button></p>` : ''}`;
+      ${!editando && GS.importar && !GS.somenteLeitura ? `<p class="dica-importar" data-so-lancamento>Tem muitos para lançar? <button type="button" class="link-btn" data-ir-importar>${icone('subir')}Importe o extrato</button></p>` : ''}`;
 
     const modal = GS.abrirModal({
       titulo: 'Novo gasto', corpo, rodape, tamanho: 'lg form-gasto',
       avisoDescarte: () => (editando ? 'As alterações ainda não foram salvas.'
         : tipo === 'receita' ? 'A receita que você estava preenchendo ainda não foi salva.'
+        : tipo === 'aplicacao' ? 'A aplicação que você estava preenchendo ainda não foi salva.'
         : 'O gasto que você estava preenchendo ainda não foi salvo.'),
     });
     const $ = sel => corpo.querySelector(sel);
@@ -163,6 +184,7 @@ window.GS = window.GS || {};
       .forEach(c => c && c.classList.add('so-mais'));
     const botaoMais = GS.el('button', 'mais-opcoes', `${icone('chevron-down')}<span>Mais opções</span><small>repetir, descrição</small>`);
     botaoMais.type = 'button';
+    botaoMais.dataset.soLancamento = '';
     botaoMais.setAttribute('aria-expanded', 'false');
     corpo.append(botaoMais);
     const abrirMais = aberto => {
@@ -175,7 +197,7 @@ window.GS = window.GS || {};
 
     /* campos */
     const valor = GS.campoMoeda($('#txValor'), t.valor);
-    const data = GS.campoData(t.data, () => { atualizarDica(); atualizarFatura(); });
+    const data = GS.campoData(t.data, () => { atualizarDica(); atualizarFatura(); atualizarAplicacao(); });
     $('[data-slot="data"]').append(data.el);
 
     const opcoesCategoria = tipo => categorias
@@ -245,9 +267,62 @@ window.GS = window.GS || {};
       valor: t.carteiraId,
       placeholder: 'Escolha uma carteira',
       rotuloAria: 'Carteira ou cartão',
-      aoMudar: atualizarFatura,
+      aoMudar: () => { atualizarFatura(); atualizarAplicacao(); },
     });
     $('[data-slot="carteira"]').append(carteira.el);
+
+    /* aplicação: qual investimento recebe o dinheiro */
+    const comoRende = GS.formInvestimento ? GS.formInvestimento.comoRende : () => '';
+    const investimento = GS.criarSelect({
+      opcoes: ativos.map(c => ({ valor: c.id, rotulo: `${c.nome} · ${comoRende(infoInv.get(c.id))}`, icone: 'trending' })),
+      valor: ativos.some(c => c.id === t.investimentoId) ? t.investimentoId : (ativos[0] ? ativos[0].id : null),
+      placeholder: 'Escolha o investimento',
+      rotuloAria: 'Investimento',
+      aoMudar: atualizarAplicacao,
+    });
+    $('[data-slot="investimento"]').append(investimento.el);
+    investimento.el.classList.toggle('hidden', !ativos.length);
+    $('[data-sem-investimento]').classList.toggle('hidden', !!ativos.length);
+
+    // valor de hoje de cada investimento e saldo das contas (para a linha "Inter fica com…"): carrega ao entrar em Aplicação
+    let extras = null;
+    async function carregarExtras() {
+      if (extras) return;
+      extras = { transacoes: (await GS.carregarTudo()).transacoes, estimado: new Map() };
+      try {
+        const datas = extras.transacoes.filter(x => ativos.some(c => c.id === x.destinoId)).map(x => x.data)
+          .concat(investimentos.map(v => v.valorAtualEm).filter(Boolean)).sort();
+        await GS.indices.carregar(datas[0] || GS.isoData(GS.hoje()));
+        ativos.forEach(c => extras.estimado.set(c.id, GS.indices.estimar(infoInv.get(c.id), c, extras.transacoes)));
+      } catch (e) { /* sem os índices: a linha fala só da conta */ }
+      atualizarAplicacao();
+    }
+
+    function atualizarAplicacao() {
+      const caixa = $('[data-info-aplicacao]');
+      const inv = ativos.find(c => c.id === investimento.valor);
+      const conta = carteiras.find(c => c.id === carteira.valor);
+      const v = valor.valor;
+      if (tipo !== 'aplicacao' || !extras || !inv || !conta || !(v > 0)) { caixa.classList.add('hidden'); return; }
+      const sobra = GS.calc.saldoCarteira(conta, extras.transacoes, data.valor) - v;
+      const est = extras.estimado.get(inv.id);
+      const info = infoInv.get(inv.id);
+      const semTaxa = !info || info.indexador === 'sem_taxa';
+      const quando = GS.dataMedia(GS.parseData(data.valor));
+      let texto = `<b>${esc(conta.nome)}</b> fica com <b class="num">${GS.moeda(sobra)}</b>. `;
+      texto += est
+        ? `<b>${esc(inv.nome)}</b> passa a <b class="num">${GS.moeda(est.hoje + v)}</b>${semTaxa ? '.' : ` e os ${GS.moeda(v)} rendem a partir de ${quando}.`}`
+        : `${GS.moeda(v)} vão para <b>${esc(inv.nome)}</b>${semTaxa ? '.' : ` e rendem a partir de ${quando}.`}`;
+      $('[data-aplicacao-texto]').innerHTML = texto;
+      caixa.classList.remove('hidden');
+    }
+    $('#txValor').addEventListener('input', atualizarAplicacao);
+
+    // nenhum investimento ainda: o cadastro completo fica no formulário de investimento
+    $('[data-cadastrar-investimento]').addEventListener('click', async () => {
+      modal.fechar();
+      GS.formInvestimento.abrir({ ctx: await GS.carregarTudo() });
+    });
 
     const parcelas = GS.criarSelect({ opcoes: [], valor: t.parcelas || 1, rotuloAria: 'Parcelas', aoMudar: atualizarFatura });
     $('[data-slot="parcelas"]').append(parcelas.el);
@@ -267,14 +342,24 @@ window.GS = window.GS || {};
         b.classList.toggle('active', ativo);
         b.classList.toggle('expense', ativo && tipo === 'despesa');
         b.classList.toggle('income', ativo && tipo === 'receita');
+        b.classList.toggle('aplica', ativo && tipo === 'aplicacao');
         b.setAttribute('aria-pressed', ativo);
       });
+      // aplicação: só investimento, valor, data e de qual conta saiu (o dinheiro muda de lugar, não é gasto)
+      const aplicacao = tipo === 'aplicacao';
+      janela.classList.toggle('modo-aplicacao', aplicacao);
+      // sem investimento para receber: fica só o convite para cadastrar o primeiro
+      janela.classList.toggle('sem-investimento', aplicacao && !ativos.length);
+      $('[data-campo-investimento]').classList.toggle('hidden', !aplicacao);
+      modal.foot.querySelector('[data-salvar]').classList.toggle('hidden', aplicacao && !ativos.length);
+      if (aplicacao) { carregarExtras(); }
+      atualizarAplicacao();
       // "transação" é o nome geral; aqui a janela diz o que a pessoa está fazendo
       const receita = tipo === 'receita';
       modal.el.querySelector('.modal-title').textContent = editando
         ? (receita ? 'Editar receita' : 'Editar gasto')
-        : (receita ? 'Nova receita' : 'Novo gasto');
-      if (!editando) modal.foot.querySelector('[data-rotulo-salvar]').textContent = receita ? 'Salvar receita' : 'Salvar gasto';
+        : (aplicacao ? 'Nova aplicação' : receita ? 'Nova receita' : 'Novo gasto');
+      if (!editando) modal.foot.querySelector('[data-rotulo-salvar]').textContent = aplicacao ? 'Salvar aplicação' : receita ? 'Salvar receita' : 'Salvar gasto';
       // receita: exemplos de renda e a dica de repetir o salário (quem só via "gasto" não sabia que dava)
       $('#txTitulo').placeholder = receita ? 'Ex.: Salário, freela, Pix recebido' : 'Ex.: Almoço, Uber, Mercado';
       $('[data-dica-receita]').classList.toggle('hidden', !receita || editando);
@@ -282,6 +367,8 @@ window.GS = window.GS || {};
     corpo.querySelectorAll('[data-tipo]').forEach(b => b.addEventListener('click', () => {
       if (tipo === b.dataset.tipo) return;
       tipo = b.dataset.tipo;
+      // aplicação não se repete (a recorrência só sabe repetir gasto e receita)
+      if (tipo === 'aplicacao' && recorrente) { recorrente = false; pintarRepeticao(); }
       const opcoes = opcoesCategoria(tipo);
       categoria.definirOpcoes(opcoes, opcoes[0] ? opcoes[0].valor : null);
       trocarSubcategorias();
@@ -318,7 +405,7 @@ window.GS = window.GS || {};
       carteira.el.classList.toggle('hidden', semCarteira);
       $('[data-sem-carteira]').classList.toggle('hidden', !semCarteira);
 
-      $('[data-rotulo-carteira]').textContent = credito() ? 'Cartão' : 'Carteira';
+      $('[data-rotulo-carteira]').textContent = credito() ? 'Cartão' : tipo === 'aplicacao' ? 'Sai de' : 'Carteira';
       const comParcelas = credito() && !recorrente;
       $('[data-campo-parcelas]').classList.toggle('hidden', !comParcelas);
       $('[data-linha-carteira]').classList.toggle('single', !comParcelas);
@@ -452,7 +539,29 @@ window.GS = window.GS || {};
 
     const botaoSalvar = modal.foot.querySelector('[data-salvar]');
 
+    async function salvarAplicacao() {
+      erro($('[data-wrap="valor"]'), valor.valor > 0 ? '' : 'Informe um valor maior que zero.');
+      erro(investimento.botao, investimento.valor ? '' : 'Escolha o investimento.');
+      erro(carteira.botao, carteira.valor ? '' : carteiras.length ? 'Escolha de qual conta saiu.' : 'Crie uma carteira para continuar.');
+      if (!(valor.valor > 0 && investimento.valor && carteira.valor)) {
+        corpo.querySelector('.invalid')?.querySelector('input, button')?.focus?.();
+        return;
+      }
+      GS.salvando(botaoSalvar, true);
+      try {
+        await GS.api.aplicarInvestimento(investimento.valor, { valor: valor.valor, data: data.valor, origemId: carteira.valor });
+        const inv = ativos.find(c => c.id === investimento.valor);
+        GS.toast(`Aplicação salva · ${GS.moeda(valor.valor)} em ${inv.nome}`);
+        modal.fechar();
+        GS.notificarMudanca();
+      } catch (e) {
+        GS.toast(e.message, 'erro');
+        GS.salvando(botaoSalvar, false);
+      }
+    }
+
     async function salvar() {
+      if (tipo === 'aplicacao') return salvarAplicacao();
       if (!validar()) return;
       const dados = {
         tipo,

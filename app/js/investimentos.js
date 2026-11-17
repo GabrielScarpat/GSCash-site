@@ -118,6 +118,9 @@
         ? `<button type="button" class="btn btn-primary" data-confirmar="${c.id}">Confirmar resgate</button>`
         : livre(inv, hojeIso) && !semTaxa ? `<button type="button" class="btn btn-outline" data-resgatar="${c.id}">Resgatar</button>`
         : `<button type="button" class="btn btn-outline" data-valor="${c.id}">Atualizar valor</button>`;
+      // vencido não recebe mais dinheiro: só falta confirmar o resgate
+      const aplicar = vencido(inv, hojeIso) ? ''
+        : `<button type="button" class="btn btn-primary" data-aplicar="${c.id}">${icone('plus')}Aplicar mais</button>`;
       return `
         <section class="card inv-apl" data-id="${c.id}">
           <div class="inv-topo">
@@ -128,7 +131,7 @@
               : `<small class="${e.ganho >= 0 ? 'pos' : 'neg'}">${e.ganho >= 0 ? '+' : '−'}${GS.moeda(Math.abs(e.ganho))}</small>`}</div>
           </div>
           <div class="inv-prazo">${prazo}</div>
-          <div class="inv-pe">${acao}<button type="button" class="icon-btn" data-menu="${c.id}" aria-label="Mais opções de ${esc(c.nome)}">${icone('more')}</button></div>
+          <div class="inv-pe">${aplicar}${acao}<button type="button" class="icon-btn" data-menu="${c.id}" aria-label="Mais opções de ${esc(c.nome)}">${icone('more')}</button></div>
         </section>`;
     }).join('');
   }
@@ -148,7 +151,12 @@
     ctx, carteira, estimadoHoje: carteira ? (estimativas.get(carteira.id) || {}).hoje || 0 : 0,
   });
 
-  /* ---------- Atualizar valor, resgatar, confirmar vencimento ---------- */
+  /* ---------- Aplicar mais, atualizar valor, resgatar, confirmar vencimento ---------- */
+
+  const hojeIsoAgora = () => GS.isoData(GS.hoje());
+
+  // a mesma janela do Novo lançamento, já em "Aplicação" e com este investimento
+  const aplicarMais = c => GS.abrirFormTransacao(null, { tipo: 'aplicacao', investimentoId: c.id });
 
   function janelaValor({ titulo, texto, valorInicial, comConta, contaInicial, extra = '', botao, aoConfirmar }) {
     const contas = GS.calc.disponiveis(ctx.carteiras);
@@ -255,12 +263,13 @@
   $('novaAplicacao').addEventListener('click', () => (GS.somenteLeitura ? GS.toast(GS.TEXTO_SO_LEITURA, 'erro') : abrirForm()));
 
   document.querySelector('main').addEventListener('click', e => {
-    const alvo = e.target.closest('[data-resgatar], [data-valor], [data-confirmar], [data-menu]');
+    const alvo = e.target.closest('[data-aplicar], [data-resgatar], [data-valor], [data-confirmar], [data-menu]');
     if (!alvo) return;
-    const id = alvo.dataset.resgatar || alvo.dataset.valor || alvo.dataset.confirmar || alvo.dataset.menu;
+    const id = alvo.dataset.aplicar || alvo.dataset.resgatar || alvo.dataset.valor || alvo.dataset.confirmar || alvo.dataset.menu;
     const c = ctx.carteira.get(id);
     if (!c) return;
     if (GS.somenteLeitura && !alvo.dataset.menu) return GS.toast(GS.TEXTO_SO_LEITURA, 'erro');
+    if (alvo.dataset.aplicar) return aplicarMais(c);
     if (alvo.dataset.resgatar) return resgatar(c);
     if (alvo.dataset.valor) return atualizarValor(c);
     if (alvo.dataset.confirmar) return confirmarVencimento(c);
@@ -268,6 +277,7 @@
     const ativo = !(inv && inv.resgatadoEm);
     GS.abrirMenu(alvo, [
       ...(ativo ? [
+        ...(vencido(inv, hojeIsoAgora()) ? [] : [{ rotulo: 'Aplicar mais', icone: 'plus', escrita: true, acao: () => aplicarMais(c) }]),
         { rotulo: 'Editar', icone: 'pencil', escrita: true, acao: () => abrirForm(c) },
         { rotulo: 'Atualizar valor', icone: 'trending', escrita: true, acao: () => atualizarValor(c) },
         { rotulo: 'Resgatar', icone: 'arrow-up', escrita: true, acao: () => resgatar(c) },

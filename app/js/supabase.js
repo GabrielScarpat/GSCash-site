@@ -678,6 +678,31 @@ window.GS = window.GS || {};
   const raiz = document.documentElement;
   raiz.style.visibility = 'hidden';
 
+  // No app do Windows o endereço interno muda a cada abertura, e o localStorage começa vazio:
+  // as preferências da conta (GS.daConta, abaixo) também vão para o arquivo do computador,
+  // onde a sessão já fica, e voltam para o localStorage ao abrir.
+  const CHAVE_MARCAS = 'gscash:da-conta';
+  const marcasDesktop = {
+    dados: {},
+    gravando: Promise.resolve(),
+    async carregar() {
+      if (!noDesktop) return;
+      try {
+        const salvo = JSON.parse(await armazenamentoDesktop.getItem(CHAVE_MARCAS));
+        if (salvo && typeof salvo === 'object') this.dados = salvo;
+        Object.entries(this.dados).forEach(([k, v]) => { try { localStorage.setItem(k, v); } catch (e) { /* segue */ } });
+      } catch (e) { /* arquivo vazio ou ilegível: começa do zero */ }
+    },
+    gravar(chave, valor) {
+      if (!noDesktop) return;
+      this.dados[chave] = String(valor);
+      // uma gravação por vez, sempre com a lista inteira mais nova
+      this.gravando = this.gravando
+        .then(() => armazenamentoDesktop.setItem(CHAVE_MARCAS, JSON.stringify(this.dados)))
+        .catch(e => console.warn('marcas da conta', e));
+    },
+  };
+
   const logado = GS.auth.sessao().then(async sessao => {
     // sem login, ou com a verificação em duas etapas ligada e o código ainda não digitado
     if (!sessao || await GS.auth.duasEtapas.precisaCodigo()) {
@@ -685,6 +710,7 @@ window.GS = window.GS || {};
       return null;
     }
     GS.usuario = sessao.user;
+    await marcasDesktop.carregar();
     raiz.style.visibility = '';
     // contas que já estavam entradas antes das várias contas passam a constar na lista
     contas.registrar(sessao).catch(() => {});
@@ -721,6 +747,7 @@ window.GS = window.GS || {};
     gravar(base, valor) {
       if (!GS.usuario) return;
       try { localStorage.setItem(GS.daConta.chave(base), valor); } catch (e) { /* sem localStorage: segue */ }
+      marcasDesktop.gravar(GS.daConta.chave(base), valor);
     },
   };
 

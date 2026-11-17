@@ -1497,6 +1497,32 @@ window.GS = window.GS || {};
       return responder(inv);
     },
 
+    // "Aplicar mais": dinheiro novo num investimento que já existe. dados = { valor, data, origemId }
+    // Vira uma transferência da conta para ele, como a do cadastro; o rendimento conta a partir da data dela.
+    aplicarInvestimento(id, dados) {
+      const db = carregar();
+      const carteira = db.carteiras.find(c => c.id === id && c.tipo === 'investimento');
+      if (!carteira) return falhar('Investimento não encontrado.');
+      const inv = db.investimentos.find(v => v.id === id);
+      if (inv && inv.resgatadoEm) return falhar('Este investimento já foi resgatado.');
+      const origem = db.carteiras.find(c => c.id === dados.origemId && c.tipo !== 'investimento');
+      if (!origem) return falhar('Escolha de qual conta o dinheiro saiu.');
+      const valor = Math.round(Number(dados.valor) || 0);
+      if (valor <= 0) return falhar('Informe o valor aplicado.');
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(dados.data || '')) return falhar('Informe a data da aplicação.');
+      if (inv && inv.liquidez === 'vencimento' && inv.vencimento && dados.data >= inv.vencimento) {
+        return falhar(`Este investimento vence em ${GS.dataMedia(GS.parseData(inv.vencimento))}: a aplicação precisa ser antes.`);
+      }
+      db.transacoes.push({
+        ...limparTransferencia({ valor, data: dados.data, origemId: origem.id, destinoId: carteira.id }),
+        titulo: `Aplicação · ${carteira.nome}`, id: novoId('t'), criadoEm: Date.now(),
+      });
+      // valor informado à mão no mesmo dia: o cálculo só soma o que entra depois dele, então ele já leva este
+      if (inv && inv.valorAtual != null && inv.valorAtualEm === dados.data) inv.valorAtual += valor;
+      salvar();
+      return responder({ valor });
+    },
+
     // resgate: dados = { valor (o que entrou na conta), data, destinoId, total, estimado }
     // O ganho entra como receita "Rendimentos" (ou a perda como gasto) e o dinheiro volta por transferência.
     // Parcial (só liquidez diária): o ganho é proporcional ao que saiu.

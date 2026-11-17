@@ -252,6 +252,8 @@
   .form-gasto [data-campo-parcelas] { order: 10; }
   .form-gasto [data-sem-cartao] { order: 11; }
   .form-gasto [data-info-fatura] { order: 12; }
+  .form-gasto [data-campo-investimento] { order: 2; }
+  .form-gasto [data-info-aplicacao] { order: 12; }
   .form-gasto .mais-opcoes { order: 13; }
   .form-gasto .toggle:has([data-rec]) { order: 14; }
   .form-gasto [data-recbox] { order: 15; }
