@@ -45,6 +45,13 @@
                · indexador: cdi_pct | cdi_mais | prefixado | ipca_mais | selic |
                  poupanca | sem_taxa (veja js/indices.js).
                · carteira 'investimento' sem registro aqui (criada antes): "sem taxa".
+   Divida    { id, lado: 'me_devem'|'eu_devo', pessoa, descricao, valor, data, vencimento|null,
+               transacaoId|null, pagamentos: [{ id, valor, data, transacaoId|null }], criadoEm }
+               · me_devem: alguém deve à pessoa (botão Recebi); eu_devo: a pessoa deve (Paguei).
+               · pagamentos em partes; quitada quando a soma chega ao valor.
+               · transacaoId (na dívida e em cada pagamento): o lançamento feito na carteira, na
+                 categoria "Dívidas", quando a pessoa pediu. É uma transação comum: some com a
+                 dívida só se ela for excluída junto.
    ========================================================= */
 
 window.GS = window.GS || {};
@@ -226,6 +233,7 @@ window.GS = window.GS || {};
       transacoes: [],
       recorrencias: [],
       investimentos: [],
+      dividas: [],
       preferencias: {},
     };
   }
@@ -402,7 +410,7 @@ window.GS = window.GS || {};
   /* ---------- Conversão: modelo do app <-> linhas do banco ---------- */
 
   // a ordem importa no envio: quem é apontado (carteiras) vai antes de quem aponta (investimentos, transações)
-  const TABELAS = ['categorias', 'subcategorias', 'carteiras', 'investimentos', 'transacoes', 'recorrencias', 'perfis'];
+  const TABELAS = ['categorias', 'subcategorias', 'carteiras', 'investimentos', 'transacoes', 'recorrencias', 'dividas', 'perfis'];
   const POR_PAGINA = 1000;
   const paraIso = ms => new Date(ms || Date.now()).toISOString();
 
@@ -451,6 +459,15 @@ window.GS = window.GS || {};
         liquidez: v.liquidez, vencimento: v.vencimento || null, destino_id: v.destinoId || null,
         valor_atual: v.valorAtual == null ? null : v.valorAtual, valor_atual_em: v.valorAtualEm || null,
         resgatado_em: v.resgatadoEm || null,
+      });
+    });
+
+    (db.dividas || []).forEach(d => {
+      linhas.dividas.set(d.id, {
+        user_id: u, id: d.id, lado: d.lado, pessoa: d.pessoa, descricao: d.descricao || '', valor: d.valor,
+        data: d.data, vencimento: d.vencimento || null, transacao_id: d.transacaoId || null,
+        pagamentos: (d.pagamentos || []).map(g => ({ id: g.id, valor: g.valor, data: g.data, transacao_id: g.transacaoId || null })),
+        criado_em: paraIso(d.criadoEm),
       });
     });
 
@@ -506,6 +523,12 @@ window.GS = window.GS || {};
       recorrencias: (l.recorrencias || []).map(r => ({
         id: r.id, frequencia: r.frequencia, inicio: r.inicio, semFim: r.sem_fim, geradaAte: r.gerada_ate,
       })),
+      dividas: (l.dividas || []).map(d => ({
+        id: d.id, lado: d.lado, pessoa: d.pessoa, descricao: d.descricao || '', valor: Number(d.valor), data: d.data,
+        vencimento: d.vencimento || null, transacaoId: d.transacao_id || null,
+        pagamentos: (d.pagamentos || []).map(g => ({ id: g.id, valor: Number(g.valor), data: g.data, transacaoId: g.transacao_id || null })),
+        criadoEm: Date.parse(d.criado_em) || 0,
+      })).sort((a, b) => a.criadoEm - b.criadoEm),
       preferencias: (l.perfis[0] && l.perfis[0].preferencias) || {},
     };
   }
@@ -527,12 +550,20 @@ window.GS = window.GS || {};
     return resp.data;
   };
 
+  // tabelas novas: se o banco ainda não tem a tabela, o app abre assim mesmo (só aquela tela fica vazia)
+  const TABELAS_NOVAS = new Set(['dividas']);
+
   async function buscarTudo(tabela) {
     const todas = [];
     for (let de = 0; ; de += POR_PAGINA) {
       let consulta = GS.supabase.from(tabela).select('*');
       if (tabela !== 'perfis') consulta = consulta.is('excluido_em', null);
-      const dados = verificar(await consulta.order('user_id').order(tabela === 'perfis' ? 'user_id' : 'id').range(de, de + POR_PAGINA - 1));
+      const resp = await consulta.order('user_id').order(tabela === 'perfis' ? 'user_id' : 'id').range(de, de + POR_PAGINA - 1);
+      if (resp.error && TABELAS_NOVAS.has(tabela)) {
+        console.warn(`Tabela ${tabela} indisponível no banco`, resp.error.message);
+        return todas;
+      }
+      const dados = verificar(resp);
       todas.push(...dados);
       if (dados.length < POR_PAGINA) return todas;
     }
@@ -550,6 +581,7 @@ window.GS = window.GS || {};
   function aplicar(db) {
     db.recorrencias = db.recorrencias || [];   // cópia ou dados de antes das regras de repetição
     db.investimentos = db.investimentos || [];
+    db.dividas = db.dividas || [];
     cache = db;
     gravado = fotografia(paraLinhas(db));
     guardarCopia();
@@ -674,7 +706,8 @@ window.GS = window.GS || {};
         cache = quer ? sanear(local) : dadosIniciais();
         cache.recorrencias = cache.recorrencias || [];
         cache.investimentos = cache.investimentos || [];
-        gravado = fotografia(paraLinhas({ categorias: [], carteiras: [], transacoes: [], recorrencias: [], investimentos: [] }));
+        cache.dividas = cache.dividas || [];
+        gravado = fotografia(paraLinhas({ categorias: [], carteiras: [], transacoes: [], recorrencias: [], investimentos: [], dividas: [] }));
         await sincronizar();
       })();
       iniciando.catch(() => { iniciando = null; });
@@ -951,6 +984,26 @@ window.GS = window.GS || {};
       id: novoId('t'), criadoEm: Date.now(),
     };
   }
+
+  // lançamento de uma dívida na carteira: receita (entrou dinheiro) ou gasto (saiu), categoria "Dívidas"
+  function lancamentoDaDivida(db, { entrou, valor, data, carteiraId, titulo }) {
+    const tipo = entrou ? 'receita' : 'despesa';
+    let cat = db.categorias.find(c => c.tipo === tipo && mesmoNome(c.nome, 'Dívidas'));
+    if (!cat) {
+      cat = { id: novoId('c'), nome: 'Dívidas', tipo, icone: 'tag', cor: entrou ? '#5E8C61' : '#C2392B', orcamento: null, subcategorias: [] };
+      db.categorias.push(cat);
+    }
+    const t = {
+      tipo, titulo: titulo.slice(0, 80), descricao: '', valor, data,
+      categoriaId: cat.id, subcategoriaId: null, carteiraId, forma: 'debito', parcelas: 1,
+      id: novoId('t'), criadoEm: Date.now(),
+    };
+    db.transacoes.push(t);
+    return t.id;
+  }
+
+  const pagoDaDivida = d => (d.pagamentos || []).reduce((s, g) => s + g.valor, 0);
+  const contaDaDivida = (db, id) => db.carteiras.find(c => c.id === id && c.tipo !== 'investimento');
 
   /* ---------- API ---------- */
 
@@ -1411,6 +1464,108 @@ window.GS = window.GS || {};
       db.investimentos.forEach(v => { if (v.destinoId === id) v.destinoId = null; });
       // carteiras que pagavam a fatura com esta ficam sem conta definida
       db.carteiras.forEach(c => { if (c.credito && c.credito.pagarComId === id) c.credito.pagarComId = null; });
+      salvar();
+      return responder(true);
+    },
+
+    /* Dívidas (js/dividas.js) */
+
+    listarDividas() {
+      return responder(carregar().dividas || []);
+    },
+
+    // dados = { lado, pessoa, descricao, valor, data, vencimento, carteiraId }
+    // carteiraId: o dinheiro já se mexeu ao criar (emprestei: saiu dela; peguei emprestado: entrou nela)
+    criarDivida(dados) {
+      const db = carregar();
+      const lado = dados.lado === 'eu_devo' ? 'eu_devo' : 'me_devem';
+      const pessoa = String(dados.pessoa || '').trim().slice(0, 60);
+      const valor = Math.round(Number(dados.valor) || 0);
+      if (!pessoa) return falhar('Diga com quem é a dívida.');
+      if (valor <= 0) return falhar('Informe o valor.');
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(dados.data || '')) return falhar('Escolha a data.');
+      const d = {
+        id: novoId('d'), lado, pessoa, descricao: String(dados.descricao || '').trim().slice(0, 80), valor, data: dados.data,
+        vencimento: dados.vencimento || null, transacaoId: null, pagamentos: [], criadoEm: Date.now(),
+      };
+      if (dados.carteiraId) {
+        if (!contaDaDivida(db, dados.carteiraId)) return falhar('Escolha a carteira.');
+        d.transacaoId = lancamentoDaDivida(db, {
+          entrou: lado === 'eu_devo', valor, data: d.data, carteiraId: dados.carteiraId,
+          titulo: lado === 'eu_devo' ? `Empréstimo de ${pessoa}` : `Empréstimo para ${pessoa}`,
+        });
+      }
+      db.dividas = db.dividas || [];
+      db.dividas.push(d);
+      salvar();
+      return responder(d);
+    },
+
+    // muda quem, do quê, o valor e o vencimento (o que já foi pago fica)
+    atualizarDivida(id, dados) {
+      const db = carregar();
+      const d = (db.dividas || []).find(x => x.id === id);
+      if (!d) return falhar('Dívida não encontrada.');
+      const pessoa = String(dados.pessoa ?? d.pessoa).trim().slice(0, 60);
+      const valor = dados.valor === undefined ? d.valor : Math.round(Number(dados.valor) || 0);
+      if (!pessoa) return falhar('Diga com quem é a dívida.');
+      if (valor <= 0) return falhar('Informe o valor.');
+      if (valor < pagoDaDivida(d)) return falhar('O valor não pode ser menor do que o que já foi pago.');
+      Object.assign(d, {
+        pessoa, valor,
+        descricao: dados.descricao === undefined ? d.descricao : String(dados.descricao).trim().slice(0, 80),
+        vencimento: dados.vencimento === undefined ? d.vencimento : dados.vencimento || null,
+      });
+      salvar();
+      return responder(d);
+    },
+
+    // Recebi / Paguei: dados = { valor, data, carteiraId } (carteiraId vazio = não lança na carteira)
+    registrarPagamentoDivida(id, dados) {
+      const db = carregar();
+      const d = (db.dividas || []).find(x => x.id === id);
+      if (!d) return falhar('Dívida não encontrada.');
+      const valor = Math.round(Number(dados.valor) || 0);
+      const falta = d.valor - pagoDaDivida(d);
+      if (valor <= 0) return falhar('Informe o valor.');
+      if (valor > falta) return falhar('O valor é maior do que falta.');
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(dados.data || '')) return falhar('Escolha a data.');
+      const g = { id: novoId('g'), valor, data: dados.data, transacaoId: null };
+      if (dados.carteiraId) {
+        if (!contaDaDivida(db, dados.carteiraId)) return falhar('Escolha a carteira.');
+        const recebi = d.lado === 'me_devem';
+        g.transacaoId = lancamentoDaDivida(db, {
+          entrou: recebi, valor, data: g.data, carteiraId: dados.carteiraId,
+          titulo: `${recebi ? 'Recebi de' : 'Paguei a'} ${d.pessoa}${d.descricao ? ` · ${d.descricao}` : ''}`,
+        });
+      }
+      d.pagamentos = [...(d.pagamentos || []), g];
+      salvar();
+      return responder(d);
+    },
+
+    // desfaz um Recebi/Paguei: tira o pagamento e o lançamento dele na carteira
+    excluirPagamentoDivida(id, pagamentoId) {
+      const db = carregar();
+      const d = (db.dividas || []).find(x => x.id === id);
+      const g = d && (d.pagamentos || []).find(x => x.id === pagamentoId);
+      if (!g) return falhar('Pagamento não encontrado.');
+      d.pagamentos = d.pagamentos.filter(x => x !== g);
+      if (g.transacaoId) db.transacoes = db.transacoes.filter(t => t.id !== g.transacaoId);
+      salvar();
+      return responder(d);
+    },
+
+    // apaga a dívida; comLancamentos = também os lançamentos que ela fez nas carteiras
+    excluirDivida(id, { comLancamentos = false } = {}) {
+      const db = carregar();
+      const d = (db.dividas || []).find(x => x.id === id);
+      if (!d) return falhar('Dívida não encontrada.');
+      db.dividas = db.dividas.filter(x => x !== d);
+      if (comLancamentos) {
+        const ids = new Set([d.transacaoId, ...(d.pagamentos || []).map(g => g.transacaoId)].filter(Boolean));
+        db.transacoes = db.transacoes.filter(t => !ids.has(t.id));
+      }
       salvar();
       return responder(true);
     },

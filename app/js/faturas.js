@@ -14,7 +14,7 @@
 
   const nomeMes = chave => GS.mesAnoDeIso(chave).split(' ')[0].toLowerCase();
   const COR_STATUS = { aberta: 'info', fechada: 'alerta', paga: 'ok', vencida: 'erro', futura: 'neutro' };
-  const badge = status => `<span class="selo ${COR_STATUS[status]}">${GS.faturas.STATUS[status]}</span>`;
+  const badge = status => `<span class="estado-txt ${COR_STATUS[status]}">${GS.faturas.STATUS[status]}</span>`;
 
   /* ---------- Desenho ---------- */
 
@@ -211,8 +211,21 @@
   function abrirConfiguracao() {
     const corpo = GS.el('div', '');
     corpo.style.display = 'contents';
-    corpo.innerHTML = `<p>Escolha quais carteiras também funcionam como cartão de crédito.</p><ul class="cfg-lista"></ul>`;
+    corpo.innerHTML = `
+      <p data-explica>Escolha quais carteiras também funcionam como cartão de crédito.</p>
+      <ul class="cfg-lista"></ul>
+      <div class="sem-carteira hidden" data-sem-carteira>
+        <p>O cartão de crédito fica dentro de uma carteira (a conta do banco que paga a fatura). Crie a carteira primeiro; logo em seguida você configura o crédito dela.</p>
+        <button type="button" class="btn btn-primary" data-criar-carteira>${icone('plus')}Criar minha primeira carteira</button>
+      </div>`;
     const lista = corpo.querySelector('ul');
+
+    // sem nenhuma carteira, a lista ficava vazia e a pessoa não sabia o que fazer:
+    // cria a carteira aqui mesmo e já abre o crédito dela
+    corpo.querySelector('[data-criar-carteira]').addEventListener('click', () => GS.abrirFormCarteira(null, {
+      quantas: 0,
+      aoSalvar: nova => { pintar(); abrirCredito(nova, pintar); },
+    }));
 
     const modal = GS.abrirModal({
       titulo: 'Configurar crédito',
@@ -225,6 +238,10 @@
 
     async function pintar() {
       const carteiras = await GS.api.listarCarteiras();
+      const vazio = !carteiras.length;
+      corpo.querySelector('[data-explica]').classList.toggle('hidden', vazio);
+      lista.classList.toggle('hidden', vazio);
+      corpo.querySelector('[data-sem-carteira]').classList.toggle('hidden', !vazio);
       lista.innerHTML = carteiras.map(c => {
         const ativo = GS.faturas.temCredito(c);
         const tipo = GS.TIPOS_CARTEIRA[c.tipo] || GS.TIPOS_CARTEIRA.corrente;

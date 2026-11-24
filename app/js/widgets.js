@@ -20,9 +20,11 @@ window.GS = window.GS || {};
       const recorrente = t.recorrenciaId
         ? `<span class="sep">·</span><span class="tx-badge" title="${t.totalParcelas ? 'Transação recorrente' : 'Repete até você cancelar'}">${icone('repeat')}${t.totalParcelas ? `${t.parcela}/${t.totalParcelas}` : ''}</span>`
         : '';
-      // data ainda não chegou: ainda não mexeu no saldo
-      const prevista = t.data > GS.isoData(GS.hoje()) && !pagamento
-        ? `<span class="selo info tx-prevista" title="Ainda não aconteceu: entra no saldo em ${esc(GS.dataMedia(t.data))}">Prevista</span>`
+      // data ainda não chegou: ainda não mexeu no saldo. A linha fica apagada (valor em cinza) e
+      // "Prevista para 30 nov" entra junto da categoria
+      const ehPrevista = t.data > GS.isoData(GS.hoje()) && !pagamento;
+      const prevista = ehPrevista
+        ? `<span class="sep">·</span><span class="tx-prev" title="Ainda não aconteceu: entra no saldo em ${esc(GS.dataMedia(t.data))}">Prevista para ${GS.dataCurta(t.data)}</span>`
         : '';
       const credito = t.forma === 'credito' && !naFatura
         ? `<span class="sep">·</span><span class="tx-badge credito" title="Compra no crédito">${icone('card')}Crédito${t.parcelas > 1 ? ` ${t.parcelas}x` : ''}</span>`
@@ -47,18 +49,18 @@ window.GS = window.GS || {};
            ${mostrarCarteira ? `<span class="sep">·</span><span>${contaHtml(cart)}</span>` : ''}`;
 
       return `
-        <li class="tx ${pagamento ? 'tx-pagamento' : ''} ${transferencia ? 'tx-transfer' : ''}" data-id="${t.id}">
+        <li class="tx ${pagamento ? 'tx-pagamento' : ''} ${transferencia ? 'tx-transfer' : ''} ${ehPrevista ? 'tx-prevista' : ''}" data-id="${t.id}">
           <span class="tile">${icone(icon)}</span>
           <div class="tx-body">
             <div class="tx-title" title="${esc(t.descricao || t.titulo)}">${esc(t.titulo)}</div>
             <div class="tx-meta">
               ${meta}
               ${comData ? `<span class="sep">·</span><span>${GS.dataCurta(t.data)}</span>` : ''}
-              ${credito}${seloParcela}${recorrente}
+              ${credito}${seloParcela}${recorrente}${prevista}
             </div>
             ${comDescricao && t.descricao && !transferencia ? `<div class="tx-desc">${esc(t.descricao)}</div>` : ''}
           </div>
-          <div class="tx-value num ${receita ? 'income' : ''}">${receita ? '+' : ''}${GS.moeda(valor ?? t.valor)}${prevista}</div>
+          <div class="tx-value num ${receita ? 'income' : ''}">${receita ? '+' : ''}${GS.moeda(valor ?? t.valor)}</div>
           ${comAcoes ? `
           <div class="tx-actions">
             ${pagamento

@@ -319,7 +319,7 @@ window.GS = window.GS || {};
       titulo('Comprar licença');
       modal.body.innerHTML = `
         <div class="compra-plano">
-          <div class="topo"><b>GSCASH · 1 ano</b><span class="selo-promo">Promoção</span></div>
+          <div class="topo"><b>GSCASH · 1 ano</b><span class="promo-txt">Promoção</span></div>
           <span class="preco num"><s>${preco(PRECO_DE)}</s>${preco(PRECO_POR)}<small>por ano</small></span>
           <ul>
             <li>${icone('check')}Todos os recursos, sem limite de lançamentos</li>
@@ -629,7 +629,7 @@ window.GS = window.GS || {};
       <p>Cole abaixo a chave de licença que você recebeu. Ela fica ligada à sua conta e vale no computador e no navegador.</p>
       <div data-slot="campo"></div>
       <div class="comprar">
-        <div class="comprar-topo"><b>Ainda não tem uma chave?</b><span class="selo-promo">Promoção</span></div>
+        <div class="comprar-topo"><b>Ainda não tem uma chave?</b><span class="promo-txt">Promoção</span></div>
         <div class="comprar-linha">
           <span class="preco num"><s>${preco(PRECO_DE)}</s>${preco(PRECO_POR)}<small>por ano</small></span>
           <button type="button" class="btn btn-outline" data-comprar>Quero comprar</button>
@@ -691,20 +691,20 @@ window.GS = window.GS || {};
     if (info.estado === 'teste' || info.estado === 'teste-acabou') {
       const prazo = info.estado === 'teste' ? `faltam ${GS.plural(info.dias, 'dia', 'dias')}` : 'acabou';
       linhas = `
-        <div><span>Situação</span><span class="selo-licenca ${info.estado === 'teste' ? 'teste' : 'vencida'}">${info.estado === 'teste' ? 'Teste grátis' : 'Teste acabou'}</span></div>
+        <div><span>Situação</span><span class="estado-txt ${info.estado === 'teste' ? 'info' : 'erro'}">${info.estado === 'teste' ? 'Teste grátis' : 'Teste acabou'}</span></div>
         <div><span>Conta</span><b>${esc(conta)}</b></div>
         <div><span>Teste até</span><b>${data(info.testeAte)} <small>· ${prazo}</small></b></div>`;
     } else {
       const [selo, classe] = {
-        ativa: ['Ativa', 'ativa'],
-        vencendo: ['Vence em breve', 'vencendo'],
-        vencida: ['Vencida', 'vencida'],
+        ativa: ['Ativa', 'ok'],
+        vencendo: ['Vence em breve', 'alerta'],
+        vencida: ['Vencida', 'erro'],
       }[info.estado];
       const prazo = info.dias >= 0
         ? (info.dias === 0 ? 'vence hoje' : `faltam ${GS.plural(info.dias, 'dia', 'dias')}`)
         : `venceu há ${GS.plural(-info.dias, 'dia', 'dias')}`;
       linhas = `
-        <div><span>Situação</span><span class="selo-licenca ${classe}">${selo}</span></div>
+        <div><span>Situação</span><span class="estado-txt ${classe}">${selo}</span></div>
         <div><span>Licenciado para</span><b>${esc(info.nome)}</b></div>
         <div><span>Conta</span><b>${esc(conta)}</b></div>
         <div><span>Válida até</span><b>${data(info.validade)} <small>· ${prazo}</small></b></div>`;
@@ -859,8 +859,10 @@ window.GS = window.GS || {};
   /* ---------- rodapé ---------- */
 
   // "Licenciado para Maria Silva até 5 out 2027 · Licença" / "Teste grátis até 19 out · Licença"
-  function rodapeHtml() {
+  // a situação em uma frase ("Teste grátis até 30 nov", "Licenciado para Ana até 12 mai 2027"...)
+  function situacao() {
     const i = info;
+    if (!i) return null;
     const texto = {
       teste: () => `Teste grátis até ${ATE(i.testeAte)}`,
       'teste-acabou': () => 'Teste grátis encerrado',
@@ -868,9 +870,15 @@ window.GS = window.GS || {};
       vencendo: () => `Licenciado para ${esc(i.nome)} até ${data(i.validade)}`,
       vencida: () => `Licença vencida em ${data(i.validade)}`,
     }[i.estado]?.();
-    if (!texto) return '';
+    return texto ? { estado: i.estado, texto } : null;
+  }
+
+  function rodapeHtml() {
+    const sit = situacao();
+    if (!sit) return '';
+    const texto = sit.texto;
     return `<span>${texto}</span><span class="sep">·</span><button type="button" class="link-btn" data-licenca>Licença</button><span class="sep">·</span>`;
   }
 
-  GS.licenca = { pronta, recarregar, rodapeHtml, abrirJanela, abrirAtivacao, abrirCompra: comprar };
+  GS.licenca = { pronta, recarregar, rodapeHtml, situacao, abrirJanela, abrirAtivacao, abrirCompra: comprar };
 })();

@@ -30,8 +30,8 @@
 .cfg-moeda.on .simb { background: var(--primary); color: var(--bg); }
 .cfg-moeda.on .marca { background: var(--primary); border-color: var(--primary); color: var(--bg); }
 .cfg-moeda.on .marca svg { opacity: 1; }
-.cfg-moeda .selo { margin-left: auto; }
-.cfg-moeda .selo + .marca { margin-left: 0; }
+.cfg-moeda .estado-txt { margin-left: auto; }
+.cfg-moeda .estado-txt + .marca { margin-left: 0; }
 
 /* a troca só vale depois de confirmar */
 .cfg-confirmar { display: flex; align-items: center; gap: 14px; margin-top: 14px; padding: 14px 16px; border: 1.5px solid var(--primary); border-radius: 14px; background: var(--primary-soft); }
@@ -86,7 +86,7 @@
 .ind-amigo .txt { display: flex; flex-direction: column; min-width: 0; margin-right: auto; }
 .ind-amigo .txt b { overflow: hidden; font-size: 14.5px; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
 .ind-amigo .txt small { color: var(--muted); font-size: 12.5px; }
-.ind-amigo .selo { flex: none; min-width: 112px; }
+.ind-amigo .estado-txt { flex: none; }
 
 @media (max-width: 640px) {
   .cfg-voltar { display: inline-flex; align-items: center; gap: 4px; margin-bottom: -8px; color: var(--text-2); font-size: 14px; }
@@ -98,4 +98,77 @@
   .cfg-linha { flex-wrap: wrap; }
   .cfg-linha .txt { flex: 1; }
   .cfg-botao { flex: 1 0 100%; margin-left: 0; }
+}
+
+/* =========================================================
+   Lista agrupada (2.0): como os ajustes do iPhone.
+   Celular: a lista é a tela e cada linha abre a sua (#moeda, #indique).
+   Computador: lista à esquerda, a tela escolhida à direita.
+   ========================================================= */
+
+.cfg-app { display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 32px; align-items: start; }
+.cfg-menu { display: grid; gap: 0; min-width: 0; }
+.cfg-menu .page-title { margin: 0 0 18px; }
+
+.cfg-perfil { display: flex; align-items: center; gap: 12px; width: 100%; margin-bottom: 22px; padding: 14px; border: 1px solid var(--border); border-radius: 18px; background: var(--surface); font: inherit; color: var(--text); text-align: left; cursor: pointer; }
+.cfg-perfil:hover { background: var(--surface-2); }
+.cfg-perfil .cfg-avatar { width: 48px; height: 48px; }
+.cfg-perfil .txt { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; }
+.cfg-perfil .txt b { font-size: 16px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cfg-perfil .txt small { color: var(--muted); font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cfg-perfil .estado-txt { margin-top: 3px; white-space: normal; }
+.cfg-perfil > svg { flex: none; width: 18px; height: 18px; color: var(--muted); }
+
+.cfg-grupo-t { margin: 0 4px 6px; font-size: 13px; font-weight: 600; color: var(--muted); letter-spacing: .01em; }
+.cfg-grupo { margin-bottom: 22px; border: 1px solid var(--border); border-radius: 18px; background: var(--surface); overflow: hidden; }
+.cfg-grupo[hidden], .cfg-grupo-t[hidden], .cfg-item[hidden] { display: none; }
+.cfg-item { position: relative; display: flex; align-items: center; gap: 12px; width: 100%; min-height: 54px; padding: 0 14px; border: 0; background: none; font: inherit; color: var(--text); text-align: left; text-decoration: none; cursor: pointer; }
+div.cfg-item { cursor: default; }
+.cfg-item + .cfg-item::before { content: ""; position: absolute; top: 0; left: 56px; right: 0; height: 1px; background: var(--border); }
+button.cfg-item:hover, a.cfg-item:hover { background: var(--surface-2); }
+.cfg-item.on { background: var(--primary-soft); }
+.cfg-item.on .nome { color: var(--primary); }
+.cfg-ic { display: grid; place-items: center; flex: none; width: 30px; height: 30px; border-radius: 8px; background: var(--primary-soft); color: var(--primary); }
+.cfg-ic svg { width: 17px; height: 17px; }
+.cfg-item .nome { flex: 1; min-width: 0; padding: 14px 0; font-size: 15px; font-weight: 500; }
+.cfg-item .nome small { display: block; margin-top: 1px; color: var(--muted); font-size: 12.5px; font-weight: 400; }
+.cfg-item .dir { display: flex; align-items: center; gap: 6px; flex: none; color: var(--muted); font-size: 14px; }
+.cfg-item .dir svg { width: 16px; height: 16px; }
+.cfg-item .switch { flex: none; }
+.cfg-item .switch:disabled { opacity: .6; }
+.cfg-mini { flex: none; height: 32px; padding: 0 12px; font-size: 13px; }
+.cfg-item.perigo { justify-content: center; color: var(--danger); }
+.cfg-item.perigo .nome { flex: none; font-weight: 600; }
+.cfg-excluir { justify-self: center; margin: -8px 0 0; padding: 6px; border: 0; background: none; font: inherit; font-size: 13.5px; color: var(--muted); text-decoration: underline; cursor: pointer; }
+.cfg-excluir:hover { color: var(--danger); }
+.cfg-versao { margin: 12px 0 0; text-align: center; color: var(--muted); font-size: 12.5px; }
+
+/* as telas */
+.cfg-painel { min-width: 0; padding-top: 56px; }
+.cfg-voltar-sub { display: none; }
+.cfg-sub-titulo { display: flex; align-items: center; gap: 12px; margin: 0 0 14px; font-size: 22px; font-weight: 600; letter-spacing: -.01em; }
+.cfg-sub-titulo .estado-txt.hidden { display: none; }
+.cfg-painel .cfg-texto { margin: 0 0 14px; }
+/* moedas como linhas de uma lista, com o check na escolhida */
+.cfg-painel .cfg-lista { grid-template-columns: minmax(0, 1fr); gap: 0; border: 1px solid var(--border); border-radius: 18px; background: var(--surface); overflow: hidden; }
+.cfg-painel .cfg-moeda { position: relative; padding: 12px 14px; border: 0; border-radius: 0; box-shadow: none; background: none; }
+.cfg-painel .cfg-moeda + .cfg-moeda::before { content: ""; position: absolute; top: 0; left: 70px; right: 0; height: 1px; background: var(--border); }
+.cfg-painel .cfg-moeda:hover { background: var(--surface-2); }
+.cfg-painel .cfg-moeda .simb { width: 40px; height: 40px; border-radius: 10px; font-size: 14px; }
+.cfg-painel .cfg-moeda.on { box-shadow: none; }
+.cfg-painel .cfg-moeda .marca { border: 0; background: none; }
+.cfg-painel .cfg-moeda.on .marca { background: none; color: var(--primary); }
+.cfg-painel .cfg-moeda .marca svg { width: 20px; height: 20px; }
+.cfg-painel .cfg-moeda .estado-txt { margin-left: auto; }
+.cfg-painel .cfg-moeda .estado-txt + .marca { margin-left: 0; }
+
+@media (max-width: 760px) {
+  .cfg-app { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .cfg-menu .page-title { font-size: 28px; }
+  /* uma coisa por vez: a lista ou a tela aberta */
+  .cfg-app:not([data-tela=""]) .cfg-menu { display: none; }
+  .cfg-painel { padding-top: 0; }
+  .cfg-voltar-sub { display: inline-flex; align-items: center; gap: 2px; margin: 0 0 8px; padding: 0; border: 0; background: none; font: inherit; font-size: 15px; font-weight: 500; color: var(--primary); cursor: pointer; }
+  .cfg-voltar-sub svg { width: 20px; height: 20px; }
+  .cfg-sub-titulo { font-size: 28px; font-weight: 700; }
 }

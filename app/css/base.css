@@ -137,6 +137,10 @@ svg { flex-shrink: 0; }
 
 .topbar .btn-primary { margin-left: auto; }
 
+/* olho de ocultar valores (components.js): do tamanho do Transferir só com ícone */
+.topbar-acoes .olho-topo { width: 44px; padding: 0; }
+.topbar-acoes .olho-topo.on { background: var(--primary-soft); border-color: rgba(29, 58, 94, .25); color: var(--primary); }
+
 /* ---------- Botões ---------- */
 
 .btn {

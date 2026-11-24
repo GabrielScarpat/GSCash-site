@@ -1197,6 +1197,9 @@ window.GS = window.GS || {};
       const cartaoDaConta = cartoesFat.find(c => c.credito.pagarComId === destino.carteira.id)
         || cartoesFat.find(c => c.id === destino.carteira.id) || (cartoesFat.length === 1 ? cartoesFat[0] : null);
       const pagamentosDaConta = transacoes.filter(t => t.tipo === 'pagamento' && t.carteiraId === destino.carteira.id);
+      // compra no crédito dentro do extrato da conta: o cartão desta carteira, o que ela paga, ou o primeiro
+      const cartaoPadrao = cartoesFat.find(c => c.id === destino.carteira.id) || cartaoDaConta || cartoesFat[0] || null;
+      const podeCredito = i => i.tipo === 'despesa' && !i.inv && !i.fat && cartoesFat.length > 0;
 
       const itens = linhas.map((l, n) => {
         const tipo = l.valor < 0 ? 'despesa' : 'receita';
@@ -1246,7 +1249,7 @@ window.GS = window.GS || {};
         }
         return {
           n, id, tipo, valor, data, titulo: l.titulo.slice(0, 80), nota, parcela: parcela ? `${parcela[1]}/${parcela[2]}` : '',
-          marcado: !repetido, repetido, inv, fat,
+          marcado: !repetido, repetido, inv, fat, cred: null,
           cat: s.nova ? `nova:${s.nova}` : `${s.categoriaId}${s.subcategoriaId ? '|' + s.subcategoriaId : ''}`,
           sugerida: s.sugerida,
         };
@@ -1296,6 +1299,13 @@ window.GS = window.GS || {};
         const selo = i.inv.invId ? (i.inv.escolhido ? '' : 'reconhecido') : 'novo';
         return `<button type="button" class="imp-inv">${icone('trending')}<span>${esc(nome)}</span>${selo ? `<small>${selo}</small>` : ''}</button>`;
       }
+      // débito (sai da conta) ou crédito (entra na fatura de um cartão)
+      function formaHtml(i) {
+        if (!podeCredito(i)) return '';
+        if (!i.cred) return `<button type="button" class="imp-forma">${icone('wallet')}<span>Débito</span>${icone('chevron-down')}</button>`;
+        const c = carteiras.find(x => x.id === i.cred);
+        return `<button type="button" class="imp-forma cred">${icone('card')}<span>Crédito · ${esc(nomeCartao(i.cred))} · fatura de ${esc(mesFatura(GS.faturas.cicloDe(c, i.data)))}</span>${icone('chevron-down')}</button>`;
+      }
       function linhaHtml(i) {
         const sub = i.repetido ? `<small class="aviso">${esc(i.repetido)}</small>`
           : i.fat ? '<small class="fat">Paga a fatura do cartão, não é gasto</small>'
@@ -1305,7 +1315,7 @@ window.GS = window.GS || {};
           <div class="imp-item ${i.repetido ? 'rep' : ''}" data-n="${i.n}">
             <input type="checkbox" class="imp-marca" ${i.marcado ? 'checked' : ''} aria-label="Importar ${esc(i.titulo)}">
             <span class="data">${esc(GS.dataCurta ? GS.dataCurta(i.data) : i.data)}</span>
-            <span class="desc"><b title="${esc(i.titulo)}">${esc(i.titulo)}</b>${sub}</span>
+            <span class="desc"><b title="${esc(i.titulo)}">${esc(i.titulo)}</b>${sub}${formaHtml(i)}</span>
             <span class="cat-slot">${slotHtml(i)}</span>
             <span class="val ${i.tipo === 'receita' ? 'e' : i.fat ? 't' : ''}">${i.tipo === 'receita' ? '+ ' : ''}${fmt(i.valor)}</span>
           </div>`;
@@ -1328,6 +1338,9 @@ window.GS = window.GS || {};
           ${foraDaFatura ? `<span class="chip-r">${GS.plural(foraDaFatura, 'pagamento ou estorno fica', 'pagamentos e estornos ficam')} de fora</span>` : ''}
           <span class="chip-r">Total <b data-total></b></span>
         </div>
+        ${!cartao && cartoesFat.length && itens.some(podeCredito) ? `<div class="imp-tudo">
+          <span><b>Compras no cartão de crédito?</b><small>Escolha em cada gasto, ou marque todos de uma vez.</small></span>
+          <button type="button" class="btn btn-outline" data-tudo-credito></button></div>` : ''}
         <div class="imp-itens">${itens.map(linhaHtml).join('')}</div>
         <p class="imp-legenda">${icone('brilho')}<span>categoria sugerida. Toque na categoria para trocar; o que você trocar o GSCASH aprende para as próximas importações.</span></p>`;
 
@@ -1340,6 +1353,12 @@ window.GS = window.GS || {};
       const botaoImportar = () => modal.foot.querySelector('[data-importar]');
       function atualizar() {
         const marcados = itens.filter(i => i.marcado);
+        const bt = modal.body.querySelector('[data-tudo-credito]');
+        if (bt) {
+          const gastos = itens.filter(podeCredito);
+          bt.dataset.todos = gastos.length && gastos.every(i => i.cred) ? '1' : '';
+          bt.innerHTML = bt.dataset.todos ? `${icone('wallet')}Voltar tudo para débito` : `${icone('card')}Paguei tudo no crédito`;
+        }
         const total = marcados.reduce((s, i) => s + (i.tipo === 'receita' ? i.valor : -i.valor), 0);
         modal.body.querySelector('[data-conta]').textContent = marcados.length;
         modal.body.querySelector('[data-total]').textContent = `${total > 0 ? '+ ' : total < 0 ? '− ' : ''}${fmt(total)}`;
@@ -1403,7 +1422,26 @@ window.GS = window.GS || {};
         ]);
       }
 
+      function menuForma(bo, item) {
+        const escolher = cred => { item.cred = cred; redesenhar(item); atualizar(); };
+        GS.abrirMenu(bo, [
+          { rotulo: `Débito · sai de ${destino.carteira.nome}`, icone: 'wallet', acao: () => escolher(null) },
+          ...cartoesFat.map(c => ({ rotulo: `Crédito · ${c.nome} · fatura de ${mesFatura(GS.faturas.cicloDe(c, item.data))}`, icone: 'card', acao: () => escolher(c.id) })),
+        ]);
+      }
+      const marcarTudo = cred => { itens.filter(podeCredito).forEach(i => { i.cred = cred; redesenhar(i); }); atualizar(); };
+      modal.body.querySelector('[data-tudo-credito]')?.addEventListener('click', e => {
+        const bt = e.currentTarget;
+        if (bt.dataset.todos) return marcarTudo(null);
+        if (cartoesFat.length === 1) return marcarTudo(cartoesFat[0].id);
+        GS.abrirMenu(bt, [cartaoPadrao, ...cartoesFat.filter(c => c !== cartaoPadrao)].map(c => ({
+          rotulo: `Tudo no ${c.nome}`, icone: 'card', acao: () => marcarTudo(c.id),
+        })));
+      });
+
       lista.addEventListener('click', e => {
+        const bo = e.target.closest('.imp-forma');
+        if (bo) return menuForma(bo, porN.get(Number(bo.closest('.imp-item').dataset.n)));
         const bf = e.target.closest('.imp-fat');
         if (bf) return menuFatura(bf, porN.get(Number(bf.closest('.imp-item').dataset.n)));
         const bi = e.target.closest('.imp-inv');
@@ -1505,8 +1543,8 @@ window.GS = window.GS || {};
           const [categoriaId, subcategoriaId] = i.cat.startsWith('nova:') ? [novas.get(`${i.tipo}|${i.cat}`), null] : i.cat.split('|');
           return {
             id: i.id, tipo: i.tipo, titulo: i.titulo, descricao: i.nota, valor: i.valor, data: i.data,
-            categoriaId, subcategoriaId: subcategoriaId || null, carteiraId: destino.carteira.id,
-            forma: destino.cartao ? 'credito' : 'debito', parcelas: 1,
+            categoriaId, subcategoriaId: subcategoriaId || null, carteiraId: i.cred || destino.carteira.id,
+            forma: destino.cartao || i.cred ? 'credito' : 'debito', parcelas: 1,
           };
         });
         const criadas = await GS.api.importarTransacoes(lista);

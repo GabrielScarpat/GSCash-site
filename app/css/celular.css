@@ -3,7 +3,7 @@
    As peças são criadas em components.js (barraCelular) e supabase.js (saudação). */
 
 /* no computador nada disso aparece */
-.barra-celular, .fab-novo, .topbar-acoes .ola, .faixa-licenca .curto, .filtros-btn, .mais-opcoes { display: none; }
+.barra-celular, .fab-novo, .topbar-acoes .ola, .faixa-licenca .curto, .filtros-btn, .mais-opcoes, .mais-veu, .menu-mais { display: none; }
 
 @media (max-width: 640px) {
   body { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
@@ -100,6 +100,7 @@
   .barra-celular .aba.on { flex: none; padding: 0 13px; color: #fff; }
   .barra-celular .aba.on .nome { max-width: 110px; opacity: 1; margin-left: 7px; }
   .barra-celular .aba.indo { color: var(--primary); }
+  .barra-celular button.aba { border: 0; background: none; font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; }
   .barra-celular .aba.indo svg { transform: scale(.9); }
 
   /* ---------- "Novo gasto" flutuante ---------- */
@@ -119,7 +120,44 @@
     -webkit-tap-highlight-color: transparent;
   }
   .fab-novo svg { width: 26px; height: 26px; stroke-width: 2.2; }
+  /* iPhone com a barra nativa (Liquid Glass): a de HTML fica na página, invisível (js/components.js) */
+  .barra-nativa .barra-celular, .barra-nativa .fab-novo { visibility: hidden; pointer-events: none; }
   .fab-novo:active { transform: scale(.95); }
+
+  /* ---------- menu da aba Mais (Investimentos e Dívidas) ---------- */
+  .mais-veu { display: block; position: fixed; inset: 0; z-index: 58; background: rgba(27, 27, 25, .12); opacity: 0; pointer-events: none; transition: opacity .2s; }
+  .menu-mais {
+    display: block;
+    position: fixed;
+    z-index: 61;
+    right: 18px;
+    bottom: calc(84px + env(safe-area-inset-bottom));
+    width: 240px;
+    padding: 6px;
+    border-radius: 24px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, .78), rgba(253, 252, 248, .66));
+    -webkit-backdrop-filter: blur(20px) saturate(1.8);
+    backdrop-filter: blur(20px) saturate(1.8);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .9), inset 0 0 0 1px rgba(221, 215, 199, .55), 0 14px 36px rgba(28, 26, 20, .18);
+    /* nasce de dentro da aba Mais (canto de baixo, à direita) */
+    transform-origin: calc(100% - 22px) calc(100% + 40px);
+    transform: scale(.2);
+    opacity: 0;
+    pointer-events: none;
+    transition: transform .32s cubic-bezier(.2, .9, .25, 1.15), opacity .18s;
+  }
+  .menu-mais a { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 18px; color: var(--text); text-decoration: none; -webkit-tap-highlight-color: transparent; }
+  .menu-mais a + a { margin-top: 2px; }
+  .menu-mais a:active, .menu-mais a:focus-visible { background: rgba(29, 58, 94, .07); outline: 0; }
+  .menu-mais a.on { background: rgba(29, 58, 94, .08); color: var(--primary); }
+  .menu-mais svg { width: 22px; height: 22px; flex: none; }
+  .menu-mais b { display: block; font-size: 15px; font-weight: 600; }
+  .menu-mais small { display: block; color: var(--muted); font-size: 12.5px; line-height: 1.3; }
+  .mais-aberto .mais-veu { opacity: 1; pointer-events: auto; }
+  .mais-aberto .menu-mais { transform: none; opacity: 1; pointer-events: auto; }
+  .mais-aberto .fab-novo { opacity: 0; transform: scale(.8); pointer-events: none; }
+  .fab-novo { transition: opacity .2s, transform .2s; }
+  .barra-nativa .mais-veu, .barra-nativa .menu-mais { visibility: hidden; pointer-events: none; }
 
   /* ---------- Painel ---------- */
   /* título, olho e relatório (só o ícone) numa linha; períodos em pílulas que deslizam; mês embaixo */
@@ -139,7 +177,6 @@
     border: 28px solid rgba(243, 239, 228, .06); pointer-events: none; }
   .saldo-card .label, .saldo-card .muted { color: rgba(243, 239, 228, .72); }
   .saldo-card .big-value { color: #F3EFE4; }
-  .saldo-card .selo { color: rgba(243, 239, 228, .85); border-color: rgba(243, 239, 228, .3); background: rgba(243, 239, 228, .06); }
   .saldo-card .previsto { flex-wrap: wrap; gap: 10px 12px; border-top-color: rgba(243, 239, 228, .14); }
   .saldo-card .previsto .tile { background: rgba(243, 239, 228, .12); color: #F3EFE4; }
   .saldo-card .previsto small, .saldo-card .previsto .dif { color: rgba(243, 239, 228, .72); }
@@ -172,6 +209,9 @@
   .tx-meta > * { min-width: 0; }
   .tx-meta > :first-child { flex-basis: 100%; }
   .tx-meta > .sep:nth-child(2) { display: none; }
+  /* "Prevista para 30 nov" ganha a linha de baixo inteira (sem o "·" sobrando antes dela) */
+  .tx-meta > .tx-prev { flex-basis: 100%; }
+  .tx-meta > .sep:has(+ .tx-prev) { display: none; }
   .tx-meta .caminho { display: inline; }
   .tx-meta .caminho svg { display: inline; vertical-align: -1px; margin: 0 1px; }
   .tx-meta .rota { display: inline-flex; align-items: center; gap: 3px; }
@@ -220,6 +260,31 @@
   .modal-title { font-size: 21px; }
   .modal-body { flex: 1 1 auto; min-height: 0; padding: 8px 18px 12px; }
   .modal-foot { flex-shrink: 0; padding: 12px 18px calc(14px + env(safe-area-inset-bottom)); border-top: 1px solid var(--border); background: var(--surface); }
+
+  /* ---------- Janelas no desenho do iOS 27 (sheet) ----------
+     alça no topo, cantos grandes (acompanham o canto do iPhone), fechar redondo e botões em cápsula.
+     A janela baixa fica solta das bordas; a alta (.lg: Novo gasto, importar...) encosta nelas. */
+  .modal-alca { display: block; flex: none; width: 36px; height: 5px; margin: 8px auto 0; border-radius: 3px; background: var(--border-strong); touch-action: none; }
+  .modal .lem-puxador { display: none; }
+  .modal:not(.lg) { width: auto; margin: 0 8px calc(8px + env(safe-area-inset-bottom)); border-radius: 34px;
+    max-height: calc(100dvh - 44px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); }
+  .modal.lg { border-radius: 34px 34px 0 0; }
+  .modal-head { padding: 8px 16px 6px 22px; touch-action: none; }
+  .modal-body { padding: 8px 22px 12px; }
+  .modal-foot { border-top: 0; }
+  .modal:not(.lg) .modal-foot { padding: 8px 16px 16px; border-radius: 0 0 34px 34px; }
+  .modal-foot .btn { border-radius: 999px; }
+  .modal-close { width: 34px; height: 34px; border-radius: 50%; }
+  .modal-close svg { width: 16px; height: 16px; }
+
+  /* confirmação ("Excluir?", "Sair da conta?"): alerta no meio da tela, como o do iOS */
+  .modal-backdrop.tem-alerta { place-items: center; padding: 24px; }
+  .modal.alerta { width: min(300px, 100%); height: auto; margin: 0; border-radius: 30px; text-align: center; }
+  .modal.alerta .modal-alca, .modal.alerta .modal-close { display: none; }
+  .modal.alerta .modal-head { justify-content: center; padding: 22px 18px 4px; }
+  .modal.alerta .modal-title { font-size: 17px; font-weight: 700; }
+  .modal.alerta .modal-body { padding: 4px 20px 14px; font-size: 14px; }
+  .modal.alerta .modal-foot { padding: 4px 14px 14px; }
 
   /* ---------- Novo gasto: janela só da altura necessária ----------
      tipo e valor em destaque no topo; data e carteira lado a lado; Única/Recorrente e descrição em "Mais opções" */
@@ -271,6 +336,7 @@
 }
 
 @media (max-width: 640px) and (prefers-reduced-motion: reduce) {
+  .menu-mais, .mais-veu { transition: none; }
   .barra-celular .aba .nome { transition: none; }
 }
 

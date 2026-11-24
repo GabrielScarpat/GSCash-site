@@ -7,8 +7,10 @@
    · Lembrete diário: chave liga/desliga, vale só para este aparelho.
      Não aparece no programa para Windows (lá não chega notificação).
    · Verificação em duas etapas: só aparece aqui (não fica no menu da conta).
-   · Aplicativo: baixar para Windows (computador) ou instalar no celular.
-   · Conta: Sair da conta (as outras contas do aparelho continuam entradas).
+   · Aplicativo: importar, baixar para Windows (computador) ou instalar no celular, e o tour.
+   · Sair da conta (as outras contas do aparelho continuam entradas), excluir a conta e a versão.
+   Lista agrupada (como os ajustes do iPhone): no celular, cada linha abre a sua tela (#moeda,
+   #indique); no computador, a lista fica à esquerda e a tela escolhida à direita.
    ========================================================= */
 
 (function () {
@@ -30,7 +32,7 @@
       return `<button type="button" class="cfg-moeda${on ? ' on' : ''}" role="radio" aria-checked="${on}" data-moeda="${codigo}">
         <span class="simb" aria-hidden="true">${esc(m.sigla)}</span>
         <span class="txt"><b>${esc(m.nome)}</b><small class="num">${esc(formatar(codigo, 123456))}</small></span>
-        ${codigo === atual ? '<span class="selo info">Em uso</span>' : ''}
+        ${codigo === atual ? '<span class="estado-txt info">Em uso</span>' : ''}
         <span class="marca" aria-hidden="true">${icone('check')}</span>
       </button>`;
     }).join('');
@@ -75,6 +77,73 @@
     }
   });
 
+  /* ---------- Navegação: lista e telas ----------
+     Celular: a lista é a tela; tocar numa linha abre a tela dela (o "voltar" do aparelho volta à lista).
+     Computador: a lista fica à esquerda e a tela escolhida à direita (começa na Moeda). */
+
+  const TELAS = ['moeda', 'indique'];
+  const noCelular = () => matchMedia('(max-width: 760px)').matches;
+
+  function mostrarTela() {
+    let tela = location.hash.slice(1);
+    if (!TELAS.includes(tela) || (tela === 'indique' && $('grupoIndicacao').hidden)) tela = '';
+    const visivel = tela || (noCelular() ? '' : 'moeda');
+    $('cfgApp').dataset.tela = tela;
+    document.querySelectorAll('.cfg-painel').forEach(p => { p.hidden = p.dataset.painel !== visivel; });
+    document.querySelectorAll('.cfg-menu [data-ir]').forEach(b => {
+      const on = b.dataset.ir === visivel && !noCelular();
+      b.classList.toggle('on', on);
+      if (on) b.setAttribute('aria-current', 'true'); else b.removeAttribute('aria-current');
+    });
+    if (tela && noCelular()) window.scrollTo(0, 0);
+  }
+
+  document.querySelector('.cfg-menu').addEventListener('click', e => {
+    const b = e.target.closest('[data-ir]');
+    if (!b) return;
+    if (location.hash === '#' + b.dataset.ir) mostrarTela();
+    else location.hash = b.dataset.ir;
+  });
+  document.querySelectorAll('[data-voltar]').forEach(b => b.addEventListener('click', () => {
+    if (history.length > 1 && location.hash) history.back();
+    else { history.replaceState(null, '', location.pathname); mostrarTela(); }
+  }));
+  window.addEventListener('hashchange', mostrarTela);
+  matchMedia('(max-width: 760px)').addEventListener('change', mostrarTela);
+
+  const linhaHtml = (ic, nome, direita = '', sub = '') => `<span class="cfg-ic">${icone(ic)}</span>
+    <span class="nome">${esc(nome)}${sub ? `<small>${esc(sub)}</small>` : ''}</span>${direita}`;
+  const seta = (antes = '') => `<span class="dir">${antes}${icone('chevron-right')}</span>`;
+
+  /* ---------- Topo: a conta e a licença ---------- */
+
+  async function garantirUsuario() {
+    if (GS.usuario || !GS.auth) return GS.usuario;
+    const sessao = await GS.auth.sessao();
+    if (sessao) GS.usuario = sessao.user;
+    return GS.usuario;
+  }
+
+  const COR_LICENCA = { ativa: 'ok', vencendo: 'alerta', teste: 'info', 'teste-acabou': 'erro', vencida: 'erro' };
+
+  async function desenharPerfil() {
+    if (!await garantirUsuario() || !GS.dadosDaConta) return;
+    const { email, inicial } = GS.dadosDaConta(GS.usuario);
+    const meta = GS.usuario.user_metadata || {};
+    const nome = meta.full_name || meta.name || '';
+    if (GS.licenca) await GS.licenca.pronta;
+    const sit = GS.licenca && GS.licenca.situacao && GS.licenca.situacao();
+    $('perfil').hidden = false;
+    $('perfil').innerHTML = `
+      <span class="cfg-avatar" aria-hidden="true">${esc(inicial)}</span>
+      <span class="txt"><b>${esc(nome || email)}</b>${nome ? `<small>${esc(email)}</small>` : ''}
+        ${sit ? `<span class="estado-txt ${COR_LICENCA[sit.estado] || 'neutro'}">${sit.texto}</span>` : ''}</span>
+      ${icone('chevron-right')}`;
+    $('perfil').setAttribute('aria-label', `${nome || email}. ${sit ? sit.texto.replace(/<[^>]+>/g, '') + '. ' : ''}Abrir a licença`);
+  }
+
+  $('perfil').addEventListener('click', () => GS.licenca && GS.licenca.abrirJanela());
+
   /* ---------- Indique e ganhe ----------
      5 amigos criam conta pelo link e registram o primeiro gasto: 6 meses de licença, uma vez.
      Quem conta e quem ganha é o banco (minha_indicacao); aqui só mostra. */
@@ -89,7 +158,7 @@
       indicacao = data;
     } catch (err) {
       console.warn('minha_indicacao', err);
-      return;   // sem internet: o cartão não aparece
+      return;   // sem internet: a linha não aparece
     }
     const { codigo, meta, premio, amigos } = indicacao;
     const validas = Math.min(indicacao.validas, meta);
@@ -97,7 +166,10 @@
     const tracos = Array.from({ length: meta }, (_, i) => `<i${i < validas ? ' class="on"' : ''}></i>`).join('');
     const nota = texto => `<div class="cfg-nota">${icone('alert')}<span>${texto}</span></div>`;
 
-    $('cardIndicacao').hidden = false;
+    $('grupoIndicacao').hidden = false;
+    $('grupoIndicacao').querySelector('[data-ir]').innerHTML = linhaHtml('gift', 'Indique e ganhe',
+      seta(premio ? '<span class="estado-txt ok">Ganhou</span>' : `<span class="num">${validas} de ${meta}</span>`),
+      premio ? '' : '6 meses grátis com 5 amigos');
     $('indicacaoSelo').classList.toggle('hidden', !premio);
 
     if (premio) {
@@ -111,6 +183,7 @@
           <div class="ind-tracos">${tracos}</div>
         </div>
         ${nota('Você ainda pode compartilhar o GSCASH, mas o prêmio vale uma vez só.')}`;
+      mostrarTela();
       return;
     }
 
@@ -121,7 +194,7 @@
         ${amigos.map(a => `<div class="ind-amigo">
           <span class="ini" aria-hidden="true">${esc(a.email.charAt(0).toUpperCase())}</span>
           <span class="txt"><b>${esc(a.email)}</b><small>Entrou em ${esc(GS.dataMedia(new Date(a.criada_em)))}</small></span>
-          ${a.valida ? '<span class="selo ok">Valeu</span>' : '<span class="selo alerta">Falta 1º gasto</span>'}
+          ${a.valida ? '<span class="estado-txt ok">Valeu</span>' : '<span class="estado-txt alerta">Falta 1º gasto</span>'}
         </div>`).join('')}
       </div>` : '';
 
@@ -142,6 +215,7 @@
       </div>
       ${lista}
       ${nota(`Vale uma vez por conta. Os 6 meses somam à licença que você já tem. Só conta quem criou uma conta nova.`)}`;
+    mostrarTela();   // abriu direto em #indique antes da linha existir
   }
 
   async function copiarLink(botao, texto) {
@@ -178,24 +252,24 @@
     GS.toast('Link copiado. Cole no WhatsApp ou onde quiser.');
   });
 
-  /* ---------- Lembrete diário ---------- */
+  /* ---------- Lembrete diário (chave direto na linha) ---------- */
 
-  const TEXTO_LEMBRETE = 'Todo dia às 19h, se você ainda não lançou nada no dia.';
+  const TEXTO_LEMBRETE = 'Às 19h, se ainda não lançou nada no dia';
 
   async function desenharLembrete() {
     if (!GS.lembrete || !GS.lembrete.visivel()) return;
-    $('cardNotificacoes').hidden = false;
-    const titulo = sub => `<span class="cfg-icone">${icone('sino')}</span>
-      <span class="txt"><b>Lembrete diário</b><small>${esc(sub)}</small></span>`;
+    const linha = $('lembrete');
+    linha.hidden = false;
     // iPhone pelo Safari: só funciona com o app instalado na tela inicial
     if (!GS.lembrete.suportado) {
-      $('lembrete').innerHTML = titulo('No iPhone, funciona com o GSCASH instalado na tela inicial.')
-        + '<button type="button" class="btn btn-outline" data-instalar>Como instalar</button>';
+      linha.innerHTML = linhaHtml('sino', 'Lembrete diário', '<button type="button" class="btn btn-outline cfg-mini" data-instalar>Como instalar</button>',
+        'Funciona com o GSCASH instalado na tela inicial');
       return;
     }
     const ligado = await GS.lembrete.ligado().catch(() => false);
-    $('lembrete').innerHTML = titulo(ligado ? `${TEXTO_LEMBRETE} Ligado neste aparelho.` : TEXTO_LEMBRETE)
-      + `<button type="button" class="switch${ligado ? ' on' : ''}" role="switch" aria-checked="${ligado}" aria-label="Lembrete diário" data-chave></button>`;
+    linha.innerHTML = linhaHtml('sino', 'Lembrete diário',
+      `<button type="button" class="switch${ligado ? ' on' : ''}" role="switch" aria-checked="${ligado}" aria-label="Lembrete diário" data-chave></button>`,
+      ligado ? `${TEXTO_LEMBRETE} · neste aparelho` : TEXTO_LEMBRETE);
   }
 
   $('lembrete').addEventListener('click', async e => {
@@ -215,7 +289,7 @@
     if (document.querySelector('.modal-backdrop')) vigiarJanela(desenharLembrete);
   });
 
-  // redesenha quando a janela aberta (lembrete, duas etapas) fecha
+  // redesenha quando a janela aberta (lembrete, duas etapas, licença) fecha
   function vigiarJanela(redesenhar) {
     const vigia = new MutationObserver(() => {
       if (document.querySelector('.modal-backdrop')) return;
@@ -228,87 +302,63 @@
   /* ---------- Verificação em duas etapas ---------- */
 
   async function desenharDuasEtapas() {
-    if (!GS.duasEtapas || !GS.auth) return;
-    // a conta pode ainda não ter chegado (supabase.js confere o login em paralelo)
-    if (!GS.usuario) {
-      const sessao = await GS.auth.sessao();
-      if (!sessao) return;
-      GS.usuario = sessao.user;
-    }
+    if (!GS.duasEtapas || !await garantirUsuario()) return;
     const ligada = GS.duasEtapas.ligada();
-    $('cardSeguranca').hidden = false;
-    $('duasEtapas').innerHTML = `
-      <span class="cfg-icone">${icone('escudo')}</span>
-      <span class="txt"><b>Verificação em duas etapas</b>
-        <small>Além da senha, o GSCASH pede um código do app autenticador do celular ao entrar.</small></span>
-      <span class="cfg-acoes">
-        ${ligada ? '<span class="selo ok">Ligada</span>' : ''}
-        <button type="button" class="btn btn-outline" data-duas-etapas>${ligada ? 'Gerenciar' : 'Ligar'}</button>
-      </span>`;
+    $('tituloSeguranca').hidden = false;
+    $('grupoSeguranca').hidden = false;
+    // desligada não mostra nada à direita (só a seta)
+    $('duasEtapas').innerHTML = linhaHtml('escudo', 'Verificação em duas etapas', seta(ligada ? '<span class="estado-txt ok">Ligada</span>' : ''));
   }
 
-  $('duasEtapas').addEventListener('click', e => {
-    if (!e.target.closest('[data-duas-etapas]')) return;
+  $('duasEtapas').addEventListener('click', () => {
     GS.duasEtapas.abrir();
-    // ao fechar a janela, mostra se ficou ligada ou desligada
-    vigiarJanela(desenharDuasEtapas);
+    vigiarJanela(desenharDuasEtapas);   // ao fechar a janela, mostra se ficou ligada ou desligada
   });
 
-  /* ---------- Aplicativo (baixar para Windows ou instalar no celular) ---------- */
+  /* ---------- Aplicativo ---------- */
 
-  // No computador com Windows, pelo navegador: baixar o instalador. No celular, pelo navegador:
-  // instalar com ícone na tela inicial. No programa para Windows, no app do iPhone, no que já
-  // foi instalado e em Mac/Linux não há o que oferecer: o cartão nem aparece.
+  // Importar extrato; baixar para Windows (computador com Windows, pelo navegador) ou instalar no celular
+  // (pelo navegador); o tour. Só aparece o que vale para este aparelho.
   function desenharAplicativo() {
-    const linha = (nome, titulo, sub, acao) => `<span class="cfg-icone">${icone(nome)}</span>
-      <span class="txt"><b>${esc(titulo)}</b><small>${esc(sub)}</small></span>${acao}`;
-    let html = '';
+    const linhas = [];
+    if (GS.importar) linhas.push(`<button type="button" class="cfg-item" data-importar>${linhaHtml('subir', 'Importar extrato ou planilha', seta())}</button>`);
     if (GS.baixar && GS.baixar.disponivel()) {
-      html = linha('computador', 'GSCASH para Windows', 'Abre direto da área de trabalho, com a mesma conta e os mesmos dados.',
-        `<a class="btn btn-outline cfg-botao" href="${GS.baixar.url}" data-baixar>${icone('download')}Baixar</a>`);
+      linhas.push(`<a class="cfg-item" href="${GS.baixar.url}" data-baixar>${linhaHtml('computador', 'GSCASH para Windows', `<span class="dir">${icone('download')}</span>`, 'Mesma conta, direto da área de trabalho')}</a>`);
     } else if (GS.instalar && GS.instalar.disponivel()) {
-      html = linha('celular', 'Instalar no celular', 'Ícone na tela inicial, abre em tela cheia, como um app.',
-        '<button type="button" class="btn btn-outline cfg-botao" data-instalar-app>Instalar</button>');
+      linhas.push(`<button type="button" class="cfg-item" data-instalar-app>${linhaHtml('celular', 'Instalar no celular', seta(), 'Ícone na tela inicial, como um app')}</button>`);
     }
-    $('cardApp').hidden = !html;
-    $('aplicativo').innerHTML = html;
+    if (GS.abrirTour) linhas.push(`<button type="button" class="cfg-item" data-tour>${linhaHtml('play', 'Ver o tour do GSCASH', seta('<span>1 min</span>'))}</button>`);
+    $('aplicativo').innerHTML = linhas.join('');
+    $('aplicativo').hidden = $('tituloApp').hidden = !linhas.length;
   }
 
   $('aplicativo').addEventListener('click', e => {
-    if (e.target.closest('[data-instalar-app]')) GS.instalar.abrir();
+    if (e.target.closest('[data-importar]')) return GS.importar.abrir();
+    if (e.target.closest('[data-instalar-app]')) return GS.instalar.abrir();
+    if (e.target.closest('[data-tour]')) return GS.abrirTour();
   });
-  // instalou pelo convite do navegador: o cartão some
+  // instalou pelo convite do navegador: a linha some
   window.addEventListener('appinstalled', desenharAplicativo);
 
-  /* ---------- Conta (sair) ---------- */
+  /* ---------- Sair, excluir e versão ---------- */
 
   // Sai só da conta em uso, do mesmo jeito que "Sair" em Gerenciar contas: as outras contas
   // guardadas neste aparelho continuam entradas e aparecem na tela de entrar para escolher.
   async function desenharConta() {
-    if (!GS.contas || !GS.auth) return;
-    if (!GS.usuario) {
-      const sessao = await GS.auth.sessao();
-      if (!sessao) return;
-      GS.usuario = sessao.user;
-    }
-    const { id, email, inicial } = GS.dadosDaConta(GS.usuario);
-    const outras = (await GS.contas.listar().catch(() => [])).filter(c => c.id !== id);
-    const sub = outras.length
-      ? 'Sai só desta conta. As outras contas deste aparelho continuam entradas.'
-      : 'Você entra de novo quando quiser, com e-mail e senha ou com o Google.';
-    $('cardConta').hidden = false;
-    $('conta').innerHTML = `
-      <span class="cfg-avatar" aria-hidden="true">${esc(inicial)}</span>
-      <span class="txt"><b>${esc(email)}</b><small>${esc(sub)}</small></span>
-      <button type="button" class="btn btn-outline cfg-botao" data-sair>${icone('logout')}Sair da conta</button>`;
+    if (!GS.contas || !await garantirUsuario()) return;
+    $('grupoSair').hidden = false;
+    $('excluirConta').hidden = !GS.excluirConta;
   }
 
-  $('conta').addEventListener('click', async e => {
-    const botao = e.target.closest('[data-sair]');
-    if (!botao || botao.disabled) return;
+  $('sair').addEventListener('click', async () => {
+    const botao = $('sair');
+    if (botao.disabled) return;
+    const { id, email } = GS.dadosDaConta(GS.usuario);
+    const outras = (await GS.contas.listar().catch(() => [])).filter(c => c.id !== id);
     const ok = await GS.confirmar({
       titulo: 'Sair da conta?',
-      mensagem: `Você sai de <strong>${esc(GS.dadosDaConta(GS.usuario).email)}</strong> neste aparelho. Seus dados continuam guardados na nuvem.`,
+      mensagem: `Você sai de <strong>${esc(email)}</strong> neste aparelho. Seus dados continuam guardados na nuvem.`
+        + (outras.length ? ' As outras contas deste aparelho continuam entradas.' : ''),
       botao: 'Sair', perigo: false,
     });
     if (!ok) return;
@@ -321,10 +371,27 @@
     }
   });
 
+  $('excluirConta').addEventListener('click', () => GS.excluirConta && GS.excluirConta.abrir());
+
+  // a versão de quem está rodando: app do celular, programa do Windows ou o site
+  async function desenharVersao() {
+    let texto = 'GSCASH · navegador';
+    try {
+      if (GS.nativo && window.Capacitor && window.Capacitor.isPluginAvailable('App')) {
+        texto = `GSCASH ${(await window.Capacitor.registerPlugin('App').getInfo()).version}`;
+      } else if (GS.noDesktop) {
+        texto = `GSCASH ${(await (await GS.apiDesktop()).info()).versao} · Windows`;
+      }
+    } catch (e) { /* fica o texto padrão */ }
+    $('versao').textContent = texto;
+  }
+
+  let primeira = true;
   async function desenhar() {
     desenharMoedas();
     desenharAplicativo();
-    await Promise.all([desenharIndicacao(), desenharLembrete(), desenharDuasEtapas(), desenharConta()]);
+    if (primeira) { primeira = false; mostrarTela(); desenharVersao(); }
+    await Promise.all([desenharPerfil(), desenharIndicacao(), desenharLembrete(), desenharDuasEtapas(), desenharConta()]);
   }
 
   GS.iniciarPagina('configuracoes', desenhar);

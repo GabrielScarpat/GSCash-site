@@ -7,6 +7,10 @@
 
 @media (max-width: 1100px) {
   .container { padding: 0 28px; }
+}
+
+/* o topo inteiro (7 abas desde Dívidas, mais o olho) pede uns 1440px: abaixo disso ele fica compacto */
+@media (max-width: 1460px) {
   .topbar-inner { padding: 0 28px; gap: 16px; }
   /* topo mais compacto: menu mais junto e "Transferir" só com o ícone (o nome fica no title) */
   .nav-links a { padding: 10px 12px; }
@@ -14,8 +18,8 @@
   .topbar-acoes .btn-outline { width: 44px; padding: 0; }
 }
 
-/* abaixo disso o topo não cabe numa linha (6 abas desde Investimentos): o menu desce para uma segunda linha */
-@media (max-width: 1080px) {
+/* abaixo disso o topo não cabe numa linha nem compacto (7 abas desde Dívidas): o menu desce para uma segunda linha */
+@media (max-width: 1280px) {
   .topbar-inner {
     flex-wrap: wrap;
     height: auto;

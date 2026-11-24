@@ -619,7 +619,7 @@ window.GS = window.GS || {};
         ${lista.length ? `<div class="gerir-lista">${lista.map(c => `
           <div class="gerir-linha">
             <span class="conta-mini${c.id === atualId ? ' atual' : ''}" aria-hidden="true">${esc(c.inicial)}</span>
-            <span class="conta-nomes"><span class="l1"><b>${esc(nomeDe(c))}</b>${c.id === atualId ? '<span class="gerir-selo">Atual</span>' : ''}</span><small>${esc(c.email)}</small></span>
+            <span class="conta-nomes"><span class="l1"><b>${esc(nomeDe(c))}</b>${c.id === atualId ? '<span class="estado-txt ok">Atual</span>' : ''}</span><small>${esc(c.email)}</small></span>
             <button type="button" class="gerir-sair" data-sair="${esc(c.id)}" aria-label="Sair da conta ${esc(c.email)}">Sair</button>
           </div>`).join('')}</div>` : '<p class="gerir-vazio">Nenhuma conta guardada.</p>'}
         <p class="gerir-erro" role="alert"${erro ? '' : ' hidden'}>${esc(erro || '')}</p>

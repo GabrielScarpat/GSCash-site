@@ -79,6 +79,20 @@
 .imp-fat.novo:hover { border-color: #9A5B12; }
 .imp-item .desc small.fat { color: var(--primary); }
 .imp-item .val.t { color: var(--muted); }
+
+/* débito ou crédito de cada gasto (extrato de conta) e o atalho "Paguei tudo no crédito" */
+.imp-forma { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; margin-top: 3px; padding: 2px 0; border: 0; background: none; color: var(--text-2); font: inherit; font-size: 12px; font-weight: 500; cursor: pointer; }
+.imp-forma span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.imp-forma svg { width: 13px; height: 13px; flex: none; }
+.imp-forma:hover { color: var(--primary); }
+.imp-forma.cred { color: var(--primary); }
+.imp-tudo { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px; background: var(--surface-2); }
+.imp-tudo > span { flex: 1; min-width: 0; }
+.imp-tudo b { display: block; font-size: 14px; font-weight: 600; }
+.imp-tudo small { display: block; color: var(--text-2); font-size: 12.5px; }
+.imp-tudo .btn { height: 36px; font-size: 13.5px; flex: none; }
+.imp-tudo .btn svg { width: 16px; height: 16px; }
+@media (max-width: 760px) { .imp-tudo { flex-wrap: wrap; } .imp-tudo .btn { width: 100%; } }
 @media (max-width: 760px) { .imp-fat { height: 32px; font-size: 12.5px; } }
 .imp-legenda { display: flex; align-items: flex-start; gap: 8px; color: var(--muted) !important; font-size: 12.5px; }
 .imp-legenda svg { width: 14px; height: 14px; flex-shrink: 0; margin-top: 2px; }

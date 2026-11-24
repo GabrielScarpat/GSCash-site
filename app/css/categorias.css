@@ -205,8 +205,20 @@ a.sub-item:hover .sub-nome { color: var(--primary); text-decoration: underline; 
 .row-item { transition: background-color 1s ease; }
 .row-item.destaque { background-color: #E5F0E4; border-radius: 12px; }
 
+/* meta de receita: a barra enche conforme o dinheiro entra; verde quando a meta é batida */
+.cat-receitas { align-items: start; }
+.budget .bar span.batida { background: var(--success); }
+.meta-txt { font-size: 13.5px; color: var(--muted); }
+.meta-txt.ok { color: var(--success); font-weight: 500; }
+.meta-de { display: none; }
+
 @media (max-width: 980px) {
   .cat-top { grid-template-columns: minmax(0, 1fr); }
+  /* uma coluna: a meta vem logo depois do orçamento, antes da lista de todas as categorias */
+  .cat-receitas { display: contents; }
+  #cardMetas { order: 1; }
+  .cat-todas { order: 2; }
+  #cardReceitas { order: 3; }
 }
 
 @media (max-width: 760px) {
@@ -215,6 +227,9 @@ a.sub-item:hover .sub-nome { color: var(--primary); text-decoration: underline; 
   .row-values { margin-right: 0; }
   .budget-val { font-size: 14px; }
   .budget-line .tile { display: none; }
+  /* meta: o valor da meta sai do lado do nome (para o nome caber) e vai para a linha de baixo */
+  .meta .budget-val .de { display: none; }
+  .meta-de { display: inline; font-size: 13.5px; color: var(--muted); }
 }
 
 /* =========================================================

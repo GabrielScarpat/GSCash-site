@@ -71,9 +71,10 @@ window.GS = window.GS || {};
   // perguntam antes de fechar. Salvar e "Cancelar" ([data-fechar]) fecham direto.
   GS.abrirModal = function ({ titulo, corpo, rodape, tamanho = '', rodapeClasse = '', aoFechar, avisoDescarte }) {
     const idTitulo = 'm' + Math.random().toString(36).slice(2, 8);
-    const fundo = el('div', 'modal-backdrop');
+    const fundo = el('div', `modal-backdrop${/(^|\s)alerta(\s|$)/.test(tamanho) ? ' tem-alerta' : ''}`);
     fundo.innerHTML = `
       <div class="modal ${tamanho}" role="dialog" aria-modal="true" aria-labelledby="${idTitulo}">
+        <div class="modal-alca" aria-hidden="true"></div>
         <div class="modal-head">
           <h2 class="modal-title" id="${idTitulo}">${esc(titulo)}</h2>
           <button type="button" class="modal-close" aria-label="Fechar">${icone('x')}</button>
@@ -90,9 +91,19 @@ window.GS = window.GS || {};
 
     const focoAnterior = document.activeElement;
     let fechado = false;
-    let digitou = false;
+    // "digitou" = o que está na janela mudou de verdade. Texto: compara com o valor que o campo tinha
+    // ao receber o foco (digitar e apagar não conta). Chaves e opções (sem foco no iPhone): qualquer toque conta.
+    let marcou = false;
     let perguntando = false;
-    body.addEventListener('input', () => { digitou = true; });
+    const iniciais = new Map();
+    const ehTexto = c => c.matches('textarea, input:not([type=checkbox]):not([type=radio])');
+    body.addEventListener('focusin', e => {
+      const c = e.target;
+      if (c.matches && ehTexto(c) && !iniciais.has(c)) iniciais.set(c, c.value);
+    });
+    body.addEventListener('input', e => { if (!e.target.matches || !ehTexto(e.target)) marcou = true; });
+    body.addEventListener('change', e => { if (e.target.matches && !ehTexto(e.target)) marcou = true; });
+    const digitou = () => marcou || [...iniciais].some(([c, v]) => c.isConnected && c.value !== v);
 
     const api = {
       el: modal,
@@ -112,16 +123,16 @@ window.GS = window.GS || {};
       },
       tentarFechar() {
         if (fechado || perguntando) return;
-        if (!avisoDescarte || !digitou) return api.fechar();
+        if (!avisoDescarte || !digitou()) return api.fechar();
         perguntando = true;
         const texto = typeof avisoDescarte === 'function' ? avisoDescarte() : avisoDescarte;
         const p = GS.abrirModal({
           titulo: 'Descartar o que você digitou?',
           corpo: `<p>${esc(texto)}</p>`,
-          tamanho: 'sm',
+          tamanho: 'sm alerta',
           rodapeClasse: 'even',
           rodape: `<button type="button" class="btn btn-outline" data-descartar>Descartar</button>
-                   <button type="button" class="btn btn-primary" data-fechar>Continuar editando</button>`,
+                   <button type="button" class="btn btn-primary" data-fechar>Continuar</button>`,
           aoFechar: () => { perguntando = false; },
         });
         p.foot.querySelector('[data-descartar]').addEventListener('click', () => { p.fechar(); api.fechar(); });
@@ -145,18 +156,60 @@ window.GS = window.GS || {};
       else if (!e.shiftKey && document.activeElement === ultimo) { e.preventDefault(); primeiro.focus(); }
     });
 
+    arrastarParaFechar(modal, api);
+
     document.body.append(fundo);
     document.body.style.overflow = 'hidden';
     pilha.push(api);
     requestAnimationFrame(() => {
       fundo.classList.add('show');
+      // alerta: se um rótulo não cabe na metade, os botões ficam um em cima do outro (como no iOS)
+      if (modal.classList.contains('alerta') && [...foot.children].some(b => b.scrollWidth > b.clientWidth + 1)) {
+        foot.classList.add('empilhado');
+      }
       const alvo = modal.querySelector('[autofocus]') || modal.querySelector('input:not([type=hidden]):not([type=date])');
       if (alvo && window.matchMedia('(min-width: 761px)').matches) alvo.focus();
     });
     return api;
   };
 
+  // Celular: arrastar a janela para baixo pela alça (ou pelo título) fecha, como no iOS. Passou de 120px,
+  // ou foi um puxão rápido: fecha (com o aviso de descartar, se a pessoa digitou algo); senão, volta.
+  function arrastarParaFechar(modal, api) {
+    const alvos = [modal.querySelector('.modal-alca'), modal.querySelector('.modal-head')];
+    let y0 = null, dy = 0, t0 = 0;
+    const ini = e => {
+      if (e.touches.length !== 1 || modal.classList.contains('alerta') || e.target.closest('button')
+        || !matchMedia('(max-width: 640px)').matches) return;
+      y0 = e.touches[0].clientY;
+      t0 = Date.now();
+      dy = 0;
+      modal.style.transition = 'none';
+    };
+    const mover = e => {
+      if (y0 === null) return;
+      dy = Math.max(0, e.touches[0].clientY - y0);
+      modal.style.transform = dy ? `translateY(${dy}px)` : '';
+      e.preventDefault();
+    };
+    const soltar = () => {
+      if (y0 === null) return;
+      y0 = null;
+      modal.style.transition = '';
+      modal.style.transform = '';
+      if (dy > 120 || (dy > 40 && Date.now() - t0 < 250)) api.tentarFechar();
+    };
+    alvos.forEach(a => {
+      if (!a) return;
+      a.addEventListener('touchstart', ini, { passive: true });
+      a.addEventListener('touchmove', mover, { passive: false });
+      a.addEventListener('touchend', soltar);
+      a.addEventListener('touchcancel', soltar);
+    });
+  }
+
   // diálogo de confirmação → Promise<boolean>
+  // no celular aparece como alerta no meio da tela, como o do iOS (classe "alerta")
   GS.confirmar = function ({ titulo, mensagem, botao = 'Excluir', perigo = true }) {
     return new Promise(resolve => {
       let resposta = false;
@@ -164,7 +217,7 @@ window.GS = window.GS || {};
         <button type="button" class="btn btn-outline" data-fechar>Cancelar</button>
         <button type="button" class="btn ${perigo ? 'btn-danger' : 'btn-primary'}" data-ok>${esc(botao)}</button>`;
       const m = GS.abrirModal({
-        titulo, corpo: `<p>${mensagem}</p>`, rodape, tamanho: 'sm', rodapeClasse: 'even',
+        titulo, corpo: `<p>${mensagem}</p>`, rodape, tamanho: 'sm alerta', rodapeClasse: 'even',
         aoFechar: () => resolve(resposta),
       });
       m.foot.querySelector('[data-ok]').addEventListener('click', () => { resposta = true; m.fechar(); });
@@ -266,10 +319,34 @@ window.GS = window.GS || {};
         entrada.placeholder = o && !o.apagado ? o.rotulo : (criar ? 'Buscar ou criar…' : 'Buscar…');
         botao.classList.add('hidden');
         campo.classList.remove('hidden');
-        entrada.focus();
+        // no celular o teclado só abre se a pessoa tocar na busca: abrir sozinho cobria o fim da lista
+        if (!toque()) entrada.focus();
       }
+      // e o teclado de outro campo (o título, por exemplo) fecha: no iPhone, tocar num botão não tira o foco dele
+      if (toque() && document.activeElement && document.activeElement.blur && !raiz.contains(document.activeElement)) document.activeElement.blur();
       rolarAteFoco();
+      caberNaTela();
+      if (window.visualViewport) ['resize', 'scroll'].forEach(ev => visualViewport.addEventListener(ev, caberNaTela));
       document.addEventListener('mousedown', foraClique, true);
+    }
+
+    const toque = () => window.matchMedia && matchMedia('(pointer: coarse)').matches;
+
+    // com o teclado aberto, a lista para logo acima dele (senão as últimas opções ficam escondidas atrás)
+    function caberNaTela() {
+      lista.style.maxHeight = '';
+      const vv = window.visualViewport;
+      if (!vv || lista.classList.contains('hidden') || lista.classList.contains('up')) return;
+      // o fim do que se vê: o teclado ou, numa janela, os botões do rodapé (que ficam por cima da lista)
+      const rodape = raiz.closest('.modal') && raiz.closest('.modal').querySelector('.modal-foot');
+      const fimVisivel = Math.min(vv.offsetTop + vv.height, rodape && rodape.offsetHeight ? rodape.getBoundingClientRect().top : Infinity);
+      let espaco = Math.floor(fimVisivel - lista.getBoundingClientRect().top - 8);
+      // campo lá embaixo, perto do teclado: sobe o campo para o topo da janela antes de medir
+      if (espaco < 200 && espaco < lista.offsetHeight) {
+        raiz.scrollIntoView({ block: 'start' });
+        espaco = Math.floor(fimVisivel - lista.getBoundingClientRect().top - 8);
+      }
+      if (espaco < lista.offsetHeight) lista.style.maxHeight = `${Math.max(132, espaco)}px`;
     }
 
     function fechar() {
@@ -282,6 +359,8 @@ window.GS = window.GS || {};
         botao.classList.remove('hidden');
         if (tinhaFoco) botao.focus();
       }
+      if (window.visualViewport) ['resize', 'scroll'].forEach(ev => visualViewport.removeEventListener(ev, caberNaTela));
+      lista.style.maxHeight = '';
       document.removeEventListener('mousedown', foraClique, true);
     }
 
@@ -984,24 +1063,32 @@ window.GS = window.GS || {};
   /* ---------- Celular: abas embaixo (vidro, com a "gota" na aba ativa) e "Nova transação" flutuante ----------
      Feitas a partir dos links do menu do topo; o CSS (celular.css) só mostra em telas estreitas. */
 
-  const ICONE_ABA = { painel: 'painel', transacoes: 'list', carteiras: 'carteira', faturas: 'cartao', categorias: 'etiqueta', investimentos: 'trending' };
+  const ICONE_ABA = { painel: 'painel', transacoes: 'list', carteiras: 'carteira', faturas: 'cartao', categorias: 'etiqueta', investimentos: 'trending', dividas: 'pessoas' };
+  // telas que no celular ficam dentro da aba "Mais" (no computador continuam no menu do topo)
+  const NO_MAIS = { investimentos: 'Aplicações e rendimento', dividas: 'Quem você deve e quem te deve' };
 
   function barraCelular(pagina) {
     const links = [...document.querySelectorAll('.nav-links a')];
     if (!links.length || document.querySelector('.barra-celular')) return;
+    const principais = links.filter(a => !(a.dataset.nav in NO_MAIS));
+    const extras = links.filter(a => a.dataset.nav in NO_MAIS);
+    const naExtra = extras.find(a => a.dataset.nav === pagina);
     const barra = el('nav', 'barra-celular');
     barra.setAttribute('aria-label', 'Telas do GSCASH');
-    barra.innerHTML = '<span class="gota" aria-hidden="true"></span>' + links.map(a => {
-      const ativa = a.dataset.nav === pagina;
-      return `<a class="aba${ativa ? ' on' : ''}" href="${esc(a.getAttribute('href'))}"${ativa ? ' aria-current="page"' : ''}>`
-        + `${icone(ICONE_ABA[a.dataset.nav] || 'list')}<span class="nome">${esc(a.textContent.trim())}</span></a>`;
-    }).join('');
+    const aba = (a, ativa) => `<a class="aba${ativa ? ' on' : ''}" href="${esc(a.getAttribute('href'))}"${ativa ? ' aria-current="page"' : ''}>`
+      + `${icone(ICONE_ABA[a.dataset.nav] || 'list')}<span class="nome">${esc(a.textContent.trim())}</span></a>`;
+    // a aba Mais: com uma das telas dela aberta, mostra o ícone e o nome dessa tela
+    const mais = !extras.length ? '' : naExtra
+      ? `<button type="button" class="aba mais on" aria-haspopup="menu" aria-expanded="false" aria-current="page">${icone(ICONE_ABA[naExtra.dataset.nav])}<span class="nome">${esc(naExtra.textContent.trim())}</span></button>`
+      : `<button type="button" class="aba mais" aria-haspopup="menu" aria-expanded="false" aria-label="Mais">${icone('mais-h')}<span class="nome">Mais</span></button>`;
+    barra.innerHTML = '<span class="gota" aria-hidden="true"></span>' + principais.map(a => aba(a, a.dataset.nav === pagina)).join('') + mais;
     const fab = el('button', 'fab-novo', icone('plus'));
     fab.type = 'button';
     fab.dataset.acao = 'novo-gasto';
     fab.setAttribute('aria-label', 'Nova transação');
     fab.title = 'Nova transação';
     document.body.append(barra, fab);
+    if (extras.length) ligarMenuMais(barra.querySelector('.aba.mais'), extras, pagina);
 
     // a gota fica embaixo da aba aberta. A passagem de uma aba para outra é feita pelo navegador
     // (transição entre páginas, em celular.css): a gota só escorre quando a tela nova já está
@@ -1019,12 +1106,156 @@ window.GS = window.GS || {};
     // a aba tocada responde na hora, enquanto a próxima tela carrega
     barra.addEventListener('click', e => {
       const aba = e.target.closest('.aba');
+      if (!aba || aba.classList.contains('mais')) return;   // o Mais abre o menu (ligarMenuMais)
       if (aba === ativa) e.preventDefault();
-      else if (aba) aba.classList.add('indo');
+      else aba.classList.add('indo');
     });
     // voltou pelo botão "voltar" do navegador: a página reaparece como estava
     window.addEventListener('pageshow', () => barra.querySelectorAll('.indo').forEach(a => a.classList.remove('indo')));
     arrastarEntreTelas(barra);
+    ligarBarraNativa(barra, pagina);
+  }
+
+  /* ---------- Olho de ocultar valores, no topo de todas as telas ----------
+     Fica logo antes do Transferir (no celular, os dois redondos à direita do "Olá"). Um toque troca
+     todos os valores do app por "R$ •••••" (GS.oculto); a escolha fica guardada na conta. */
+  function olhoDoTopo() {
+    const transferir = document.querySelector('.topbar-acoes [data-acao="transferir"]');
+    if (!transferir) return null;
+    const b = el('button', 'btn btn-outline olho-topo');
+    b.type = 'button';
+    transferir.before(b);
+    const pintar = () => {
+      b.innerHTML = icone(GS.oculto ? 'eye-off' : 'eye');
+      b.classList.toggle('on', GS.oculto);
+      b.setAttribute('aria-pressed', String(GS.oculto));
+      b.title = GS.oculto ? 'Mostrar valores' : 'Ocultar valores';
+      b.setAttribute('aria-label', b.title);
+    };
+    b.addEventListener('click', async () => {
+      GS.oculto = !GS.oculto;
+      pintar();
+      GS.notificarMudanca();   // a tela redesenha com os valores escondidos (ou à mostra) na hora
+      // se não der para salvar, avisa que a escolha não vai ficar guardada
+      try {
+        await GS.api.salvarPreferencia('ocultarValores', GS.oculto);
+      } catch (err) {
+        GS.toast(err.message, 'erro');
+      }
+    });
+    pintar();
+    return { pintar };
+  }
+
+  /* ---------- Celular: menu da aba Mais ----------
+     Sobe de dentro da aba, logo acima da barra, com as telas que não cabem nela (Investimentos e Dívidas).
+     Tocar fora fecha; enquanto está aberto, o "+" sai da frente. */
+  function ligarMenuMais(botao, extras, pagina) {
+    const veu = el('div', 'mais-veu');
+    const menu = el('div', 'menu-mais', extras.map(a => {
+      const id = a.dataset.nav;
+      return `<a role="menuitem" href="${esc(a.getAttribute('href'))}" class="${id === pagina ? 'on' : ''}"${id === pagina ? ' aria-current="page"' : ''}>`
+        + `${icone(ICONE_ABA[id])}<span><b>${esc(a.textContent.trim())}</b><small>${esc(NO_MAIS[id])}</small></span></a>`;
+    }).join(''));
+    menu.setAttribute('role', 'menu');
+    document.body.append(veu, menu);
+    const raiz = document.documentElement;
+    const abrir = aberto => {
+      raiz.classList.toggle('mais-aberto', aberto);
+      botao.setAttribute('aria-expanded', String(aberto));
+      if (aberto) menu.querySelector('a').focus({ preventScroll: true });
+    };
+    botao.addEventListener('click', () => abrir(!raiz.classList.contains('mais-aberto')));
+    veu.addEventListener('click', () => abrir(false));
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && raiz.classList.contains('mais-aberto')) abrir(false); });
+    menu.addEventListener('click', e => {
+      const a = e.target.closest('a');
+      if (!a) return;
+      if (a.classList.contains('on')) e.preventDefault();
+      abrir(false);
+    });
+    window.addEventListener('pageshow', () => abrir(false));
+  }
+
+  /* ---------- iPhone: barra nativa com o Liquid Glass do iOS 26 ----------
+     O vidro do sistema só existe em componente nativo (celular/ios/App/App/BarraNativaPlugin.swift).
+     Quando o app do iPhone tem o plugin, a barra e o "+" em HTML ficam invisíveis (seguem na página para o
+     arrastar entre telas e para os toques passarem pelo mesmo caminho) e a nativa assume. Versões antigas
+     do app, o Android, o site e o Windows não têm o plugin e continuam com a barra em HTML. */
+  // símbolos da Apple: só reserva, se a imagem do ícone do GSCASH não sair
+  const SIMBOLOS_ABA = {
+    painel: ['square.grid.2x2'], transacoes: ['list.bullet'], carteiras: ['wallet.bifold', 'wallet.pass'],
+    faturas: ['creditcard'], categorias: ['tag'], investimentos: ['chart.line.uptrend.xyaxis', 'chart.xyaxis.line'],
+    dividas: ['person.2'], mais: ['ellipsis'],
+  };
+
+  // o ícone de traço do GSCASH (o mesmo do site) desenhado numa imagem PNG de 25pt em 3x, preto sobre
+  // transparente: o iPhone pinta com a cor da aba (azul na aberta, cinza nas outras). Devolve o base64.
+  function imagemDoIcone(nome) {
+    const lado = 75;
+    const svg = icone(nome).replace('<svg ', `<svg xmlns="http://www.w3.org/2000/svg" width="${lado}" height="${lado}" `).replace(/currentColor/g, '#000');
+    return new Promise(resolve => {
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const tela = document.createElement('canvas');
+          tela.width = tela.height = lado;
+          tela.getContext('2d').drawImage(img, 0, 0, lado, lado);
+          resolve(tela.toDataURL('image/png').split(',')[1]);
+        } catch (e) { resolve(null); }
+      };
+      img.onerror = () => resolve(null);
+      img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+    });
+  }
+
+  function ligarBarraNativa(barra, pagina) {
+    const C = window.Capacitor;
+    if (!GS.nativo || !C || C.getPlatform() !== 'ios' || !C.isPluginAvailable || !C.isPluginAvailable('BarraNativa')) return;
+    const nativa = C.registerPlugin('BarraNativa');
+    const raiz = document.documentElement;
+    raiz.classList.add('barra-nativa');
+    const links = [...document.querySelectorAll('.nav-links a')];
+    const principais = links.filter(a => !(a.dataset.nav in NO_MAIS));
+    const extras = links.filter(a => a.dataset.nav in NO_MAIS);
+    const naExtra = extras.find(a => a.dataset.nav === pagina);
+
+    // aba principal tocada: o mesmo caminho do toque na barra HTML; tela do Mais escolhida no menu nativo: abre direto
+    nativa.addListener('aba', ({ id }) => {
+      const link = links.find(a => a.dataset.nav === id);
+      if (!link || id === pagina) return;
+      const aba = [...barra.querySelectorAll('a.aba')].find(a => a.getAttribute('href') === link.getAttribute('href'));
+      if (aba) aba.click();
+      else location.href = link.getAttribute('href');
+    });
+    nativa.addListener('novo', () => { const fab = document.querySelector('.fab-novo'); if (fab) fab.click(); });
+    const nome = a => a.textContent.trim();
+    // a aba Mais: com uma tela dela aberta, mostra o ícone e o nome dessa tela (como na barra HTML)
+    const mais = extras.length ? { id: 'mais', titulo: naExtra ? nome(naExtra) : 'Mais', icone: naExtra ? ICONE_ABA[naExtra.dataset.nav] : 'mais-h',
+      icones: naExtra ? SIMBOLOS_ABA[naExtra.dataset.nav] : SIMBOLOS_ABA.mais } : null;
+    const abasNativas = [...principais.map(a => ({ id: a.dataset.nav, titulo: nome(a), icone: ICONE_ABA[a.dataset.nav] || 'list', icones: SIMBOLOS_ABA[a.dataset.nav] || ['circle'] })), ...(mais ? [mais] : [])];
+    const menu = extras.map(a => ({ id: a.dataset.nav, titulo: nome(a), subtitulo: NO_MAIS[a.dataset.nav], icone: ICONE_ABA[a.dataset.nav], icones: SIMBOLOS_ABA[a.dataset.nav] || ['circle'] }));
+    // o nome aparece só na aba aberta, como na barra do site no celular (o plugin cuida disso)
+    Promise.all([...abasNativas, ...menu].map(x => imagemDoIcone(x.icone))).then(imagens => nativa.mostrar({
+      abas: abasNativas.map((x, i) => ({ id: x.id, titulo: x.titulo, imagem: imagens[i], icones: x.icones })),
+      ativa: naExtra ? 'mais' : pagina,
+      // o Mais não troca de tela: abre o menu de vidro com estas opções (a da tela aberta fica marcada)
+      menu: { id: 'mais', aberta: naExtra ? pagina : null, itens: menu.map((x, i) => ({ id: x.id, titulo: x.titulo, subtitulo: x.subtitulo, imagem: imagens[abasNativas.length + i], icones: x.icones })) },
+      botao: true,
+      nomeSoNaAberta: true,
+    })).then(() => {
+      // a página já abriu com uma janela (o tour, por exemplo): a barra começa escondida
+      if (document.querySelector('.modal-backdrop')) nativa.ocultar({ oculta: true }).catch(() => {});
+    }).catch(() => raiz.classList.remove('barra-nativa'));   // sem a barra nativa, a de HTML volta
+
+    // janela aberta na página (Nova transação, confirmações...): a barra nativa sai da frente
+    let aberta = false;
+    new MutationObserver(() => {
+      const agora = !!document.querySelector('.modal-backdrop');
+      if (agora === aberta) return;
+      aberta = agora;
+      nativa.ocultar({ oculta: agora }).catch(() => {});
+    }).observe(document.body, { childList: true });
   }
 
   /* ---------- Celular: arrastar o dedo para o lado troca de tela ----------
@@ -1033,7 +1264,8 @@ window.GS = window.GS || {};
      quando o dedo começa num campo ou em algo que rola para o lado (chips, tabelas) e perto das
      bordas (onde o sistema tem o gesto de voltar). */
   function arrastarEntreTelas(barra) {
-    const abas = [...barra.querySelectorAll('.aba')];
+    // o Mais só entra quando é a tela aberta (arrastar até ele abriria o menu, não uma tela)
+    const abas = [...barra.querySelectorAll('.aba')].filter(a => !a.classList.contains('mais') || a.classList.contains('on'));
     const atual = abas.findIndex(a => a.classList.contains('on'));
     const conteudo = document.querySelector('main');
     if (atual < 0 || !conteudo) return;
@@ -1121,6 +1353,7 @@ window.GS = window.GS || {};
   GS.iniciarPagina = function (pagina, desenhar) {
     document.querySelectorAll('[data-icon]').forEach(s => { s.outerHTML = icone(s.dataset.icon); });
     barraCelular(pagina);
+    const olho = olhoDoTopo();
 
     document.querySelectorAll('.nav-links a').forEach(a => {
       const ativo = a.dataset.nav === pagina;
@@ -1157,7 +1390,7 @@ window.GS = window.GS || {};
     const lento = setTimeout(() => problema('Está demorando mais que o normal.', 'Verifique sua conexão com a internet.'), 8000);
     let primeira = true;
 
-    const rodar = () => preparar.then(desenhar).then(() => {
+    const rodar = () => preparar.then(() => { if (olho) olho.pintar(); }).then(desenhar).then(() => {
       if (!primeira) return;
       primeira = false;
       clearTimeout(lento);

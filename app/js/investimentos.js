@@ -103,16 +103,16 @@
       const inicio = ctx.transacoes.filter(t => t.destinoId === c.id).map(t => t.data).sort()[0] || (inv && inv.valorAtualEm);
       let prazo;
       if (vencido(inv, hojeIso)) {
-        prazo = `<div class="linha"><span>Venceu em ${GS.dataMedia(GS.parseData(inv.vencimento))}</span><span class="selo info">Confirme o resgate</span></div>`;
+        prazo = `<div class="linha"><span>Venceu em ${GS.dataMedia(GS.parseData(inv.vencimento))}</span><span class="estado-txt info">Confirme o resgate</span></div>`;
       } else if (inv && inv.liquidez === 'vencimento') {
         const total = Math.max(1, GS.diasEntre(GS.parseData(inicio || hojeIso), GS.parseData(inv.vencimento)));
         const passou = Math.min(100, Math.max(0, (GS.diasEntre(GS.parseData(inicio || hojeIso), GS.hoje()) / total) * 100));
         prazo = `
-          <div class="linha"><span>${inicio ? `Aplicado em ${GS.dataMedia(GS.parseData(inicio))}` : ''}</span><span class="selo alerta">Até ${GS.dataMedia(GS.parseData(inv.vencimento))}</span></div>
+          <div class="linha"><span>${inicio ? `Aplicado em ${GS.dataMedia(GS.parseData(inicio))}` : ''}</span><span class="estado-txt alerta">Até ${GS.dataMedia(GS.parseData(inv.vencimento))}</span></div>
           <div class="bar"><span style="width:${passou}%"></span></div>
           <div class="linha"><span>faltam ${falta(hojeIso, inv.vencimento)}</span><span class="dir">no vencimento<br><b class="num">~${GS.moeda(e.noVencimento || e.hoje)}</b></span></div>`;
       } else {
-        prazo = `<div class="linha"><span>${inicio ? `Aplicado em ${GS.dataMedia(GS.parseData(inicio))}` : 'Vinda das suas carteiras'}</span><span class="selo ok">Resgate livre</span></div>`;
+        prazo = `<div class="linha"><span>${inicio ? `Aplicado em ${GS.dataMedia(GS.parseData(inicio))}` : 'Vinda das suas carteiras'}</span><span class="estado-txt ok">Resgate livre</span></div>`;
       }
       const acao = vencido(inv, hojeIso)
         ? `<button type="button" class="btn btn-primary" data-confirmar="${c.id}">Confirmar resgate</button>`

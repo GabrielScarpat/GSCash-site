@@ -28,7 +28,8 @@
 .comprar { display: flex; flex-direction: column; gap: 10px; padding: 18px 20px; border-radius: 16px; background: var(--surface-2); }
 .comprar-topo { display: flex; align-items: center; gap: 10px; }
 .comprar-topo b { font-weight: 600; }
-.selo-promo { display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 99px; background: #DCEBDC; color: var(--success); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+/* destaque de venda: só a palavra, azul forte e maiúsculas (sem caixa) */
+.promo-txt { color: var(--primary); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
 .comprar-linha { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .comprar .preco { display: inline-flex; align-items: baseline; gap: 8px; font-size: 24px; font-weight: 700; letter-spacing: -.02em; }
 .comprar .preco s { color: var(--muted); font-size: 16px; font-weight: 500; }
@@ -123,11 +124,7 @@
 .lic-info b { font-weight: 600; text-align: right; }
 .lic-info small { color: var(--muted); font-weight: 400; font-size: 14px; }
 .lic-info code { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: 13.5px; }
-.selo-licenca { display: inline-flex; align-items: center; height: 24px; padding: 0 10px; border-radius: 99px; font-size: 12.5px; font-weight: 600; }
-.lic-info .selo-licenca.teste { background: var(--primary-soft); color: var(--primary); }
-.lic-info .selo-licenca.ativa { background: #DCEBDC; color: var(--success); }
-.lic-info .selo-licenca.vencendo { background: #F6E6CF; color: #9A5B12; }
-.lic-info .selo-licenca.vencida { background: #F4DCD6; color: var(--danger); }
+.lic-info .estado-txt { font-size: 13px; }
 
 @media (max-width: 760px) {
   .faixa-licenca { padding: 12px 16px; }

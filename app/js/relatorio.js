@@ -12,6 +12,9 @@
 window.GS = window.GS || {};
 
 (function () {
+  // situação de cada fatura, nas mesmas cores da tela Faturas
+  const COR_FATURA = { aberta: 'info', fechada: 'alerta', paga: 'ok', vencida: 'erro', futura: 'neutro' };
+
   const { icone, esc } = GS;
 
   // o relatório mostra os valores mesmo com "Ocultar valores" ligado no Painel
@@ -177,7 +180,7 @@ window.GS = window.GS || {};
           <thead><tr><th>Cartão</th><th>Fatura</th><th>Fecha</th><th>Vence</th><th class="r">Valor</th><th class="r">Situação</th></tr></thead>
           <tbody>${d.faturas.map(f => `
             <tr><td>${esc(f.cartao.nome)}</td><td>${GS.mesAnoDeIso(f.chave)}</td><td>${GS.dataCurta(f.fechamento)}</td><td>${GS.dataCurta(f.vencimento)}</td>
-              <td class="r">${moeda(f.total)}</td><td class="r"><span class="f-selo ${f.status}">${GS.faturas.STATUS[f.status]}</span></td></tr>`).join('')}
+              <td class="r">${moeda(f.total)}</td><td class="r"><span class="estado-txt ${COR_FATURA[f.status] || 'neutro'}">${GS.faturas.STATUS[f.status]}</span></td></tr>`).join('')}
           </tbody>
         </table>` : vazioSec('Nenhuma fatura fecha ou vence neste período.')}
       </div>`;

@@ -14,11 +14,11 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="GSCASH">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <link rel="stylesheet" href="css/fonts.css?v=a1c6b46">
-  <link rel="stylesheet" href="css/estilos.css?v=a1c6b46">
-  <script src="js/vendor/capacitor.js?v=a1c6b46"></script>
-  <script src="js/vendor/supabase.js?v=a1c6b46"></script>
-  <script src="js/supabase.js?v=a1c6b46"></script>
+  <link rel="stylesheet" href="css/fonts.css?v=87a544b">
+  <link rel="stylesheet" href="css/estilos.css?v=87a544b">
+  <script src="js/vendor/capacitor.js?v=87a544b"></script>
+  <script src="js/vendor/supabase.js?v=87a544b"></script>
+  <script src="js/supabase.js?v=87a544b"></script>
 </head>
 <body>
 
@@ -32,6 +32,7 @@
       <li><a href="faturas.html" data-nav="faturas">Faturas</a></li>
       <li><a href="categorias.html" data-nav="categorias">Categorias</a></li>
       <li><a href="investimentos.html" data-nav="investimentos">Investimentos</a></li>
+      <li><a href="dividas.html" data-nav="dividas">Dívidas</a></li>
     </ul>
     <div class="topbar-acoes">
       <button type="button" class="btn btn-outline" data-acao="transferir" title="Transferir entre contas"><span data-icon="transfer"></span><span class="rotulo">Transferir</span></button>
@@ -41,87 +42,87 @@
 </header>
 
 <main class="page">
-  <div class="container stack">
+  <div class="container">
+    <div class="cfg-app" id="cfgApp" data-tela="">
 
-    <a href="index.html" class="cfg-voltar"><span data-icon="chevron-left"></span>Painel</a>
-    <div class="page-head">
-      <h1 class="page-title">Configurações</h1>
+      <!-- a lista: no celular é a tela inicial; no computador fica à esquerda -->
+      <nav class="cfg-menu" aria-label="Configurações">
+        <a href="index.html" class="cfg-voltar"><span data-icon="chevron-left"></span>Painel</a>
+        <h1 class="page-title">Configurações</h1>
+
+        <button type="button" class="cfg-perfil" id="perfil" hidden></button>
+
+        <h2 class="cfg-grupo-t">Preferências</h2>
+        <div class="cfg-grupo">
+          <button type="button" class="cfg-item" data-ir="moeda"><span class="cfg-ic"><span data-icon="cash"></span></span>
+            <span class="nome">Moeda</span><span class="dir"><span id="moedaAtual"></span><span data-icon="chevron-right"></span></span></button>
+          <div class="cfg-item" id="lembrete" hidden></div>
+        </div>
+
+        <h2 class="cfg-grupo-t" id="tituloSeguranca" hidden>Segurança</h2>
+        <div class="cfg-grupo" id="grupoSeguranca" hidden>
+          <button type="button" class="cfg-item" id="duasEtapas"></button>
+        </div>
+
+        <div class="cfg-grupo" id="grupoIndicacao" hidden>
+          <button type="button" class="cfg-item" data-ir="indique"></button>
+        </div>
+
+        <h2 class="cfg-grupo-t" id="tituloApp" hidden>Aplicativo</h2>
+        <div class="cfg-grupo" id="aplicativo" hidden></div>
+
+        <div class="cfg-grupo" id="grupoSair" hidden>
+          <button type="button" class="cfg-item perigo" id="sair"><span class="nome">Sair da conta</span></button>
+        </div>
+        <button type="button" class="cfg-excluir" id="excluirConta" hidden>Excluir minha conta</button>
+        <p class="cfg-versao" id="versao"></p>
+      </nav>
+
+      <!-- Moeda -->
+      <section class="cfg-painel" data-painel="moeda" aria-labelledby="tituloMoeda" hidden>
+        <button type="button" class="cfg-voltar-sub" data-voltar><span data-icon="chevron-left"></span>Configurações</button>
+        <h2 class="cfg-sub-titulo" id="tituloMoeda">Moeda</h2>
+        <p class="cfg-texto">Em qual moeda você registra seus gastos. Vale para todo o app, neste e nos outros aparelhos.</p>
+        <div class="cfg-lista" id="moedas" role="radiogroup" aria-label="Moeda do app"></div>
+        <div class="cfg-confirmar" id="confirmarMoeda" role="status" hidden>
+          <span class="txt"><b data-titulo></b><small data-exemplo></small></span>
+          <button type="button" class="btn btn-outline" data-cancelar>Cancelar</button>
+          <button type="button" class="btn btn-primary" data-confirmar><span data-icon="check"></span>Confirmar troca</button>
+        </div>
+        <div class="cfg-nota"><span data-icon="alert"></span><span>Os valores não são convertidos: trocar de real para euro faz R$ 50,00 aparecer como €50.00. A licença do GSCASH continua custando R$ 50, pago em real.</span></div>
+      </section>
+
+      <!-- Indique e ganhe -->
+      <section class="cfg-painel" data-painel="indique" aria-labelledby="tituloIndique" hidden>
+        <button type="button" class="cfg-voltar-sub" data-voltar><span data-icon="chevron-left"></span>Configurações</button>
+        <h2 class="cfg-sub-titulo" id="tituloIndique">Indique e ganhe <span class="estado-txt ok hidden" id="indicacaoSelo">Prêmio recebido</span></h2>
+        <div class="card" id="indicacao"></div>
+      </section>
+
     </div>
-
-    <section class="card">
-      <div class="card-head">
-        <h2 class="card-title">Moeda</h2>
-        <span class="card-sub" id="moedaAtual"></span>
-      </div>
-      <p class="cfg-texto">Em qual moeda você registra seus gastos. Vale para todo o app, neste e nos outros aparelhos.</p>
-      <div class="cfg-lista" id="moedas" role="radiogroup" aria-label="Moeda do app"></div>
-      <div class="cfg-confirmar" id="confirmarMoeda" role="status" hidden>
-        <span class="txt"><b data-titulo></b><small data-exemplo></small></span>
-        <button type="button" class="btn btn-outline" data-cancelar>Cancelar</button>
-        <button type="button" class="btn btn-primary" data-confirmar><span data-icon="check"></span>Confirmar troca</button>
-      </div>
-      <div class="cfg-nota"><span data-icon="alert"></span><span>Os valores não são convertidos: trocar de real para euro faz R$ 50,00 aparecer como €50.00. A licença do GSCASH continua custando R$ 50, pago em real.</span></div>
-    </section>
-
-    <section class="card" id="cardIndicacao" hidden>
-      <div class="card-head">
-        <h2 class="card-title">Indique e ganhe</h2>
-        <span class="selo ok hidden" id="indicacaoSelo">Prêmio recebido</span>
-      </div>
-      <div id="indicacao"></div>
-    </section>
-
-    <section class="card" id="cardNotificacoes" hidden>
-      <div class="card-head">
-        <h2 class="card-title">Notificações</h2>
-      </div>
-      <div class="cfg-linha" id="lembrete"></div>
-    </section>
-
-    <section class="card" id="cardSeguranca" hidden>
-      <div class="card-head">
-        <h2 class="card-title">Segurança</h2>
-      </div>
-      <div class="cfg-linha" id="duasEtapas"></div>
-    </section>
-
-    <section class="card" id="cardApp" hidden>
-      <div class="card-head">
-        <h2 class="card-title">Aplicativo</h2>
-      </div>
-      <div class="cfg-linha" id="aplicativo"></div>
-    </section>
-
-    <section class="card" id="cardConta" hidden>
-      <div class="card-head">
-        <h2 class="card-title">Conta</h2>
-      </div>
-      <div class="cfg-linha" id="conta"></div>
-    </section>
-
   </div>
 </main>
 
-<script src="js/data.js?v=a1c6b46"></script>
-<script src="js/core.js?v=a1c6b46"></script>
-<script src="js/components.js?v=a1c6b46"></script>
-<script src="js/widgets.js?v=a1c6b46"></script>
-<script src="js/carteira-form.js?v=a1c6b46"></script>
-<script src="js/boas-vindas.js?v=a1c6b46"></script>
-<script src="js/transacao-form.js?v=a1c6b46"></script>
-<script src="js/transferencia-form.js?v=a1c6b46"></script>
-<script src="js/licenca.js?v=a1c6b46"></script>
-<script src="js/avisos-app.js?v=a1c6b46"></script>
-<script src="js/compra-loja.js?v=a1c6b46"></script>
-<script src="js/baixar.js?v=a1c6b46"></script>
-<script src="js/atualizacao.js?v=a1c6b46"></script>
-<script src="js/instalar.js?v=a1c6b46"></script>
-<script src="js/lembrete.js?v=a1c6b46"></script>
-<script src="js/indices.js?v=a1c6b46"></script>
-<script src="js/investimento-form.js?v=a1c6b46"></script>
-<script src="js/importar.js?v=a1c6b46"></script>
-<script src="js/excluir-conta.js?v=a1c6b46"></script>
-<script src="js/duas-etapas.js?v=a1c6b46"></script>
-<script src="js/configuracoes.js?v=a1c6b46"></script>
+<script src="js/data.js?v=87a544b"></script>
+<script src="js/core.js?v=87a544b"></script>
+<script src="js/components.js?v=87a544b"></script>
+<script src="js/widgets.js?v=87a544b"></script>
+<script src="js/carteira-form.js?v=87a544b"></script>
+<script src="js/boas-vindas.js?v=87a544b"></script>
+<script src="js/transacao-form.js?v=87a544b"></script>
+<script src="js/transferencia-form.js?v=87a544b"></script>
+<script src="js/licenca.js?v=87a544b"></script>
+<script src="js/avisos-app.js?v=87a544b"></script>
+<script src="js/compra-loja.js?v=87a544b"></script>
+<script src="js/baixar.js?v=87a544b"></script>
+<script src="js/atualizacao.js?v=87a544b"></script>
+<script src="js/instalar.js?v=87a544b"></script>
+<script src="js/lembrete.js?v=87a544b"></script>
+<script src="js/indices.js?v=87a544b"></script>
+<script src="js/investimento-form.js?v=87a544b"></script>
+<script src="js/importar.js?v=87a544b"></script>
+<script src="js/excluir-conta.js?v=87a544b"></script>
+<script src="js/duas-etapas.js?v=87a544b"></script>
+<script src="js/configuracoes.js?v=87a544b"></script>
 </body>
 </html>

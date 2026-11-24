@@ -52,10 +52,7 @@
 .gerir-lista { display: grid; grid-template-columns: minmax(0, 1fr); border: 1px solid var(--border); border-radius: 14px; background: var(--surface-2); }
 .gerir-linha { display: flex; align-items: center; gap: 12px; padding: 11px 12px; }
 .gerir-linha + .gerir-linha { border-top: 1px solid var(--border); }
-.gerir-selo {
-  flex: none; display: inline-flex; align-items: center; height: 20px; padding: 0 7px; border: 1px solid var(--border-strong);
-  border-radius: 6px; background: rgba(0, 0, 0, .02); color: var(--text-2); font-size: 11.5px; font-weight: 600;
-}
+.conta-nomes .estado-txt { flex: none; margin-left: 8px; }
 .gerir-sair {
   flex: none; height: 34px; padding: 0 14px; border: 1px solid var(--border-strong); border-radius: 10px;
   background: var(--surface); font-weight: 500; font-size: 13.5px;

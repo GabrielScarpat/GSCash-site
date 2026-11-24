@@ -322,6 +322,8 @@
 }
 
 .modal-backdrop.show .modal { transform: none; }
+/* a alça só existe no celular (celular.css) */
+.modal-alca { display: none; }
 .modal.sm { max-width: 400px; }
 
 .modal-head {
@@ -366,6 +368,12 @@
 }
 
 .modal-foot.even { grid-template-columns: 1fr 1fr; }
+
+/* alerta: botão nunca passa da borda; se o rótulo não cabe, empilha (principal em cima) */
+.modal.alerta .modal-foot .btn { min-width: 0; }
+.modal.alerta .modal-foot.empilhado { grid-template-columns: 1fr; gap: 8px; }
+.modal.alerta .modal-foot.empilhado .btn-primary,
+.modal.alerta .modal-foot.empilhado .btn-danger { order: -1; }
 
 .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
@@ -503,7 +511,7 @@
 .menu button svg { width: 16px; height: 16px; }
 .menu button.danger { color: var(--danger); }
 
-/* ---------- Selos de status (Faturas, Carteiras, Painel, Categorias, Configurações, admin) ----------
+/* ---------- Selos de status (só o painel do administrador; o resto do app usa o .estado-txt) ----------
    Contorno fino na cor, fundo leve e cantos suaves; sem ícone. Todos têm a mesma
    largura mínima, então numa lista eles ficam alinhados em coluna. */
 
@@ -526,7 +534,10 @@
 .selo.erro   { color: var(--danger); border-color: rgba(194, 57, 43, .45); background: rgba(194, 57, 43, .06); }
 .selo.neutro { color: var(--text-2); border-color: var(--border-strong); background: rgba(0, 0, 0, .02); }
 /* lançamento com data futura: "Prevista" embaixo do valor */
-.tx-value .tx-prevista { display: flex; width: max-content; min-width: 0; height: 20px; margin: 4px 0 0 auto; padding: 0 6px; font-size: 11.5px; font-family: inherit; }
+/* lançamento previsto (a data ainda não chegou): linha apagada, valor em cinza e "Prevista para 30 nov" em azul */
+.tx.tx-prevista .tx-title { color: var(--text-2); }
+.tx.tx-prevista .tx-value, .tx.tx-prevista .tx-value.income { color: var(--muted); }
+.tx-meta .tx-prev { color: var(--primary); font-weight: 600; white-space: nowrap; }
 
 /* ---------- Toast ---------- */
 
@@ -876,3 +887,15 @@ main.carregando .card::after {
 .excluir-email { color: var(--text); font-weight: 600; overflow-wrap: anywhere; }
 .excluir-dica { color: var(--muted) !important; font-size: 13px; }
 .btn-danger:disabled { opacity: .45; cursor: not-allowed; }
+
+/* ---------- Estado em texto ----------
+   Texto colorido com um pontinho da mesma cor ("Ligada", "Atrasada", "Vence em 3 dias").
+   Substitui o .selo (caixa com contorno), que ficou só no painel do administrador. */
+.estado-txt { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; color: var(--text-2); white-space: nowrap; }
+.estado-txt::before { content: ""; flex: none; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.estado-txt.alerta { color: #A8620F; }
+.estado-txt.erro { color: var(--danger); }
+.estado-txt.ok { color: var(--success); }
+.estado-txt.info { color: var(--primary); }
+.estado-txt.neutro { color: var(--muted); }
+

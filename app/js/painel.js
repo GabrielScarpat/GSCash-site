@@ -133,8 +133,6 @@
     const futuro = GS.isoData(p.inicio) > hojeIso;
     const fim = futuro || GS.isoData(p.fim) <= hojeIso ? GS.isoData(p.fim) : hojeIso;
 
-    pintarOlho();
-
     // cabeçalho do período
     document.querySelectorAll('#periodoModos button').forEach(b => {
       const ativo = b.dataset.modo === estado.modo;
@@ -192,7 +190,7 @@
 
     $('saldoTotal').textContent = GS.moeda(atual);
     $('saldoSub').innerHTML = 'em ' + GS.plural(visiveis.length, 'carteira', 'carteiras') + (ocultas.length
-      ? ` · <span class="selo neutro" title="Fora do saldo: ${esc(ocultas.map(c => c.nome).join(', '))}">${GS.plural(ocultas.length, 'oculta', 'ocultas')}</span>`
+      ? `<span class="saldo-ocultas" title="Fora do saldo: ${esc(ocultas.map(c => c.nome).join(', '))}">${GS.icone('eye-off')}${GS.plural(ocultas.length, 'oculta', 'ocultas')}</span>`
       : '');
     $('previstoRotulo').textContent = `Previsto para ${fimMes.getDate()} de ${GS.mesAno(fimMes).split(' ')[0].toLowerCase()}`;
     $('previsto').textContent = GS.moeda(previsto);
@@ -439,28 +437,6 @@
     clearTimeout(redimensionando);
     redimensionando = setTimeout(() => { if (dadosEvolucao.length) pintarGrafico(); }, 80);
   }).observe($('grafico'));
-
-  /* ---------- Ocultar valores ---------- */
-
-  function pintarOlho() {
-    const olho = $('olho');
-    olho.innerHTML = icone(GS.oculto ? 'eye-off' : 'eye');
-    olho.classList.toggle('on', GS.oculto);
-    olho.setAttribute('aria-pressed', GS.oculto);
-    olho.title = GS.oculto ? 'Mostrar valores' : 'Ocultar valores';
-    olho.setAttribute('aria-label', olho.title);
-  }
-
-  $('olho').addEventListener('click', async () => {
-    GS.oculto = !GS.oculto;
-    // a tela muda na hora; se não der para salvar, avisa que a escolha não vai ficar guardada
-    try {
-      await GS.api.salvarPreferencia('ocultarValores', GS.oculto);
-    } catch (err) {
-      GS.toast(err.message, 'erro');
-    }
-    desenhar();
-  });
 
   let preferenciasLidas = false;
 

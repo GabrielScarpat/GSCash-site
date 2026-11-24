@@ -95,7 +95,7 @@
   ]
 }
 </script>
-<link rel="stylesheet" href="app/css/fonts.css?v=a1c6b46">
+<link rel="stylesheet" href="app/css/fonts.css?v=87a544b">
 <style>
   /* página pública do GSCASH: o que é, preço e onde usar (também é a "página inicial" do login com Google) */
   :root { --bg:#F3EFE4; --surface:#FDFCF8; --surface-2:#F6F3EB; --border:#ECE7DA; --border-strong:#DDD7C7;
@@ -131,9 +131,9 @@
 
   /* abertura */
   .abertura { padding:64px 0 40px; text-align:center; }
-  .selo { display:inline-flex; align-items:center; gap:8px; height:30px; padding:0 14px; border-radius:99px; background:var(--success-soft);
-    color:var(--success); font-size:13.5px; font-weight:600; }
-  .selo svg.i { width:16px; height:16px; }
+  /* chamada do teste grátis: uma linha de texto com o check verde (sem pílula) */
+  .chamada { display:inline-flex; align-items:center; gap:8px; color:var(--text-2); font-size:15px; font-weight:500; }
+  .chamada svg.i { width:18px; height:18px; color:var(--success); stroke-width:2.4; }
   h1 { margin:18px auto 14px; max-width:760px; font-size:clamp(34px, 5.4vw, 54px); line-height:1.08; letter-spacing:-.03em; font-weight:700; text-wrap:balance; }
   .abertura p.sub { margin:0 auto; max-width:600px; color:var(--text-2); font-size:clamp(17px, 2vw, 19px); text-wrap:balance; }
   .acoes { display:flex; justify-content:center; flex-wrap:wrap; gap:12px; margin-top:30px; }
@@ -261,7 +261,7 @@
 
 <main>
   <div class="abertura faixa">
-    <span class="selo"><svg class="i" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>12 dias grátis para testar</span>
+    <span class="chamada"><svg class="i" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>12 dias grátis para testar</span>
     <h1>Saiba para onde vai o seu dinheiro</h1>
     <p class="sub">O GSCASH organiza seus gastos, suas contas e as faturas do cartão em um só lugar. Simples de usar, no navegador ou no Windows.</p>
     <div class="acoes">
@@ -460,6 +460,6 @@
   })();
 </script>
 
-<script src="app/js/baixar.js?v=a1c6b46"></script>
+<script src="app/js/baixar.js?v=87a544b"></script>
 </body>
 </html>

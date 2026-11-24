@@ -129,20 +129,6 @@
 
 .titulo-linha { display: flex; align-items: center; gap: 14px; }
 
-.olho {
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  border: 1px solid var(--border-strong);
-  background: var(--surface);
-  color: var(--text-2);
-  transition: background .15s, color .15s;
-}
-.olho svg { width: 20px; height: 20px; }
-.olho:hover { background: var(--surface-2); color: var(--text); }
-.olho.on { background: var(--primary); border-color: var(--primary); color: #fff; }
 
 .linha1 { grid-template-columns: 1.15fr 1fr; }
 
@@ -150,7 +136,6 @@
 .previsto { display: flex; align-items: center; gap: 14px; margin-top: auto; padding-top: 18px; border-top: 1px solid var(--border); }
 .saldo-card .muted { margin-bottom: 18px; }
 .saldo-sub { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
-.saldo-sub .selo { height: 22px; }
 .previsto .tile { background: var(--primary-soft); color: var(--primary); }
 .previsto small { display: block; color: var(--muted); font-size: 14px; }
 .previsto strong { font-size: 22px; font-weight: 700; letter-spacing: -.02em; }
@@ -241,3 +226,7 @@
   .investiu .info #investiuInfo { display: none; }   /* sem espaço: fica só a seta */
   .legenda-evo { order: 3; width: 100%; }
 }
+
+/* carteiras ocultas na linha do saldo: o olho riscado (o mesmo de ocultar valores) e a quantidade */
+.saldo-ocultas { display: inline-flex; align-items: center; gap: 5px; margin-left: 4px; opacity: .8; font-weight: 600; white-space: nowrap; vertical-align: -1px; }
+.saldo-ocultas svg { width: 15px; height: 15px; flex: none; }

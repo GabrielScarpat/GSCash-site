@@ -83,6 +83,21 @@
         ? `<li class="budget-add"><button type="button" class="link-btn" id="definirOrcamento">${icone('plus')}Definir orçamento</button></li>`
         : '');
 
+    // metas de receita (guardadas no mesmo campo do orçamento). Conta só o que já entrou:
+    // receita prevista para depois de hoje ainda não foi recebida
+    const hojeIso = GS.isoData(GS.hoje());
+    const recebidoPor = new Map(GS.calc.agrupar(doMes.filter(t => t.tipo === 'receita' && t.data <= hojeIso), 'categoriaId')
+      .map(g => [g.id, g.total]));
+    const comMeta = receitas.filter(c => c.orcamento > 0);
+    $('metaMes').textContent = GS.mesAnoDeIso(mesSel);
+    $('cardMetas').classList.toggle('hidden', !receitas.length);
+    $('metas').innerHTML = (comMeta.length
+      ? comMeta.map(c => linhaMeta(c, recebidoPor.get(c.id) || 0)).join('')
+      : widgets.vazio('Nenhuma meta definida', 'Defina quanto quer receber por mês em cada categoria de receita.'))
+      + (receitas.length > comMeta.length
+        ? `<li class="budget-add"><button type="button" class="link-btn" id="definirMeta">${icone('plus')}Definir meta</button></li>`
+        : '');
+
     // listas
     $('totalCategorias').textContent = GS.plural(despesas.length, 'categoria', 'categorias');
     $('listaDespesas').innerHTML = despesas.length
@@ -92,6 +107,25 @@
     $('cardReceitas').classList.toggle('hidden', !receitas.length);
     $('totalReceitas').textContent = GS.plural(receitas.length, 'categoria', 'categorias');
     $('listaReceitas').innerHTML = receitas.map(c => linhaCategoria(c, gasto(c.id))).join('');
+  }
+
+  function linhaMeta(c, recebido) {
+    const bateu = recebido >= c.orcamento;
+    const txt = bateu
+      ? `<span class="meta-txt ok">Meta batida${recebido > c.orcamento ? ` · ${GS.moeda(recebido - c.orcamento)} acima` : ''}</span>`
+      : `<span class="meta-txt">${recebido ? `Faltam ${GS.moeda(c.orcamento - recebido)}` : 'Nada recebido ainda'}</span>`
+        + `<span class="meta-de"> · meta de ${GS.moeda(c.orcamento)}</span>`;
+    return `
+      <li class="budget meta">
+        <div class="budget-line">
+          <span class="tile sm">${icone(c.icone)}</span>
+          <span class="budget-name">${esc(c.nome)}</span>
+          <span class="num budget-val"><strong>${GS.moeda(recebido)}</strong><span class="de"> / ${GS.moeda(c.orcamento)}</span></span>
+          <button type="button" class="icon-btn" data-orcamento="${c.id}" aria-label="Editar meta de ${esc(c.nome)}">${icone('pencil')}</button>
+        </div>
+        <div class="bar"><span class="${bateu ? 'batida' : ''}" style="width:${Math.min(100, (recebido / c.orcamento) * 100)}%"></span></div>
+        <span>${txt}</span>
+      </li>`;
   }
 
   function linhaCategoria(c, g, total) {
@@ -198,8 +232,9 @@
         </div>
       </div>
       <div class="field" data-campo-orc>
-        <label for="catOrc">Orçamento mensal <span class="opt">(opcional)</span></label>
+        <label for="catOrc"><span data-rotulo-orc>Orçamento mensal</span> <span class="opt">(opcional)</span></label>
         <div class="input money"><span class="prefix">R$</span><input id="catOrc" placeholder="0,00"></div>
+        <span class="field-hint" data-dica-orc></span>
       </div>`;
 
     const modal = GS.abrirModal({
@@ -227,7 +262,11 @@
         b.classList.toggle('active', b.dataset.cor === corSel);
         b.setAttribute('aria-checked', b.dataset.cor === corSel);
       });
-      corpo.querySelector('[data-campo-orc]').classList.toggle('hidden', tipo === 'receita');
+      // receita: o mesmo campo vira a meta do mês
+      corpo.querySelector('[data-rotulo-orc]').textContent = tipo === 'receita' ? 'Meta mensal' : 'Orçamento mensal';
+      const dica = corpo.querySelector('[data-dica-orc]');
+      dica.textContent = 'Quanto você quer receber por mês nesta categoria.';
+      dica.hidden = tipo !== 'receita';
     }
 
     /* subcategorias: Enter adiciona, clique no nome renomeia, × remove (só vale ao salvar) */
@@ -332,7 +371,7 @@
         nome,
         icone: iconeSel,
         cor: corSel,
-        orcamento: tipo === 'despesa' ? orc.valor : null,
+        orcamento: orc.valor,
         subcategorias: subs.map(s => ({ id: s.id, nome: s.nome })),
       };
       const botao = modal.foot.querySelector('[data-salvar]');
@@ -354,15 +393,19 @@
 
   /* ---------- Orçamento ---------- */
 
-  function abrirOrcamento(cat = null) {
-    const semOrcamento = ctx.categorias.filter(c => (c.tipo || 'despesa') === 'despesa' && !(c.orcamento > 0));
+  // orçamento (categoria de gasto) ou meta (categoria de receita): o mesmo campo, com nomes diferentes
+  function abrirOrcamento(cat = null, tipoNovo = 'despesa') {
+    const tipo = cat ? (cat.tipo || 'despesa') : tipoNovo;
+    const meta = tipo === 'receita';
+    const semOrcamento = ctx.categorias.filter(c => (c.tipo || 'despesa') === tipo && !(c.orcamento > 0));
     const corpo = GS.el('div', '');
     corpo.style.display = 'contents';
     corpo.innerHTML = `
       ${cat ? '' : '<div class="field"><span class="field-label">Categoria</span><div data-slot="cat"></div></div>'}
       <div class="field">
-        <label for="orcValor">Limite mensal${cat ? ` para <strong>${esc(cat.nome)}</strong>` : ''}</label>
+        <label for="orcValor">${meta ? 'Meta mensal' : 'Limite mensal'}${cat ? ` para <strong>${esc(cat.nome)}</strong>` : ''}</label>
         <div class="input money"><span class="prefix">R$</span><input id="orcValor" placeholder="0,00" autofocus></div>
+        ${meta ? '<span class="field-hint">Quanto você quer receber por mês nesta categoria.</span>' : ''}
       </div>`;
 
     let seletor = null;
@@ -376,7 +419,7 @@
     }
 
     const modal = GS.abrirModal({
-      titulo: cat ? 'Editar orçamento' : 'Definir orçamento',
+      titulo: meta ? (cat ? 'Editar meta' : 'Definir meta') : (cat ? 'Editar orçamento' : 'Definir orçamento'),
       corpo,
       tamanho: 'sm',
       rodapeClasse: 'even',
@@ -400,7 +443,7 @@
         return GS.toast(err.message, 'erro');
       }
       modal.fechar();
-      GS.toast(v ? 'Orçamento salvo' : 'Orçamento removido');
+      GS.toast(meta ? (v ? 'Meta salva' : 'Meta removida') : (v ? 'Orçamento salvo' : 'Orçamento removido'));
       GS.notificarMudanca();
     };
 
@@ -430,9 +473,9 @@
     });
 
     const item = (it, i) => {
-      const selo = !it.sua ? '<span class="selo ok">Nova</span>'
-        : it.completa ? '<span class="selo neutro">Você já tem tudo</span>'
-        : `<span class="selo info">Junta com a sua · +${it.faltam.length}</span>`;
+      const selo = !it.sua ? '<span class="estado-txt ok">Nova</span>'
+        : it.completa ? '<span class="estado-txt neutro">Você já tem tudo</span>'
+        : `<span class="estado-txt info">Junta com a sua · +${it.faltam.length}</span>`;
       const chips = it.subcategorias.map(s => it.faltam.includes(s)
         ? `<span class="pac-sub ${it.sua ? 'mais' : ''}">${it.sua ? '+ ' : ''}${esc(s)}</span>`
         : `<span class="pac-sub ja">${esc(s)}</span>`).join('');
@@ -545,6 +588,11 @@
     const b = e.target.closest('[data-orcamento]');
     if (b) abrirOrcamento(ctx.categoria.get(b.dataset.orcamento));
     if (e.target.closest('#definirOrcamento')) abrirOrcamento();
+  });
+  $('metas').addEventListener('click', e => {
+    const b = e.target.closest('[data-orcamento]');
+    if (b) abrirOrcamento(ctx.categoria.get(b.dataset.orcamento));
+    if (e.target.closest('#definirMeta')) abrirOrcamento(null, 'receita');
   });
 
   // abre o detalhe da categoria com o cursor no campo de nova subcategoria

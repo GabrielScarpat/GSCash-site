@@ -52,7 +52,7 @@
   font-weight: 600;
 }
 
-/* selos de status: .selo, em componentes.css */
+/* situação da fatura: .estado-txt, em componentes.css */
 
 /* seletor de cartões */
 .card-pills { display: flex; gap: 8px; flex-wrap: wrap; }
