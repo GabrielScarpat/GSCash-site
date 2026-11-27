@@ -883,6 +883,15 @@ main.carregando .card::after {
 .excluir-copia { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--border); font-size: 13.5px; color: var(--text-2); }
 .excluir-copia span { flex: 1; }
 .excluir-copia b { display: block; color: var(--text); font-size: 14px; font-weight: 600; }
+
+/* Baixar meus dados (js/baixar-dados.js) */
+.dados-intro { margin: 0 0 14px; color: var(--text-2); }
+.dados-abas { list-style: none; margin: 0 0 14px; padding: 0; border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+.dados-abas li { display: flex; align-items: center; gap: 8px; padding: 12px 14px; }
+.dados-abas li + li { border-top: 1px solid var(--border); }
+.dados-abas b { font-weight: 500; }
+.dados-abas .num { color: var(--muted); }
+.dados-nota { margin: 0; color: var(--muted); font-size: 13.5px; }
 .excluir-copia .btn { flex-shrink: 0; height: 36px; padding: 0 12px; font-size: 13.5px; }
 .excluir-email { color: var(--text); font-weight: 600; overflow-wrap: anywhere; }
 .excluir-dica { color: var(--muted) !important; font-size: 13px; }

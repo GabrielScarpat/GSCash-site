@@ -340,6 +340,15 @@
   // instalou pelo convite do navegador: a linha some
   window.addEventListener('appinstalled', desenharAplicativo);
 
+  /* ---------- Seus dados: a planilha com tudo (js/baixar-dados.js) ---------- */
+
+  function desenharDados() {
+    if (!GS.baixarDados) return;
+    $('baixarDados').innerHTML = linhaHtml('download', 'Baixar meus dados', seta(), 'Planilha com tudo o que você guardou');
+    $('grupoDados').hidden = $('tituloDados').hidden = false;
+  }
+  $('baixarDados').addEventListener('click', () => GS.baixarDados.abrir());
+
   /* ---------- Sair, excluir e versão ---------- */
 
   // Sai só da conta em uso, do mesmo jeito que "Sair" em Gerenciar contas: as outras contas
@@ -390,6 +399,7 @@
   async function desenhar() {
     desenharMoedas();
     desenharAplicativo();
+    desenharDados();
     if (primeira) { primeira = false; mostrarTela(); desenharVersao(); }
     await Promise.all([desenharPerfil(), desenharIndicacao(), desenharLembrete(), desenharDuasEtapas(), desenharConta()]);
   }

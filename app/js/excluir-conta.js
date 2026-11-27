@@ -1,6 +1,6 @@
 /* =========================================================
    GSCASH — excluir a própria conta (link no fim do menu da conta)
-   1. o que se perde (e a licença, se houver), com a opção de baixar os lançamentos em CSV
+   1. o que se perde (e a licença, se houver), com a opção de baixar a planilha com tudo (js/baixar-dados.js)
    2. confirmar digitando o próprio e-mail
    3. a Edge Function "excluir-conta" apaga a conta e tudo dela; volta para a tela de entrada
    ========================================================= */
@@ -9,67 +9,6 @@ window.GS = window.GS || {};
 
 (function () {
   const { icone, esc } = GS;
-
-  /* ---------- cópia dos lançamentos (CSV que o Excel abre com acentos) ---------- */
-
-  async function planilha() {
-    const [transacoes, categorias, carteiras] = await Promise.all([
-      GS.api.listarTransacoes(), GS.api.listarCategorias(), GS.api.listarCarteiras(),
-    ]);
-    const cat = new Map(categorias.map(c => [c.id, c]));
-    const cart = new Map(carteiras.map(c => [c.id, c.nome]));
-    const TIPOS = { despesa: 'Despesa', receita: 'Receita', transferencia: 'Transferência', pagamento: 'Pagamento de fatura' };
-    const campo = v => {
-      const s = String(v ?? '');
-      return /[;"\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-    };
-    const valor = c => (c / 100).toFixed(2).replace('.', ',');
-    const linhas = [['Data', 'Tipo', 'Título', 'Descrição', 'Categoria', 'Subcategoria', 'Carteira', 'Destino', 'Forma', 'Parcelas', `Valor (${GS.moedaAtual().sigla})`]];
-    [...transacoes].sort((a, b) => (a.data < b.data ? -1 : a.data > b.data ? 1 : 0)).forEach(t => {
-      const c = cat.get(t.categoriaId);
-      const sub = c && (c.subcategorias || []).find(s => s.id === t.subcategoriaId);
-      const sinal = t.tipo === 'receita' ? 1 : -1;
-      linhas.push([
-        t.data.split('-').reverse().join('/'), TIPOS[t.tipo] || t.tipo, t.titulo, t.descricao,
-        c ? c.nome : '', sub ? sub.nome : '', cart.get(t.carteiraId) || '', cart.get(t.destinoId) || '',
-        t.forma === 'credito' ? 'Crédito' : 'Débito', t.parcelas || 1, valor(t.tipo === 'transferencia' ? t.valor : sinal * t.valor),
-      ]);
-    });
-    return linhas.map(l => l.map(campo).join(';')).join('\r\n');
-  }
-
-  async function baixarCopia(botao) {
-    const original = botao.innerHTML;
-    botao.disabled = true;
-    botao.innerHTML = '<span class="roda-botao" aria-hidden="true"></span>Gerando…';
-    try {
-      const texto = await planilha();
-      const nome = `GSCASH - lançamentos ${GS.isoData(GS.hoje())}`;
-      if (GS.noDesktop) {
-        const api = await GS.apiDesktop();
-        const r = await api.salvar_planilha(nome, texto);
-        if (!r || !r.ok) throw new Error((r && r.erro) || 'Não foi possível salvar a planilha.');
-        api.mostrar_relatorio(r.caminho);
-        GS.toast('Planilha salva em Documentos > GSCASH > Relatórios');
-      } else {
-        const blob = new Blob(['﻿' + texto], { type: 'text/csv;charset=utf-8' });
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = `${nome}.csv`;
-        document.body.append(a);
-        a.click();
-        a.remove();
-        setTimeout(() => URL.revokeObjectURL(a.href), 4000);
-        GS.toast('Planilha baixada');
-      }
-      botao.innerHTML = `${icone('check')}Baixada`;
-    } catch (err) {
-      botao.innerHTML = original;
-      GS.toast(err.message || 'Não foi possível gerar a planilha.', 'erro');
-    } finally {
-      botao.disabled = false;
-    }
-  }
 
   /* ---------- janela ---------- */
 
@@ -95,9 +34,9 @@ window.GS = window.GS || {};
           <div>· o lembrete diário e o seu acesso ao GSCASH.</div>
         </div>
         ${comLicenca ? `<div class="excluir-licenca">${icone('clock')}<span>Sua licença vale até <b>${esc(GS.dataMedia(info.validade))}</b>. Ela será perdida e não é reembolsada.</span></div>` : ''}
-        <div class="excluir-copia"><span><b>Quer guardar uma cópia?</b>Planilha (CSV) com todos os lançamentos.</span>
+        <div class="excluir-copia"><span><b>Quer guardar uma cópia?</b>Planilha do Excel com todos os seus dados.</span>
           <button type="button" class="btn btn-outline" data-copia>${icone('download')}Baixar</button></div>`;
-      modal.body.querySelector('[data-copia]').addEventListener('click', e => baixarCopia(e.currentTarget));
+      modal.body.querySelector('[data-copia]').addEventListener('click', e => GS.baixarDados.baixar(e.currentTarget));
       rodape(`<button type="button" class="btn btn-outline" data-fechar>Cancelar</button>
               <button type="button" class="btn btn-danger" data-seguir>Continuar</button>`);
       modal.foot.querySelector('[data-seguir]').addEventListener('click', passoConfirmar);

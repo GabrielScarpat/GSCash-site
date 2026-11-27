@@ -1865,7 +1865,7 @@ window.GS = window.GS || {};
   // licença vencida (js/licenca.js): o app fica só leitura e só estas funções seguem liberadas
   GS.somenteLeitura = false;
   GS.TEXTO_SO_LEITURA = 'Licença vencida: o GSCASH está em modo só leitura.';
-  const LIBERADAS_SO_LEITURA = new Set(['infoSerie', 'listarTransacoes','listarCategorias', 'listarCarteiras', 'obterPreferencias', 'salvarPreferencia']);
+  const LIBERADAS_SO_LEITURA = new Set(['infoSerie', 'listarTransacoes','listarCategorias', 'listarCarteiras', 'listarInvestimentos', 'listarDividas', 'obterPreferencias', 'salvarPreferencia']);
 
   // toda chamada espera os dados terem sido carregados do banco
   Object.keys(GS.api).forEach(nome => {
