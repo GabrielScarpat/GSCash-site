@@ -2,18 +2,19 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
+<script>/* endereço sem ".html" na barra (o GitHub Pages abre os dois) */ if (location.hostname === 'gscash.com.br' && /\.html$/.test(location.pathname)) history.replaceState(null, '', location.pathname.replace(/(index)?\.html$/, '') + location.search + location.hash);</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>GSCASH · controle de gastos simples</title>
 <script>
   // Página inicial do GSCASH (gscash.com.br).
-  // · links dos e-mails (confirmar conta, trocar senha, link vencido) vão para conta.html
+  // · links dos e-mails (confirmar conta, trocar senha, link vencido) vão para conta (conta.html)
   // · quem já entrou no app neste aparelho vai direto para o app
   // · o resto (e os buscadores, como o Google) vê esta página
   // · link de indicação (?ref=CODIGO): guarda o código para a tela de criar conta do app
   //   (mesmo endereço, então app/js/supabase.js lê a mesma chave)
   (function () {
     if (/(access_token|error|type|code|token_hash)=/.test(location.hash + location.search)) {
-      location.replace('conta.html' + location.search + location.hash);
+      location.replace('conta' + location.search + location.hash);
       return;
     }
     try {
@@ -107,7 +108,7 @@
   ]
 }
 </script>
-<link rel="stylesheet" href="app/css/fonts.css?v=c655e16">
+<link rel="stylesheet" href="app/css/fonts.css?v=2008438">
 <style>
   /* página pública do GSCASH: o que é, preço e onde usar (também é a "página inicial" do login com Google) */
   :root { --bg:#F3EFE4; --surface:#FDFCF8; --surface-2:#F6F3EB; --border:#ECE7DA; --border-strong:#DDD7C7;
@@ -269,7 +270,7 @@
       <a class="lk" href="#recursos">Recursos</a>
       <a class="lk" href="#preco">Preço</a>
       <a class="lk" href="#duvidas">Dúvidas</a>
-      <a class="btn btn-primario" href="app/entrar.html">Entrar</a>
+      <a class="btn btn-primario" href="app/entrar">Entrar</a>
     </nav>
   </div>
 </header>
@@ -280,7 +281,7 @@
     <h1>Saiba para onde vai o seu dinheiro</h1>
     <p class="sub">O GSCASH organiza seus gastos, suas contas e as faturas do cartão em um só lugar. Simples de usar, no iPhone, no navegador ou no Windows.</p>
     <div class="acoes">
-      <a class="btn btn-primario btn-grande" href="app/entrar.html#criar">Começar grátis<svg class="i" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a>
+      <a class="btn btn-primario btn-grande" href="app/entrar#criar">Começar grátis<svg class="i" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a>
       <a class="btn btn-contorno btn-grande" href="https://github.com/GabrielScarpat/GSCash-versoes/releases/latest/download/Instalar-GSCASH.exe" data-baixar data-so-computador><svg class="i" viewBox="0 0 24 24"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>Baixar para Windows</a>
       <a class="btn btn-contorno btn-grande" href="https://apps.apple.com/br/app/gscash-controle-de-gastos/id6827657035" data-so-iphone hidden><svg class="i i-loja" viewBox="0 0 24 24"><path d="M13.6 4.5 6.8 16.3"/><path d="M10.4 4.5l7.8 13.5"/><path d="M4 13.5h11"/><path d="M17.2 13.5h2.8"/><path d="M5.6 18.5l1.2-2.2"/></svg>Baixar na App Store</a>
     </div>
@@ -338,7 +339,7 @@
           <div>
             <h3>Pelo navegador</h3>
             <p>Em qualquer aparelho: celular, tablet ou computador. Não precisa instalar nada.</p>
-            <a class="lk" href="app/entrar.html">Abrir o GSCASH<svg class="i" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a>
+            <a class="lk" href="app/entrar">Abrir o GSCASH<svg class="i" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a>
           </div>
         </div>
         <div class="lado">
@@ -368,7 +369,7 @@
           <li><svg class="i" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Se a licença vencer, seus dados continuam lá para consultar</li>
         </ul>
         <div class="acoes">
-          <a class="btn btn-primario" href="app/entrar.html#criar">Começar grátis</a>
+          <a class="btn btn-primario" href="app/entrar#criar">Começar grátis</a>
           <a class="btn btn-contorno" href="app/?comprar">Quero comprar</a>
         </div>
         <p class="pix">Pagamento por Pix ou cartão, dentro do GSCASH. A licença ativa na hora.</p>
@@ -440,8 +441,8 @@
   <div class="faixa">
     <span>GSCASH · controle de gastos</span>
     <span class="links">
-      <a href="privacidade.html">Política de privacidade</a>
-      <a href="termos.html">Termos de uso</a>
+      <a href="privacidade">Política de privacidade</a>
+      <a href="termos">Termos de uso</a>
       <a href="mailto:suporte.gscash@gmail.com">suporte.gscash@gmail.com</a>
     </span>
   </div>
@@ -460,7 +461,7 @@
         <li><span><b>Envie o seu link</b> para os amigos. Ele fica em Configurações.</span></li>
         <li><span><b>Ganhe 6 meses</b> quando 5 amigos criarem a conta e lançarem o primeiro gasto.</span></li>
       </ol>
-      <a class="btn btn-primario btn-grande" href="app/entrar.html#criar">Começar grátis</a>
+      <a class="btn btn-primario btn-grande" href="app/entrar#criar">Começar grátis</a>
     </div>
     <div data-versao="convite" hidden>
       <h3 id="indiqueTituloConvite">Um amigo te convidou para o GSCASH</h3>
@@ -469,7 +470,7 @@
         <li><span><b>Crie sua conta</b> e lance o seu primeiro gasto.</span></li>
         <li><span><b>Depois, indique você também.</b> Com 5 amigos usando, você ganha 6 meses grátis.</span></li>
       </ol>
-      <a class="btn btn-primario btn-grande" href="app/entrar.html#criar">Aceitar convite</a>
+      <a class="btn btn-primario btn-grande" href="app/entrar#criar">Aceitar convite</a>
     </div>
     <button class="pp-depois" type="button" data-fechar>Agora não</button>
   </div>
@@ -508,7 +509,7 @@
   })();
 </script>
 
-<script src="app/js/baixar.js?v=c655e16"></script>
+<script src="app/js/baixar.js?v=2008438"></script>
 <script>
   // no iPhone e no iPad o botão do topo leva para a App Store; nos outros aparelhos, para o instalador do Windows
   (function () {

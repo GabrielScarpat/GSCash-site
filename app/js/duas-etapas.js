@@ -308,7 +308,7 @@ window.GS = window.GS || {};
 
   // entrou com um código de recuperação (tela de entrada): avisa que a verificação ficou desligada
   try {
-    if (sessionStorage.getItem('gscash:2fa-desligada') && !/entrar\.html$/i.test(location.pathname)) {
+    if (sessionStorage.getItem('gscash:2fa-desligada') && !/entrar(\.html)?$/i.test(location.pathname)) {
       sessionStorage.removeItem('gscash:2fa-desligada');
       window.addEventListener('load', () => setTimeout(() => {
         if (GS.toast) GS.toast('Verificação em duas etapas desligada. Ligue de novo em Configurações, com o celular novo.');

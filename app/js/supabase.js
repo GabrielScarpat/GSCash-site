@@ -51,6 +51,26 @@ window.GS = window.GS || {};
   // dentro do app do iPhone (Capacitor): sem convite de instalar, sem Windows, sem Pix
   GS.nativo = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
 
+  // Endereço sem ".html" no navegador (gscash.com.br/app/transacoes em vez de .../transacoes.html):
+  // o GitHub Pages abre os dois. Os links e o login continuam com .html (o programa do Windows e os
+  // apps do celular abrem os arquivos do aparelho e precisam dele); aqui só a barra de endereço é
+  // limpa ao abrir a página, e um clique num link do app já vai para o endereço limpo.
+  // A busca (?…) e o # ficam como estão: o login com Google e os links dos e-mails usam os dois.
+  if (location.hostname === 'gscash.com.br') {
+    const semHtml = caminho => caminho.replace(/(^|\/)index\.html$/, '$1').replace(/\.html$/, '');
+    if (/\.html$/.test(location.pathname)) {
+      try { history.replaceState(history.state, '', semHtml(location.pathname) + location.search + location.hash); } catch (e) { /* segue com .html */ }
+    }
+    document.addEventListener('click', e => {
+      const a = e.target.closest && e.target.closest('a[href]');
+      if (!a || a.target === '_blank' || a.hasAttribute('download')) return;
+      let url;
+      try { url = new URL(a.href, location.href); } catch (err) { return; }
+      if (url.origin !== location.origin || !/\.html$/.test(url.pathname)) return;
+      a.href = semHtml(url.pathname) + url.search + url.hash;
+    }, true);
+  }
+
   const apiDesktop = () => new Promise(resolve => {
     const api = window.pywebview && window.pywebview.api;
     if (api && api.sessao_ler) return resolve(api);
@@ -73,7 +93,7 @@ window.GS = window.GS || {};
   });
   GS.supabase = cliente;
 
-  const naTelaDeLogin = /entrar\.html$/i.test(location.pathname);
+  const naTelaDeLogin = /entrar(\.html)?$/i.test(location.pathname);   // com ou sem .html (gscash.com.br/app/entrar)
   // Os links dos e-mails (confirmar conta, nova senha) vão SEMPRE para a página do site
   // (site/, em gscash.com.br): ela abre em qualquer aparelho, inclusive no celular.
   // Precisa ser dito explicitamente: sem isso, o Supabase usa o endereço da página que

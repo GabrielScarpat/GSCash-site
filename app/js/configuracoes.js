@@ -377,8 +377,8 @@
   // data da última versão da política e dos termos (gscash.com.br): trocar aqui quando eles mudarem
   const DOCUMENTOS_EM = '27 de novembro';
   const DOCUMENTOS = [
-    { ic: 'escudo', nome: 'Política de privacidade', sub: `Atualizada em ${DOCUMENTOS_EM}`, url: 'https://gscash.com.br/privacidade.html' },
-    { ic: 'file', nome: 'Termos de uso', sub: `Atualizados em ${DOCUMENTOS_EM}`, url: 'https://gscash.com.br/termos.html' },
+    { ic: 'escudo', nome: 'Política de privacidade', sub: `Atualizada em ${DOCUMENTOS_EM}`, url: 'https://gscash.com.br/privacidade' },
+    { ic: 'file', nome: 'Termos de uso', sub: `Atualizados em ${DOCUMENTOS_EM}`, url: 'https://gscash.com.br/termos' },
   ];
   const FORA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7"/><path d="M8 7h9v9"/></svg>';
 

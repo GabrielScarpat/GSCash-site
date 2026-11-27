@@ -26,7 +26,7 @@ window.GS = window.GS || {};
     : { nome: 'App Store', quem: 'A Apple', na: 'na App Store', funcao: 'apple', conta: 'a sua conta da App Store', celular: 'no iPhone', recibo: 'O recibo chega no seu e-mail da Apple.', abrindo: 'Abrindo a App Store…',
         // a Apple exige na tela de compra links para os Termos de Uso (EULA padrão dela) e a privacidade
         termos: 'https://www.apple.com/legal/internet-services/itunes/dev/stdeula/' };
-  const PRIVACIDADE = 'https://gscash.com.br/privacidade.html';
+  const PRIVACIDADE = 'https://gscash.com.br/privacidade';
   const Navegador = window.Capacitor.registerPlugin('Browser');
   const TIPO = android ? { productType: 'inapp' } : {};
   const data = d => GS.dataMedia(d);
