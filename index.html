@@ -11,6 +11,7 @@
   // · quem já entrou no app neste aparelho vai direto para o app
   // · o resto (e os buscadores, como o Google) vê esta página
   // · link de indicação (?ref=CODIGO): guarda o código para a tela de criar conta do app
+  //   (o convite do Indique e ganhe só aparece dentro do app, depois de entrar: js/avisos-app.js)
   //   (mesmo endereço, então app/js/supabase.js lê a mesma chave)
   (function () {
     if (/(access_token|error|type|code|token_hash)=/.test(location.hash + location.search)) {
@@ -108,7 +109,7 @@
   ]
 }
 </script>
-<link rel="stylesheet" href="app/css/fonts.css?v=be496c5">
+<link rel="stylesheet" href="app/css/fonts.css?v=6154f7a">
 <link rel="preload" as="image" href="tela-painel.webp" type="image/webp">
 <style>
   /* Página inicial do GSCASH (aprovada no Figma em 27/11/2026, arquivo "Landing page nova").
@@ -291,25 +292,6 @@
   .js .surge.visto { opacity:1; transform:none; }
   .js .d1 { transition-delay:.08s; } .js .d2 { transition-delay:.16s; } .js .d3 { transition-delay:.24s; } .js .d4 { transition-delay:.32s; }
 
-  /* pop-up "indique e ganhe" */
-  .pp-fundo { position:fixed; inset:0; z-index:50; display:grid; place-items:end center; background:rgba(5,9,15,.6); opacity:0; transition:opacity .25s; }
-  .pp-fundo.aberto { opacity:1; }
-  .pp { position:relative; width:100%; max-height:100%; overflow-y:auto; background:var(--creme); color:var(--texto); border-radius:24px 24px 0 0;
-    padding:26px 20px calc(18px + env(safe-area-inset-bottom)); box-shadow:0 30px 80px rgba(0,0,0,.4); transform:translateY(40px); transition:transform .25s; }
-  .pp-fundo.aberto .pp { transform:none; }
-  .pp-fechar { position:absolute; top:14px; right:14px; display:grid; place-items:center; width:36px; height:36px; border:0; border-radius:10px; background:transparent; color:var(--muted); cursor:pointer; }
-  .pp-fechar:hover { background:var(--creme-2); color:var(--texto); }
-  .pp-ic { display:grid; place-items:center; width:64px; height:64px; border-radius:18px; background:var(--azul-soft); color:var(--azul); margin-bottom:18px; }
-  .pp-ic svg.i { width:34px; height:34px; stroke-width:1.6; }
-  .pp h3 { margin:0 0 8px; padding-right:28px; font-size:23px; line-height:1.2; letter-spacing:-.02em; text-wrap:balance; }
-  .pp p { margin:0 0 20px; color:var(--texto-2); font-size:15.5px; }
-  .pp ol { list-style:none; margin:0 0 24px; padding:0; display:grid; gap:12px; counter-reset:passo; }
-  .pp li { display:flex; gap:12px; align-items:flex-start; font-size:15px; color:var(--texto-2); counter-increment:passo; }
-  .pp li::before { content:counter(passo); display:grid; place-items:center; width:26px; height:26px; flex-shrink:0; border-radius:8px; border:1px solid #DDD7C7; color:var(--azul); font-size:13.5px; font-weight:700; }
-  .pp li b { color:var(--texto); font-weight:600; }
-  .pp .btn { width:100%; }
-  .pp .btn-azul { color:#fff; }
-  .pp-depois { display:block; width:100%; height:40px; margin-top:8px; border:0; background:transparent; color:var(--muted); font:inherit; font-size:14.5px; cursor:pointer; }
 
   /* ---------- telas maiores ---------- */
   @media (min-width: 700px) {
@@ -321,8 +303,6 @@
     .antes-depois { max-width:560px; margin-inline:auto; }
     .planilha { font-size:11.5px; }
     .planilha th, .planilha td { padding:7px 8px; }
-    .pp-fundo { place-items:center; padding:24px; }
-    .pp { max-width:440px; border-radius:24px; padding:30px 28px 24px; transform:translateY(12px); }
     .contato-caixa { flex-direction:row; align-items:center; justify-content:space-between; gap:32px; padding:40px 48px; }
     .contato-caixa .btn { flex-shrink:0; }
   }
@@ -622,34 +602,6 @@
 
 <div class="barra" id="barra"><a class="btn btn-claro" href="app/entrar#criar">Começar grátis</a></div>
 
-<!-- pop-up "indique e ganhe": quem chega pelo link de um amigo (?ref) vê a versão do convite -->
-<div class="pp-fundo" id="indique" hidden>
-  <div class="pp" role="dialog" aria-modal="true" aria-labelledby="indiqueTitulo">
-    <button class="pp-fechar" type="button" aria-label="Fechar" data-fechar><svg class="i" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
-    <div class="pp-ic"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5C10 3 12 8 12 8s2-5 4.5-5a2.5 2.5 0 0 1 0 5"/></svg></div>
-    <div data-versao="normal">
-      <h3 id="indiqueTitulo">Indique 5 amigos e ganhe 6 meses grátis</h3>
-      <p>Além dos 12 dias de teste, você pode usar o GSCASH por mais 6 meses sem pagar nada.</p>
-      <ol>
-        <li><span><b>Crie sua conta grátis.</b> Leva menos de um minuto.</span></li>
-        <li><span><b>Envie o seu link</b> para os amigos. Ele fica em Configurações.</span></li>
-        <li><span><b>Ganhe 6 meses</b> quando 5 amigos criarem a conta e lançarem o primeiro gasto.</span></li>
-      </ol>
-      <a class="btn btn-azul" href="app/entrar#criar">Começar grátis</a>
-    </div>
-    <div data-versao="convite" hidden>
-      <h3 id="indiqueTituloConvite">Um amigo te convidou para o GSCASH</h3>
-      <p>Crie sua conta por este link para o convite contar para ele. Você testa 12 dias grátis, sem cartão.</p>
-      <ol>
-        <li><span><b>Crie sua conta</b> e lance o seu primeiro gasto.</span></li>
-        <li><span><b>Depois, indique você também.</b> Com 5 amigos usando, você ganha 6 meses grátis.</span></li>
-      </ol>
-      <a class="btn btn-azul" href="app/entrar#criar">Aceitar convite</a>
-    </div>
-    <button class="pp-depois" type="button" data-fechar>Agora não</button>
-  </div>
-</div>
-
 <script>
   // dúvidas: o texto vem da ficha do Google (FAQPage, no topo), para as duas nunca ficarem diferentes
   (function () {
@@ -704,40 +656,7 @@
     }
   })();
 </script>
-<script>
-  // pop-up do Indique e ganhe: abre uma vez por aparelho, 3 s depois de carregar. Sem localStorage, não abre.
-  (function () {
-    const CHAVE = 'gscash:viu-indique';
-    const pp = document.getElementById('indique');
-    let ref = '';
-    try {
-      if (localStorage.getItem(CHAVE)) return;
-      ref = localStorage.getItem('gscash:ref') || '';
-    } catch (e) { return; }
-    if (ref) {
-      pp.querySelector('[data-versao=normal]').hidden = true;
-      pp.querySelector('[data-versao=convite]').hidden = false;
-      pp.querySelector('.pp').setAttribute('aria-labelledby', 'indiqueTituloConvite');
-    }
-    let antes = null;
-    function abrir() {
-      try { localStorage.setItem(CHAVE, '1'); } catch (e) {}
-      antes = document.activeElement;
-      pp.hidden = false;
-      requestAnimationFrame(() => pp.classList.add('aberto'));
-      pp.querySelector('[data-versao]:not([hidden]) .btn').focus({ preventScroll: true });
-    }
-    function fechar() {
-      pp.classList.remove('aberto');
-      setTimeout(() => { pp.hidden = true; }, 250);
-      if (antes && antes.focus) antes.focus({ preventScroll: true });
-    }
-    pp.addEventListener('click', e => { if (e.target === pp || e.target.closest('[data-fechar]')) fechar(); });
-    document.addEventListener('keydown', e => { if (e.key === 'Escape' && !pp.hidden) fechar(); });
-    setTimeout(abrir, 3000);
-  })();
-</script>
-<script src="app/js/baixar.js?v=be496c5"></script>
+<script src="app/js/baixar.js?v=6154f7a"></script>
 <script>
   // no iPhone e no iPad o botão do topo leva para a App Store; nos outros aparelhos, para o instalador do Windows
   (function () {
