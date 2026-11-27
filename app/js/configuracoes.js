@@ -81,7 +81,7 @@
      Celular: a lista é a tela; tocar numa linha abre a tela dela (o "voltar" do aparelho volta à lista).
      Computador: a lista fica à esquerda e a tela escolhida à direita (começa na Moeda). */
 
-  const TELAS = ['moeda', 'indique'];
+  const TELAS = ['moeda', 'indique', 'ajuda'];
   const noCelular = () => matchMedia('(max-width: 760px)').matches;
 
   function mostrarTela() {
@@ -328,6 +328,7 @@
       linhas.push(`<button type="button" class="cfg-item" data-instalar-app>${linhaHtml('celular', 'Instalar no celular', seta(), 'Ícone na tela inicial, como um app')}</button>`);
     }
     if (GS.abrirTour) linhas.push(`<button type="button" class="cfg-item" data-tour>${linhaHtml('play', 'Ver o tour do GSCASH', seta('<span>1 min</span>'))}</button>`);
+    linhas.push(`<button type="button" class="cfg-item" data-ir="ajuda">${linhaHtml('book', 'Ajuda', seta(), 'Dúvidas frequentes e suporte')}</button>`);
     $('aplicativo').innerHTML = linhas.join('');
     $('aplicativo').hidden = $('tituloApp').hidden = !linhas.length;
   }
@@ -339,6 +340,37 @@
   });
   // instalou pelo convite do navegador: a linha some
   window.addEventListener('appinstalled', desenharAplicativo);
+
+  /* ---------- Ajuda: dúvidas frequentes ----------
+     As mesmas perguntas das Dúvidas frequentes do site (site/index.html), ajustadas para quem já está no app.
+     Mudou uma resposta lá, muda aqui também. No app da loja, o pagamento é só pela loja: a Apple e o Google
+     não deixam o app falar de outras formas de pagar. */
+
+  function respostaPagamento() {
+    const plataforma = GS.nativo ? window.Capacitor.getPlatform() : '';
+    const loja = plataforma === 'ios' ? 'pela App Store' : plataforma === 'android' ? 'pelo Google Play' : '';
+    return loja
+      ? `Dentro do próprio GSCASH, ${loja}. A licença ativa assim que a compra é aprovada e vale em todos os aparelhos em que você entrar com a mesma conta.`
+      : 'Dentro do próprio GSCASH, por Pix ou cartão de crédito à vista. A licença ativa assim que o pagamento é aprovado e vale em todos os aparelhos em que você entrar com a mesma conta.';
+  }
+
+  const AJUDA = () => [
+    ['O que acontece depois dos 12 dias grátis?', 'Nada some. Sem a licença, o GSCASH fica só para consulta: você vê tudo o que lançou e gera relatórios, mas não lança nada novo. Ative a licença quando quiser e continue de onde parou.'],
+    ['Como importo o extrato do banco?', 'Em Configurações > Importar extrato ou planilha, escolha o arquivo que o banco fornece, em PDF, OFX, CSV ou Excel. O GSCASH mostra cada lançamento para você revisar antes de salvar. Ele nunca pede a senha do banco.'],
+    ['Quais bancos o importador lê?', 'Os extratos em PDF do Banco do Brasil, Itaú, Bradesco, Santander, Nubank, Inter, Mercado Pago, PicPay, BTG e Sicoob. De qualquer outro banco, use o arquivo OFX ou CSV, que quase todos oferecem.'],
+    ['Posso usar em mais de um aparelho?', 'Sim, em quantos quiser, com a mesma conta e a mesma licença. Também dá para deixar mais de uma conta entrada no mesmo aparelho e trocar entre elas pelo menu da conta, sem digitar a senha de novo.'],
+    ['Perdi o celular com a verificação em duas etapas. E agora?', 'Na hora de entrar, use um dos códigos de recuperação que o GSCASH mostrou quando você ligou a verificação. Sem os códigos, escreva para o suporte a partir do e-mail da conta.'],
+    ['A licença renova sozinha?', 'Não. A licença vale um ano e não existe cobrança automática. Para renovar, é só comprar de novo dentro do GSCASH, e o novo ano soma ao tempo que ainda restava.'],
+    ['Como faço o pagamento?', respostaPagamento()],
+    ['Como funciona o Indique e ganhe?', 'Envie o seu link, que fica em Configurações > Indique e ganhe. Quando 5 amigos criarem a conta por ele e lançarem o primeiro gasto, você ganha 6 meses de licença grátis. O prêmio vale uma vez por conta.'],
+    ['Posso usar em outra moeda?', 'Sim. Em Configurações > Moeda, escolha a moeda em que você registra os gastos. Os valores não são convertidos, só aparecem na moeda escolhida.'],
+    ['Como baixo meus dados ou excluo minha conta?', 'Em Configurações > Baixar meus dados, vem uma planilha do Excel com tudo o que você guardou, mesmo sem licença. Para excluir a conta, use Excluir minha conta, no fim de Configurações. Antes de confirmar, o GSCASH oferece a mesma planilha.'],
+  ];
+
+  function desenharAjuda() {
+    $('ajudaLista').innerHTML = AJUDA().map(([pergunta, resposta]) =>
+      `<details><summary>${esc(pergunta)}${icone('chevron-down')}</summary><p>${esc(resposta)}</p></details>`).join('');
+  }
 
   /* ---------- Seus dados: a planilha com tudo (js/baixar-dados.js), a política e os termos ---------- */
 
@@ -412,6 +444,8 @@
     } catch (e) { /* fica o texto padrão */ }
     $('versao').textContent = texto;
   }
+
+  desenharAjuda();
 
   let primeira = true;
   async function desenhar() {

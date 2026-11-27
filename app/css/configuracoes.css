@@ -162,6 +162,19 @@ button.cfg-item:hover, a.cfg-item:hover { background: var(--surface-2); }
 .cfg-painel .cfg-moeda .estado-txt { margin-left: auto; }
 .cfg-painel .cfg-moeda .estado-txt + .marca { margin-left: 0; }
 
+/* Ajuda: dúvidas que abrem e fecham, e o suporte */
+.aj-lista { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 0 16px; }
+.aj-lista details { border-bottom: 1px solid var(--border); }
+.aj-lista details:last-child { border-bottom: 0; }
+.aj-lista summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 15px 0; cursor: pointer; list-style: none; font-size: 15px; font-weight: 500; }
+.aj-lista summary::-webkit-details-marker { display: none; }
+.aj-lista summary svg { width: 18px; height: 18px; flex-shrink: 0; color: var(--muted); transition: transform .2s; }
+.aj-lista details[open] summary svg { transform: rotate(180deg); }
+.aj-lista p { margin: -4px 0 16px; color: var(--text-2); font-size: 14.5px; line-height: 1.5; }
+.aj-suporte { display: flex; align-items: center; gap: 14px; margin-top: 16px; padding: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 18px; }
+.aj-suporte .txt { flex: 1; font-size: 14px; color: var(--text-2); }
+.aj-suporte b { display: block; color: var(--text); font-size: 15px; font-weight: 600; margin-bottom: 2px; }
+
 @media (max-width: 760px) {
   .cfg-app { grid-template-columns: minmax(0, 1fr); gap: 0; }
   .cfg-menu .page-title { font-size: 28px; }
