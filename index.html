@@ -81,21 +81,33 @@
         { "@type": "Question", "name": "O que acontece depois dos 12 dias grátis?",
           "acceptedAnswer": { "@type": "Answer", "text": "Nada some. Sem a licença, o GSCASH fica só para consulta: você vê tudo o que lançou e gera relatórios, mas não lança nada novo. Ative a licença quando quiser e continue de onde parou." } },
         { "@type": "Question", "name": "O GSCASH se conecta ao meu banco?",
-          "acceptedAnswer": { "@type": "Answer", "text": "Não. Ele nunca pede a senha do banco nem mexe na sua conta bancária. Você lança cada gasto em poucos segundos ou importa o extrato que o banco fornece, em OFX, CSV ou planilha do Excel." } },
+          "acceptedAnswer": { "@type": "Answer", "text": "Não. Ele nunca pede a senha do banco nem mexe na sua conta bancária. Você lança cada gasto em poucos segundos ou importa o extrato que o banco fornece, em PDF, OFX, CSV ou planilha do Excel. Antes de salvar, você revisa cada lançamento." } },
+        { "@type": "Question", "name": "Quais bancos o importador lê?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Os extratos em PDF do Banco do Brasil, Itaú, Bradesco, Santander, Nubank, Inter, Mercado Pago, PicPay, BTG e Sicoob. De qualquer outro banco, use o arquivo OFX ou CSV, que quase todos oferecem." } },
         { "@type": "Question", "name": "Funciona no celular?",
-          "acceptedAnswer": { "@type": "Answer", "text": "Sim, pelo navegador do celular, sem instalar nada. Se preferir, coloque o GSCASH na tela inicial e ele abre como um aplicativo. É a mesma conta do computador." } },
+          "acceptedAnswer": { "@type": "Answer", "text": "Sim. No iPhone, baixe o app na App Store. Em qualquer celular, dá para usar pelo navegador, sem instalar nada. É a mesma conta do computador: lançou no celular, aparece no computador." } },
+        { "@type": "Question", "name": "Posso usar em mais de um aparelho?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Sim, em quantos quiser, com a mesma conta e a mesma licença. Também dá para deixar mais de uma conta entrada no mesmo aparelho e trocar entre elas pelo menu da conta, sem digitar a senha de novo." } },
         { "@type": "Question", "name": "Meus dados estão seguros?",
           "acceptedAnswer": { "@type": "Answer", "text": "Seus dados ficam guardados na sua conta, em servidores no Brasil, e cada conta só enxerga os próprios dados. A conexão é protegida e você pode ligar a verificação em duas etapas nas Configurações." } },
+        { "@type": "Question", "name": "Perdi o celular com a verificação em duas etapas. E agora?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Na hora de entrar, use um dos códigos de recuperação que o GSCASH mostrou quando você ligou a verificação. Sem os códigos, escreva para suporte.gscash@gmail.com a partir do e-mail da conta." } },
         { "@type": "Question", "name": "A licença renova sozinha?",
           "acceptedAnswer": { "@type": "Answer", "text": "Não. A licença vale um ano e não existe cobrança automática. Para renovar, é só comprar de novo dentro do GSCASH, e o novo ano soma ao tempo que ainda restava." } },
         { "@type": "Question", "name": "Como faço o pagamento?",
-          "acceptedAnswer": { "@type": "Answer", "text": "Dentro do próprio GSCASH, por Pix ou cartão de crédito à vista. A licença ativa assim que o pagamento é aprovado e vale no navegador e no programa para Windows." } }
+          "acceptedAnswer": { "@type": "Answer", "text": "Dentro do próprio GSCASH. No navegador e no Windows, por Pix ou cartão de crédito à vista. No app do iPhone, pela App Store. A licença ativa assim que o pagamento é aprovado e vale em todos os aparelhos em que você entrar com a mesma conta." } },
+        { "@type": "Question", "name": "Como funciona o Indique e ganhe?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Envie o seu link, que fica em Configurações. Quando 5 amigos criarem a conta por ele e lançarem o primeiro gasto, você ganha 6 meses de licença grátis. O prêmio vale uma vez por conta." } },
+        { "@type": "Question", "name": "Posso usar em outra moeda?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Sim. Em Configurações > Moeda, escolha a moeda em que você registra os gastos. Os valores não são convertidos, só aparecem na moeda escolhida. A licença continua sendo paga em real." } },
+        { "@type": "Question", "name": "Como baixo meus dados ou excluo minha conta?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Em Configurações, toque em Baixar meus dados: vem uma planilha do Excel com tudo o que você guardou, mesmo sem licença. Para excluir a conta, use Excluir minha conta, no fim de Configurações. Antes de confirmar, o GSCASH oferece a mesma planilha." } }
       ]
     }
   ]
 }
 </script>
-<link rel="stylesheet" href="app/css/fonts.css?v=fcc3add">
+<link rel="stylesheet" href="app/css/fonts.css?v=7c11977">
 <style>
   /* página pública do GSCASH: o que é, preço e onde usar (também é a "página inicial" do login com Google) */
   :root { --bg:#F3EFE4; --surface:#FDFCF8; --surface-2:#F6F3EB; --border:#ECE7DA; --border-strong:#DDD7C7;
@@ -376,15 +388,27 @@
         </details>
         <details>
           <summary>O GSCASH se conecta ao meu banco?<svg class="i" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></summary>
-          <p>Não. Ele nunca pede a senha do banco nem mexe na sua conta bancária. Você lança cada gasto em poucos segundos ou importa o extrato que o banco fornece, em OFX, CSV ou planilha do Excel.</p>
+          <p>Não. Ele nunca pede a senha do banco nem mexe na sua conta bancária. Você lança cada gasto em poucos segundos ou importa o extrato que o banco fornece, em PDF, OFX, CSV ou planilha do Excel. Antes de salvar, você revisa cada lançamento.</p>
+        </details>
+        <details>
+          <summary>Quais bancos o importador lê?<svg class="i" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></summary>
+          <p>Os extratos em PDF do Banco do Brasil, Itaú, Bradesco, Santander, Nubank, Inter, Mercado Pago, PicPay, BTG e Sicoob. De qualquer outro banco, use o arquivo OFX ou CSV, que quase todos oferecem.</p>
         </details>
         <details>
           <summary>Funciona no celular?<svg class="i" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></summary>
-          <p>Sim, pelo navegador do celular, sem instalar nada. Se preferir, coloque o GSCASH na tela inicial e ele abre como um aplicativo. É a mesma conta do computador.</p>
+          <p>Sim. No iPhone, baixe o app na App Store. Em qualquer celular, dá para usar pelo navegador, sem instalar nada. É a mesma conta do computador: lançou no celular, aparece no computador.</p>
+        </details>
+        <details>
+          <summary>Posso usar em mais de um aparelho?<svg class="i" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></summary>
+          <p>Sim, em quantos quiser, com a mesma conta e a mesma licença. Também dá para deixar mais de uma conta entrada no mesmo aparelho e trocar entre elas pelo menu da conta, sem digitar a senha de novo.</p>
         </details>
         <details>
           <summary>Meus dados estão seguros?<svg class="i" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></summary>
           <p>Seus dados ficam guardados na sua conta, em servidores no Brasil, e cada conta só enxerga os próprios dados. A conexão é protegida e você pode ligar a verificação em duas etapas nas Configurações.</p>
+        </details>
+        <details>
+          <summary>Perdi o celular com a verificação em duas etapas. E agora?<svg class="i" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></summary>
+          <p>Na hora de entrar, use um dos códigos de recuperação que o GSCASH mostrou quando você ligou a verificação. Sem os códigos, escreva para suporte.gscash@gmail.com a partir do e-mail da conta.</p>
         </details>
         <details>
           <summary>A licença renova sozinha?<svg class="i" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></summary>
@@ -392,7 +416,19 @@
         </details>
         <details>
           <summary>Como faço o pagamento?<svg class="i" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></summary>
-          <p>Dentro do próprio GSCASH, por Pix ou cartão de crédito à vista. A licença ativa assim que o pagamento é aprovado e vale no navegador e no programa para Windows.</p>
+          <p>Dentro do próprio GSCASH. No navegador e no Windows, por Pix ou cartão de crédito à vista. No app do iPhone, pela App Store. A licença ativa assim que o pagamento é aprovado e vale em todos os aparelhos em que você entrar com a mesma conta.</p>
+        </details>
+        <details>
+          <summary>Como funciona o Indique e ganhe?<svg class="i" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></summary>
+          <p>Envie o seu link, que fica em Configurações. Quando 5 amigos criarem a conta por ele e lançarem o primeiro gasto, você ganha 6 meses de licença grátis. O prêmio vale uma vez por conta.</p>
+        </details>
+        <details>
+          <summary>Posso usar em outra moeda?<svg class="i" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></summary>
+          <p>Sim. Em Configurações &gt; Moeda, escolha a moeda em que você registra os gastos. Os valores não são convertidos, só aparecem na moeda escolhida. A licença continua sendo paga em real.</p>
+        </details>
+        <details>
+          <summary>Como baixo meus dados ou excluo minha conta?<svg class="i" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></summary>
+          <p>Em Configurações, toque em Baixar meus dados: vem uma planilha do Excel com tudo o que você guardou, mesmo sem licença. Para excluir a conta, use Excluir minha conta, no fim de Configurações. Antes de confirmar, o GSCASH oferece a mesma planilha.</p>
         </details>
       </div>
       <p class="mais-duvida">Ficou alguma dúvida? Escreva para <a href="mailto:suporte.gscash@gmail.com">suporte.gscash@gmail.com</a></p>
@@ -472,7 +508,7 @@
   })();
 </script>
 
-<script src="app/js/baixar.js?v=fcc3add"></script>
+<script src="app/js/baixar.js?v=7c11977"></script>
 <script>
   // no iPhone e no iPad o botão do topo leva para a App Store; nos outros aparelhos, para o instalador do Windows
   (function () {
