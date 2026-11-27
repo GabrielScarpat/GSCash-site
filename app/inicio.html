@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>GSCASH</title>
+<script src="js/vendor/capacitor.js?v=7cf8e27"></script>
+<script>
+  // Apresentação do GSCASH dentro do app (iPhone e programa do Windows), na primeira abertura sem conta.
+  // Gerada a partir da página inicial do site (site/index.html): mudou lá, vale trazer para cá.
+  // No iPhone a licença é vendida só pela App Store (R$ 59,90): aqui não aparece o preço do site nem o Pix.
+  (function () {
+    const ios = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform() && window.Capacitor.getPlatform() === 'ios');
+    document.documentElement.dataset.plataforma = ios ? 'iphone' : 'windows';
+  })();
+</script>
+<meta name="description" content="Controle seus gastos sem planilha e sem complicação. Gastos, cartões e faturas num lugar só, no iPhone, no navegador e no Windows. 12 dias grátis, sem cartão.">
+<meta name="theme-color" content="#0E1B2C">
+<!-- ficha para o Google: quem é o GSCASH, logo, o que o app faz e quanto custa -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "https://gscash.com.br/#org",
+      "name": "GSCASH",
+      "url": "https://gscash.com.br/",
+      "logo": "https://gscash.com.br/logo-512.png",
+      "email": "suporte@gscash.com.br"
+    },
+    {
+      "@type": "WebSite",
+      "name": "GSCASH",
+      "url": "https://gscash.com.br/",
+      "publisher": { "@id": "https://gscash.com.br/#org" }
+    },
+    {
+      "@type": "SoftwareApplication",
+      "name": "GSCASH",
+      "description": "Controle de gastos pessoais: gastos, carteiras, faturas do cartão, categorias e relatórios.",
+      "applicationCategory": "FinanceApplication",
+      "operatingSystem": "iOS, Windows, Web",
+      "url": "https://gscash.com.br/",
+      "inLanguage": "pt-BR",
+      "offers": { "@type": "Offer", "price": "50.00", "priceCurrency": "BRL" },
+      "publisher": { "@id": "https://gscash.com.br/#org" }
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        { "@type": "Question", "name": "O que acontece depois dos 12 dias grátis?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Nada some. Sem a licença, o GSCASH fica só para consulta: você vê tudo o que lançou e gera relatórios, mas não lança nada novo. Ative a licença quando quiser e continue de onde parou." } },
+        { "@type": "Question", "name": "O GSCASH se conecta ao meu banco?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Não. Ele nunca pede a senha do banco nem mexe na sua conta bancária. Você lança cada gasto em poucos segundos ou importa o extrato que o banco fornece, em PDF, OFX, CSV ou planilha do Excel. Antes de salvar, você revisa cada lançamento." } },
+        { "@type": "Question", "name": "Quais bancos o importador lê?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Os extratos em PDF do Banco do Brasil, Itaú, Bradesco, Santander, Nubank, Inter, Mercado Pago, PicPay, BTG e Sicoob. De qualquer outro banco, use o arquivo OFX ou CSV, que quase todos oferecem." } },
+        { "@type": "Question", "name": "Funciona no celular?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Sim. No iPhone, baixe o app na App Store. Em qualquer celular, dá para usar pelo navegador, sem instalar nada. É a mesma conta do computador: lançou no celular, aparece no computador." } },
+        { "@type": "Question", "name": "Posso usar em mais de um aparelho?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Sim, em quantos quiser, com a mesma conta e a mesma licença. Também dá para deixar mais de uma conta entrada no mesmo aparelho e trocar entre elas pelo menu da conta, sem digitar a senha de novo." } },
+        { "@type": "Question", "name": "Meus dados estão seguros?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Seus dados ficam guardados na sua conta, em servidores no Brasil, e cada conta só enxerga os próprios dados. A conexão é protegida e você pode ligar a verificação em duas etapas nas Configurações." } },
+        { "@type": "Question", "name": "Perdi o celular com a verificação em duas etapas. E agora?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Na hora de entrar, use um dos códigos de recuperação que o GSCASH mostrou quando você ligou a verificação. Sem os códigos, escreva para suporte@gscash.com.br a partir do e-mail da conta." } },
+        { "@type": "Question", "name": "A licença renova sozinha?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Não. A licença vale um ano e não existe cobrança automática. Para renovar, é só comprar de novo dentro do GSCASH, e o novo ano soma ao tempo que ainda restava." } },
+        { "@type": "Question", "name": "Como faço o pagamento?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Dentro do próprio GSCASH. No navegador e no Windows, por Pix ou cartão de crédito à vista. No app do iPhone, pela App Store. A licença ativa assim que o pagamento é aprovado e vale em todos os aparelhos em que você entrar com a mesma conta." } },
+        { "@type": "Question", "name": "Como funciona o Indique e ganhe?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Envie o seu link, que fica em Configurações. Quando 5 amigos criarem a conta por ele e lançarem o primeiro gasto, você ganha 6 meses de licença grátis. O prêmio vale uma vez por conta." } },
+        { "@type": "Question", "name": "Posso usar em outra moeda?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Sim. Em Configurações > Moeda, escolha a moeda em que você registra os gastos. Os valores não são convertidos, só aparecem na moeda escolhida. A licença continua sendo paga em real." } },
+        { "@type": "Question", "name": "Como baixo meus dados ou excluo minha conta?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Em Configurações, toque em Baixar meus dados: vem uma planilha do Excel com tudo o que você guardou, mesmo sem licença. Para excluir a conta, use Excluir minha conta, no fim de Configurações. Antes de confirmar, o GSCASH oferece a mesma planilha." } }
+      ]
+    }
+  ]
+}
+</script>
+<link rel="stylesheet" href="css/fonts.css?v=7cf8e27">
+<link rel="preload" as="image" href="img/inicio/tela-painel.webp" type="image/webp">
+<style>
+  /* Página inicial do GSCASH (aprovada no Figma em 27/11/2026, arquivo "Landing page nova").
+     Celular primeiro. Fundo azul escuro com degradês em CSS (sem imagens de fundo).
+     Recursos: no computador o celular fica grudado na tela (position: sticky) e troca o print
+     a cada recurso (IntersectionObserver); no celular cada recurso mostra o próprio print.
+     Quem pediu menos movimento no aparelho vê tudo parado. Nenhuma biblioteca. */
+  :root { --navy:#0E1B2C; --azul:#1D3A5E; --azul-claro:#4D80CC; --creme:#FDFCF8; --creme-2:#F6F3EB; --borda:#ECE7DA;
+    --texto:#1B1B19; --texto-2:#4A4740; --muted:#7A766B; --azul-soft:#E3EAF2; --verde:#2E7D32; --linha:rgba(255,255,255,.12); --vidro:rgba(255,255,255,.06); }
+  *,*::before,*::after { box-sizing:border-box; }
+  [hidden] { display:none !important; }
+  html { scroll-behavior:smooth; scroll-padding-top:72px; }
+  body { margin:0; color:#fff; background:var(--navy); font-family:"Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size:16px; line-height:1.55; -webkit-font-smoothing:antialiased; overflow-x:hidden; }
+  a { color:inherit; }
+  svg.i { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; flex-shrink:0; }
+  .faixa { position:relative; max-width:1120px; margin:0 auto; padding-inline:20px; }
+  .rotulo { margin:0 0 10px; font-size:12px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:rgba(255,255,255,.55); }
+  h2 { margin:0; font-size:clamp(28px, 4vw, 44px); line-height:1.1; letter-spacing:-.025em; text-wrap:balance; }
+  .apoio { margin:14px 0 0; max-width:640px; color:rgba(255,255,255,.75); font-size:clamp(16px, 1.6vw, 18px); }
+  section { position:relative; padding-block:64px; }
+
+  /* botões */
+  .btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; height:52px; padding:0 24px; border-radius:14px; border:1.5px solid transparent;
+    font:inherit; font-size:16px; font-weight:600; text-decoration:none; cursor:pointer; transition:transform .15s ease, background .15s ease; }
+  .btn:active { transform:scale(.98); }
+  .btn svg.i { width:18px; height:18px; }
+  .btn-claro { background:var(--creme); color:var(--navy); }
+  .btn-claro:hover { background:#fff; }
+  .btn-linha { color:#fff; border-color:rgba(255,255,255,.45); }
+  .btn-linha:hover { background:rgba(255,255,255,.08); }
+  .btn-azul { background:var(--azul); color:#fff; }
+  .btn-azul:hover { background:#16304F; }
+
+  /* topo fixo */
+  header { position:sticky; top:0; z-index:30; background:rgba(14,27,44,.55); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); border-bottom:1px solid transparent; transition:border-color .2s; }
+  header.rolou { border-bottom-color:var(--linha); }
+  header { padding-top:env(safe-area-inset-top); }
+  header .faixa { display:flex; align-items:center; justify-content:space-between; height:64px; }
+  .marca { display:flex; align-items:center; gap:10px; font-weight:700; font-size:18px; letter-spacing:.04em; text-decoration:none; }
+  .marca svg { width:28px; height:28px; fill:#fff; }
+  nav { display:flex; align-items:center; gap:24px; font-size:15px; }
+  nav .lk { display:none; color:rgba(255,255,255,.75); text-decoration:none; }
+  nav .lk:hover { color:#fff; }
+  nav .btn { height:40px; padding:0 16px; font-size:15px; }
+  nav .comecar { display:none; }
+
+  /* fundo do topo: brilho, grade de planilha que some e a logo gigante quase da cor do fundo */
+  .topo-fundo { position:absolute; inset:0 0 auto 0; height:1150px; overflow:hidden; pointer-events:none; z-index:0;
+    background:radial-gradient(520px 420px at 85% 0%, rgba(77,128,204,.35), transparent 70%), linear-gradient(180deg, var(--azul) 0, var(--navy) 900px); }
+  .topo-fundo .grade { position:absolute; inset:60px 0 0 0;
+    background-image:linear-gradient(rgba(255,255,255,.07) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.07) 1px, transparent 1px);
+    background-size:46px 28px; -webkit-mask-image:linear-gradient(180deg, #000 0, rgba(0,0,0,.6) 45%, transparent 85%); mask-image:linear-gradient(180deg, #000 0, rgba(0,0,0,.6) 45%, transparent 85%); }
+  /* a parte de baixo da logo se desfaz aos poucos, para a borda não virar uma linha no fundo */
+  .logo-gigante { position:absolute; fill:#fff; opacity:.065;
+    -webkit-mask-image:linear-gradient(180deg, #000 0, #000 38%, transparent 78%); mask-image:linear-gradient(180deg, #000 0, #000 38%, transparent 78%); }
+  .topo-fundo .logo-gigante { width:620px; height:620px; left:-300px; top:70px; }
+
+  /* 1 · início */
+  .inicio { padding-block:36px 48px; text-align:center; z-index:1; }
+  .inicio .texto { display:flex; flex-direction:column; align-items:center; gap:16px; }
+  .chamada { display:inline-flex; align-items:center; gap:8px; color:rgba(255,255,255,.85); font-size:15px; font-weight:500; }
+  .chamada svg.i { color:#66CC80; stroke-width:2.4; width:18px; height:18px; }
+  h1 { margin:0; font-size:clamp(36px, 5.6vw, 58px); line-height:1.08; letter-spacing:-.03em; text-wrap:balance; }
+  .inicio .sub { margin:0; max-width:560px; color:rgba(255,255,255,.75); font-size:clamp(17px, 1.8vw, 19px); text-wrap:balance; }
+  .acoes { display:flex; flex-direction:column; gap:12px; width:100%; margin-top:8px; }
+  .garantias { display:flex; flex-direction:column; align-items:center; gap:10px; font-size:13.5px; color:rgba(255,255,255,.6); }
+  .prova { display:flex; align-items:center; gap:8px; color:rgba(255,255,255,.8); font-weight:500; }
+  .estrelas { display:flex; gap:2px; }
+  .estrelas svg { width:15px; height:15px; fill:#F2C14E; }
+  .antes-depois { display:flex; align-items:flex-end; gap:12px; margin-top:32px; }
+  .antes-depois > div { flex:1; min-width:0; text-align:left; }
+  .etiqueta { display:block; margin-bottom:8px; font-size:11px; font-weight:700; letter-spacing:.06em; }
+  .etiqueta.antes { color:#F59A8C; } .etiqueta.depois { color:#8CDB9E; }
+  .planilha { width:100%; border-collapse:collapse; background:#fff; border-radius:10px; overflow:hidden; font-size:9.5px; color:#404040;
+    box-shadow:0 20px 50px rgba(0,0,0,.35); font-variant-numeric:tabular-nums; }
+  .planilha th, .planilha td { padding:5px 6px; border:.5px solid #D1D1D1; text-align:left; white-space:nowrap; }
+  .planilha th { background:#DBE6DB; font-weight:600; }
+  .planilha td.ruim { background:#FFDCD6; color:#BF2619; }
+  .seta-ad { display:none; }
+
+  /* celular (moldura em CSS com a Dynamic Island; o print já traz a barra de status) */
+  /* a tela tem exatamente a proporção dos prints (600x1301): nada é cortado; a moldura acompanha a tela */
+  .aparelho { position:relative; width:100%; max-width:300px; margin-inline:auto; padding:3.3%; border-radius:14.7% / 7%;
+    background:#05090F; box-shadow:0 0 0 1.5px rgba(255,255,255,.14), 0 40px 90px rgba(0,0,0,.45); }
+  .aparelho::after { content:""; position:absolute; top:3.1%; left:50%; width:30.6%; height:4%; transform:translateX(-50%); border-radius:99px; background:#000; }
+  .aparelho .tela { position:relative; width:100%; aspect-ratio:600/1301; border-radius:12.9% / 6%; overflow:hidden; background:var(--creme); }
+  .aparelho img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block; }
+
+  /* faixas de degradê nas seções e brilhos alternando os lados */
+  .faixa-azul { background:linear-gradient(180deg, rgba(29,58,94,0) 0, rgba(29,58,94,.42) 28%, rgba(29,58,94,.42) 72%, rgba(29,58,94,0) 100%); }
+  .brilho::before { content:""; position:absolute; z-index:-1; width:520px; height:440px; top:10%; pointer-events:none;
+    background:radial-gradient(closest-side, rgba(77,128,204,.2), transparent); }
+  .brilho.dir::before { right:-220px; } .brilho.esq::before { left:-220px; }
+  main { position:relative; isolation:isolate; overflow-x:clip; }   /* logos e brilhos que saem pela lateral não alargam a página (clip não atrapalha o sticky) */
+
+  /* 2 · três passos */
+  .passos-faixa { display:grid; gap:16px; padding:20px; border-radius:20px; background:var(--vidro); border:1px solid var(--linha); list-style:none; margin:0; }
+  .passos-faixa li { display:flex; align-items:center; gap:14px; font-size:15.5px; font-weight:500; }
+  .num { display:grid; place-items:center; width:34px; height:34px; flex-shrink:0; border-radius:10px; border:1px solid rgba(255,255,255,.35); font-weight:700; font-size:15px; }
+  section.passos { padding-block:8px 40px; }
+
+  /* cartões claros */
+  .grade-cartoes { display:grid; gap:14px; margin-top:32px; }
+  .cartao { background:var(--creme); color:var(--texto); border-radius:20px; padding:22px; }
+  .cartao .ic { display:grid; place-items:center; width:44px; height:44px; border-radius:12px; background:var(--azul-soft); color:var(--azul); margin-bottom:16px; }
+  .cartao .ic svg.i { width:22px; height:22px; }
+  .cartao h3 { margin:0 0 6px; font-size:17px; line-height:1.3; }
+  .cartao p { margin:0; color:var(--texto-2); font-size:15px; }
+
+  /* 4 · recursos com o celular fixo */
+  .palco { display:grid; margin-top:8px; }
+  .recursos-lista { list-style:none; margin:0; padding:0; }
+  .recurso { padding-top:36px; }
+  .recurso .n { font-size:13px; font-weight:700; color:rgba(255,255,255,.5); letter-spacing:.04em; }
+  .recurso h3 { margin:6px 0 8px; font-size:22px; line-height:1.2; letter-spacing:-.01em; }
+  .recurso p { margin:0; max-width:520px; color:rgba(255,255,255,.72); }
+  .recurso .mini { margin-top:20px; }
+  .recurso .mini .aparelho { max-width:230px; }
+  .lado-fixo { display:none; }
+
+  /* 6 · veja funcionando */
+  .video { margin-top:24px; aspect-ratio:16/9; border-radius:20px; overflow:hidden; background:#081220; border:1px solid rgba(255,255,255,.14); }
+  .video video { display:block; width:100%; height:100%; object-fit:cover; }
+  .plataformas { display:flex; flex-wrap:wrap; gap:10px; margin-top:20px; list-style:none; padding:0; }
+  .plataformas a { display:flex; align-items:center; gap:8px; padding:10px 14px; border-radius:12px; background:var(--vidro); border:1px solid var(--linha); font-size:14px; font-weight:500; text-decoration:none; transition:background .15s, border-color .15s; }
+  .plataformas a:hover { background:rgba(255,255,255,.12); border-color:rgba(255,255,255,.28); }
+
+  /* 7 · preço */
+  .preco .cab { text-align:center; }
+  .comparacao { max-width:760px; margin:28px auto 0; padding:16px 18px; border-radius:16px; background:var(--vidro); border:1px solid var(--linha); text-align:center; }
+  .comparacao p { margin:0; color:rgba(255,255,255,.75); font-size:15px; }
+  .comparacao strong { display:block; margin-top:4px; font-size:18px; color:#fff; }
+  .caixa-preco { max-width:540px; margin:20px auto 0; padding:28px 24px 26px; border-radius:24px; background:var(--creme); color:var(--texto); text-align:center; box-shadow:0 24px 60px rgba(0,0,0,.3); }
+  .promo { margin:0; color:var(--verde); font-size:11.5px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; }
+  .valor { display:flex; align-items:baseline; justify-content:center; gap:8px; margin:10px 0 2px; }
+  .valor s { color:var(--muted); font-size:20px; font-weight:500; }
+  .valor b { font-size:48px; letter-spacing:-.03em; line-height:1; }
+  .valor small { color:var(--muted); font-size:16px; font-weight:500; }
+  .por-mes { margin:0 0 18px; color:var(--texto-2); font-size:15px; }
+  .caixa-preco ul { list-style:none; margin:0 0 22px; padding:0; display:grid; gap:10px; text-align:left; }
+  .caixa-preco li { display:flex; gap:10px; align-items:flex-start; color:var(--texto-2); font-size:15px; }
+  .caixa-preco li svg.i { color:var(--verde); stroke-width:2.2; width:18px; height:18px; margin-top:2px; }
+  .caixa-preco .acoes { flex-direction:column; margin:0; }
+  .caixa-preco .btn-claro { border-color:var(--azul); color:var(--azul); }
+  .pix { margin:14px 0 0; color:var(--muted); font-size:13px; }
+
+  /* 8 · dúvidas */
+  .duvidas .cab { text-align:center; }
+  .lista-duvidas { max-width:760px; margin:28px auto 0; padding:0 20px; border-radius:20px; background:var(--creme); color:var(--texto); }
+  .lista-duvidas details { border-bottom:1px solid var(--borda); }
+  .lista-duvidas details:last-child { border-bottom:0; }
+  .lista-duvidas summary { display:flex; align-items:center; justify-content:space-between; gap:14px; padding:19px 0; cursor:pointer; list-style:none; font-size:16px; font-weight:600; }
+  .lista-duvidas summary::-webkit-details-marker { display:none; }
+  .lista-duvidas summary svg.i { color:var(--muted); width:18px; height:18px; transition:transform .2s; }
+  .lista-duvidas details[open] summary svg.i { transform:rotate(180deg); }
+  .lista-duvidas p { margin:-6px 0 20px; color:var(--texto-2); font-size:15px; }
+
+  /* 9 · chamada final e 10 · contato */
+  .final { text-align:center; padding-block:72px; }
+  .final h2 { margin-bottom:24px; }
+  .contato-caixa { display:flex; flex-direction:column; gap:14px; padding:24px 22px; border-radius:22px; background:var(--vidro); border:1px solid var(--linha); }
+  .contato-caixa h2 { font-size:clamp(24px, 3vw, 36px); }
+  .contato-caixa p { margin:0; color:rgba(255,255,255,.75); }
+  .contato-caixa a.mail { color:#fff; font-weight:600; }
+  section.contato { padding-block:8px 64px; }
+  .fim-claro { position:absolute; left:0; right:0; bottom:0; height:900px; z-index:-1; pointer-events:none; background:linear-gradient(180deg, rgba(29,58,94,0), rgba(29,58,94,.55)); }
+
+  footer { position:relative; border-top:1px solid var(--linha); padding:24px 0 calc(110px + env(safe-area-inset-bottom)); font-size:13px; color:rgba(255,255,255,.5); }
+  footer .faixa { display:flex; flex-direction:column; gap:8px; }
+  footer .links { display:flex; flex-wrap:wrap; gap:16px; }
+  footer a { color:rgba(255,255,255,.75); text-decoration:none; }
+  footer a:hover { color:#fff; }
+
+  /* barra fixa no celular: aparece quando os botões do topo saem de vista */
+  .barra { position:fixed; left:0; right:0; bottom:0; z-index:25; padding:12px 16px calc(12px + env(safe-area-inset-bottom)); background:rgba(14,27,44,.94);
+    backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); border-top:1px solid var(--linha); transform:translateY(110%); transition:transform .3s ease; }
+  .barra.on { transform:none; }
+  .barra .btn { width:100%; }
+
+  /* entradas suaves (só com JavaScript ligado e sem "reduzir movimento") */
+  .js .surge { opacity:0; transform:translateY(24px); transition:opacity .7s ease, transform .7s ease; }
+  .js .surge.visto { opacity:1; transform:none; }
+  .js .d1 { transition-delay:.08s; } .js .d2 { transition-delay:.16s; } .js .d3 { transition-delay:.24s; } .js .d4 { transition-delay:.32s; }
+
+
+  /* ---------- telas maiores ---------- */
+  @media (min-width: 700px) {
+    .acoes { flex-direction:row; justify-content:center; width:auto; }
+    .garantias { flex-direction:row; flex-wrap:wrap; justify-content:center; gap:8px 18px; }
+    .garantias > span { white-space:nowrap; }
+    .grade-cartoes { grid-template-columns:repeat(2, 1fr); }
+    .passos-faixa { grid-template-columns:repeat(3, 1fr); gap:24px; padding:26px 32px; }
+    .antes-depois { max-width:560px; margin-inline:auto; }
+    .planilha { font-size:11.5px; }
+    .planilha th, .planilha td { padding:7px 8px; }
+    .contato-caixa { flex-direction:row; align-items:center; justify-content:space-between; gap:32px; padding:40px 48px; }
+    .contato-caixa .btn { flex-shrink:0; }
+  }
+  @media (min-width: 900px) {
+    section { padding-block:96px; }
+    nav .lk, nav .comecar { display:inline-flex; }
+    .topo-fundo { height:1250px; background:radial-gradient(760px 600px at 82% -10%, rgba(77,128,204,.32), transparent 70%), linear-gradient(180deg, var(--azul) 0, var(--navy) 1000px); }
+    .topo-fundo .grade { background-size:64px 34px; inset:80px 0 0 0; }
+    .topo-fundo .logo-gigante { width:1150px; height:1150px; left:-470px; top:20px; }
+    .inicio { padding-block:56px 72px; text-align:left; }
+    .inicio .faixa { display:grid; grid-template-columns:1fr auto; gap:48px; align-items:center; }
+    .inicio .texto { align-items:flex-start; gap:22px; }
+    .acoes { justify-content:flex-start; }
+    .garantias { justify-content:flex-start; }
+    .antes-depois { margin:0; gap:0; align-items:center; }
+    .antes-depois > div { flex:none; }
+    .antes-depois .lado-antes { width:260px; }
+    .antes-depois .lado-depois { width:250px; }
+    .seta-ad { display:block; padding:22px 14px 0; opacity:.6; }
+    .seta-ad svg.i { width:28px; height:28px; stroke-width:1.6; }
+    section.passos { padding-block:0 72px; }
+    .grade-cartoes.cinco { grid-template-columns:repeat(5, 1fr); gap:16px; }
+    .grade-cartoes.tres { grid-template-columns:repeat(3, 1fr); gap:20px; }
+    .cartao { padding:24px 24px 26px; }
+    .brilho::before { width:820px; height:660px; }
+    .brilho.dir::before { right:-380px; } .brilho.esq::before { left:-380px; }
+    .palco { grid-template-columns:1fr 360px; gap:64px; }
+    .recurso { min-height:72vh; display:flex; flex-direction:column; justify-content:center; padding:0; }
+    .js .recurso { opacity:.3; transition:opacity .4s ease; }
+    .js .recurso.ativo { opacity:1; }
+    .recurso h3 { font-size:34px; }
+    .recurso p { font-size:18px; }
+    .recurso .mini { display:none; }
+    .lado-fixo { display:block; }
+    .fixo { position:sticky; top:calc(32px + (100vh - min(627px, 100vh - 120px)) / 2); display:flex; align-items:center; gap:22px; }
+    .fixo .aparelho { width:min(300px, (100vh - 120px) * .478); margin:0; }
+    .fixo .tela img { opacity:0; transform:scale(1.03); transition:opacity .45s ease, transform .6s ease; }
+    .fixo .tela img.on { opacity:1; transform:none; }
+    .pontos { display:flex; flex-direction:column; gap:10px; }
+    .pontos span { width:8px; height:8px; border-radius:99px; background:rgba(255,255,255,.25); transition:height .3s ease, background .3s ease; }
+    .pontos span.on { height:26px; background:#fff; }
+    .veja .faixa { display:grid; grid-template-columns:1fr 620px; gap:56px; align-items:center; }
+    .video { margin-top:0; }
+    .caixa-preco { padding:36px 40px 34px; }
+    .valor b { font-size:56px; }
+    .caixa-preco .acoes { flex-direction:row; }
+    .caixa-preco .acoes .btn { flex:1; }
+    .lista-duvidas { padding:0 28px; }
+    .final { padding-block:88px; }
+    .barra { display:none; }
+    footer { padding-bottom:40px; }
+    footer .faixa { flex-direction:row; justify-content:space-between; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior:auto; }
+    .js .surge, .js .surge.visto, .fixo .tela img, .js .recurso, .barra, .pontos span, .btn { transition:none !important; transform:none !important; }
+    .js .surge { opacity:1; }
+  }
+</style>
+</head>
+<body>
+<header id="topo">
+  <div class="faixa">
+    <a class="marca" href="#" aria-label="GSCASH">
+      <svg viewBox="0 0 256 256" aria-hidden="true"><path d="M30 117A86 86 0 0 1 202 117Z"/><path d="M54 135H226A86 86 0 0 1 54 135Z"/></svg>
+      GSCASH
+    </a>
+    <nav aria-label="Conta"><a class="btn btn-claro" href="entrar.html">Entrar</a><a class="btn btn-claro comecar" href="entrar.html#criar" hidden>Começar grátis</a></nav>
+  </div>
+</header>
+
+<main>
+  <div class="topo-fundo" aria-hidden="true">
+    <div class="grade"></div>
+    <svg class="logo-gigante" viewBox="0 0 256 256"><path d="M30 117A86 86 0 0 1 202 117Z"/><path d="M54 135H226A86 86 0 0 1 54 135Z"/></svg>
+  </div>
+
+  <!-- 1 · Início -->
+  <section class="inicio">
+    <div class="faixa">
+      <div class="texto">
+        <span class="chamada surge"><svg class="i" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>12 dias grátis para testar</span>
+        <h1 class="surge d1">Controle seus gastos sem planilha e sem complicação</h1>
+        <p class="sub surge d2">Gastos, cartões e faturas num lugar só. Simples no iPhone, no navegador e no Windows.</p>
+        <div class="acoes surge d3" id="acoesTopo">
+          <a class="btn btn-claro" href="entrar.html#criar">Começar grátis<svg class="i" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a>
+          <a class="btn btn-linha" href="entrar.html">Já tenho conta</a>
+        </div>
+        <div class="garantias surge d4">
+          <span>Sem cartão de crédito para testar.</span>
+          <span class="prova"><span class="estrelas" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg><svg viewBox="0 0 24 24"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg><svg viewBox="0 0 24 24"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg><svg viewBox="0 0 24 24"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg><svg viewBox="0 0 24 24"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg></span>Bem avaliado na App Store</span>
+        </div>
+      </div>
+
+      <div class="antes-depois surge d2">
+        <div class="lado-antes">
+          <span class="etiqueta antes">ANTES</span>
+          <table class="planilha" aria-label="Exemplo de planilha bagunçada">
+            <thead><tr><th>Mês</th><th>Gasto</th><th>Saldo</th></tr></thead>
+            <tbody>
+              <tr><td>Jan</td><td>1.240</td><td class="ruim">???</td></tr>
+              <tr><td>Fev</td><td class="ruim">#REF!</td><td class="ruim">-312</td></tr>
+              <tr><td>Mar</td><td>980</td><td class="ruim">#N/D</td></tr>
+              <tr><td>Abr</td><td>2.105</td><td class="ruim">-1.020</td></tr>
+              <tr><td>Mai</td><td class="ruim">?</td><td class="ruim">?</td></tr>
+              <tr><td>Jun</td><td>1.877</td><td class="ruim">#REF!</td></tr>
+              <tr><td>Jul</td><td></td><td class="ruim">-2.413</td></tr>
+              <tr><td>Ago</td><td>3.020</td><td class="ruim">???</td></tr>
+              <tr><td>Set</td><td>1.110</td><td class="ruim">#N/D</td></tr>
+              <tr><td>Out</td><td class="ruim">#REF!</td><td class="ruim">-3.6</td></tr>
+              <tr><td>Nov</td><td class="ruim">?</td><td class="ruim">?</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="seta-ad" aria-hidden="true"><svg class="i" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
+        <div class="lado-depois">
+          <span class="etiqueta depois">DEPOIS</span>
+          <div class="aparelho"><div class="tela"><img src="img/inicio/tela-painel.webp" alt="Painel do GSCASH no iPhone: saldo disponível e resultado do mês" width="600" height="1301"></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2 · Em 3 passos -->
+  <section class="passos" aria-label="Como começar">
+    <div class="faixa">
+      <ol class="passos-faixa surge">
+        <li><span class="num">1</span>Crie sua conta grátis, sem cartão.</li>
+        <li><span class="num">2</span>Lance um gasto ou importe o extrato.</li>
+        <li><span class="num">3</span>Veja para onde vai o dinheiro.</li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- 3 · Por que o GSCASH -->
+  <section id="por-que" class="faixa-azul brilho dir">
+    <div class="faixa">
+      <p class="rotulo surge">Por que o GSCASH</p>
+      <h2 class="surge d1">Feito para ser simples e justo</h2>
+      <div class="grade-cartoes cinco">
+        <div class="cartao surge"><div class="ic"><svg class="i" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/><path d="M6 15h4"/></svg></div><h3>Teste grátis sem cartão</h3><p>12 dias com tudo liberado. Nada é cobrado quando acaba.</p></div>
+        <div class="cartao surge d1"><div class="ic"><svg class="i" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></div><h3>Não renova sozinho</h3><p>Você paga uma vez por ano. Sem assinatura esquecida.</p></div>
+        <div class="cartao surge d2"><div class="ic"><svg class="i" viewBox="0 0 24 24"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.4 7.5 9.5 4.3-1.1 7.5-4.9 7.5-9.5V6z"/><path d="m9 12 2 2 4-4"/></svg></div><h3>Sem acesso ao seu banco</h3><p>Você importa o extrato e decide o que entra.</p></div>
+        <div class="cartao surge d3"><div class="ic"><svg class="i" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/></svg></div><h3>Lê o PDF do extrato</h3><p>Dos principais bancos, além de OFX, CSV e Excel.</p></div>
+        <div class="cartao surge d4"><div class="ic"><svg class="i" viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.8 7L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg></div><h3>Fale com quem faz o app</h3><p>Resposta em até 12 horas, direto com o desenvolvedor.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 · Recursos: no computador o celular fica parado e troca de tela ao rolar -->
+  <section id="recursos" class="brilho esq">
+    <div class="faixa">
+      <p class="rotulo surge">O que o GSCASH faz</p>
+      <h2 class="surge d1">Tudo o que você precisa, nada que atrapalhe</h2>
+      <div class="palco">
+        <ol class="recursos-lista" id="recursosLista">
+          <li class="recurso" data-tela="img/inicio/tela-painel.webp"><span class="n">01</span><h3>Painel do mês</h3><p>Entradas, saídas e saldo numa tela só, com gráficos por categoria e a comparação com o mês anterior.</p>
+            <div class="mini surge"><div class="aparelho"><div class="tela"><img src="img/inicio/tela-painel.webp" alt="Painel do mês no GSCASH" loading="lazy" width="600" height="1301"></div></div></div></li>
+          <li class="recurso" data-tela="img/inicio/tela-novo-gasto.webp"><span class="n">02</span><h3>Lance um gasto em segundos</h3><p>Valor, categoria e pronto. Compras parceladas no cartão caem sozinhas nas faturas certas.</p>
+            <div class="mini surge"><div class="aparelho"><div class="tela"><img src="img/inicio/tela-novo-gasto.webp" alt="Tela de novo gasto no GSCASH" loading="lazy" width="600" height="1301"></div></div></div></li>
+          <li class="recurso" data-tela="img/inicio/tela-importar.webp"><span class="n">03</span><h3>Importe o extrato do banco</h3><p>O PDF dos principais bancos, OFX, CSV ou Excel. Você revisa antes de salvar, sem dar a senha do banco.</p>
+            <div class="mini surge"><div class="aparelho"><div class="tela"><img src="img/inicio/tela-importar.webp" alt="Tela de importar extrato no GSCASH" loading="lazy" width="600" height="1301"></div></div></div></li>
+          <li class="recurso" data-tela="img/inicio/tela-faturas.webp"><span class="n">04</span><h3>Faturas do cartão</h3><p>Limite, fechamento e vencimento. Você sabe quanto vai pagar antes da fatura chegar.</p>
+            <div class="mini surge"><div class="aparelho"><div class="tela"><img src="img/inicio/tela-faturas.webp" alt="Faturas do cartão no GSCASH" loading="lazy" width="600" height="1301"></div></div></div></li>
+          <li class="recurso" data-tela="img/inicio/tela-categorias.webp"><span class="n">05</span><h3>Metas por categoria</h3><p>Quanto gastar com mercado, quanto receber de salário. A barra mostra quanto falta.</p>
+            <div class="mini surge"><div class="aparelho"><div class="tela"><img src="img/inicio/tela-categorias.webp" alt="Categorias e metas no GSCASH" loading="lazy" width="600" height="1301"></div></div></div></li>
+          <li class="recurso" data-tela="img/inicio/tela-investimentos.webp"><span class="n">06</span><h3>Investimentos rendendo</h3><p>CDB, Tesouro e poupança, com o CDI, a Selic e o IPCA de hoje.</p>
+            <div class="mini surge"><div class="aparelho"><div class="tela"><img src="img/inicio/tela-investimentos.webp" alt="Investimentos no GSCASH" loading="lazy" width="600" height="1301"></div></div></div></li>
+        </ol>
+        <div class="lado-fixo" aria-hidden="true">
+          <div class="fixo">
+            <div class="aparelho"><div class="tela" id="telaFixa"></div></div>
+            <div class="pontos" id="pontos"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5 · Feito para confiar (depoimentos entram aqui quando houver textos reais autorizados) -->
+  <section class="faixa-azul brilho dir">
+    <div class="faixa">
+      <p class="rotulo surge">Feito para confiar</p>
+      <h2 class="surge d1">Um app de finanças precisa merecer sua confiança</h2>
+      <p class="apoio surge d2">Feito no Brasil, por um desenvolvedor independente.</p>
+      <div class="grade-cartoes tres">
+        <div class="cartao surge"><div class="ic"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m5.6 5.6 12.8 12.8"/></svg></div><h3>Sem anúncios</h3><p>E sem vender seus dados para ninguém.</p></div>
+        <div class="cartao surge d1"><div class="ic"><svg class="i" viewBox="0 0 24 24"><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M10.5 18.5h3"/></svg></div><h3>O extrato fica no seu aparelho</h3><p>O arquivo é lido no celular ou no computador, não é enviado para nós.</p></div>
+        <div class="cartao surge d2"><div class="ic"><svg class="i" viewBox="0 0 24 24"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg></div><h3>Seus dados são seus</h3><p>Baixe tudo numa planilha ou exclua a conta quando quiser.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6 · Veja funcionando -->
+  <section class="veja brilho esq">
+    <div class="faixa">
+      <div>
+        <p class="rotulo surge">Veja funcionando</p>
+        <h2 class="surge d1">O GSCASH em 1 minuto</h2>
+        <p class="apoio surge d2">A mesma conta no iPhone, no navegador e no Windows. Lançou num, aparece no outro.</p>
+        <ul class="plataformas surge d3">
+          <li><a href="https://apps.apple.com/br/app/gscash-controle-de-gastos/id6827657035" target="_blank" rel="noopener"><svg class="i" viewBox="0 0 24 24"><path d="M13.6 4.5 6.8 16.3"/><path d="M10.4 4.5l7.8 13.5"/><path d="M4 13.5h11"/><path d="M17.2 13.5h2.8"/><path d="M5.6 18.5l1.2-2.2"/></svg>iPhone</a></li>
+          <li><a href="https://gscash.com.br/app" target="_blank" rel="noopener"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18"/></svg>Navegador</a></li>
+          <li><a href="https://github.com/GabrielScarpat/GSCash-versoes/releases/latest/download/Instalar-GSCASH.exe" target="_blank" rel="noopener"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>Windows</a></li>
+        </ul>
+      </div>
+      <div class="video surge d2"><video src="https://gscash.com.br/tour.mp4" poster="https://gscash.com.br/tour-capa.jpg" controls preload="none" playsinline aria-label="Tour de 1 minuto pelo GSCASH"></video></div>
+    </div>
+  </section>
+
+  <!-- 7 · Preço -->
+  <section id="preco" class="preco faixa-azul">
+    <svg class="logo-gigante" aria-hidden="true" viewBox="0 0 256 256" style="width:min(900px,160vw);height:min(900px,160vw);left:-28%;top:-40px;opacity:.045;z-index:-1"><path d="M30 117A86 86 0 0 1 202 117Z"/><path d="M54 135H226A86 86 0 0 1 54 135Z"/></svg>
+    <div class="faixa">
+      <div class="cab">
+        <p class="rotulo surge">Preço</p>
+        <h2 class="surge d1">Um preço só, por ano</h2>
+      </div>
+      <div class="comparacao surge d2">
+        <p>Apps de controle de gastos costumam custar de R$ 30 a R$ 70 por mês.</p>
+        <strong data-so="windows">O GSCASH custa R$ 50 por ano.</strong><strong data-so="iphone">O GSCASH custa R$ 59,90 por ano.</strong>
+      </div>
+      <div class="caixa-preco surge d3">
+        <p class="promo" data-so="windows">Promoção até 30/11</p>
+        <div class="valor" data-so="windows"><s>R$ 70</s><b>R$ 50</b><small>/ ano</small></div>
+        <div class="valor" data-so="iphone"><b>R$ 59,90</b><small>/ ano</small></div>
+        <p class="por-mes" data-so="windows">Dá menos de R$ 4,20 por mês</p>
+        <p class="por-mes" data-so="iphone">Dá menos de R$ 5 por mês</p>
+        <ul>
+          <li><svg class="i" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Todos os recursos, sem limite de lançamentos</li>
+          <li><svg class="i" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Vale no iPhone, no navegador e no programa para Windows</li>
+          <li><svg class="i" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Não renova sozinha: nada é cobrado de novo sem você comprar</li>
+          <li><svg class="i" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Se a licença vencer, seus dados continuam lá para consultar</li>
+        </ul>
+        <div class="acoes">
+          <a class="btn btn-azul" href="entrar.html#criar">Começar grátis</a>
+        </div>
+        <p class="pix" data-so="windows">Depois do teste, a licença é comprada dentro do GSCASH, por Pix ou cartão.</p>
+        <p class="pix" data-so="iphone">Depois do teste, a licença é comprada dentro do app, pela App Store.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8 · Dúvidas frequentes (as mesmas perguntas estão na ficha do Google, no topo: mudou aqui, muda lá) -->
+  <section id="duvidas" class="duvidas brilho dir">
+    <div class="faixa">
+      <div class="cab">
+        <p class="rotulo surge">Dúvidas</p>
+        <h2 class="surge d1">Dúvidas frequentes</h2>
+      </div>
+      <div class="lista-duvidas surge d2" id="listaDuvidas"></div>
+    </div>
+  </section>
+
+  <!-- 9 · Chamada final -->
+  <section class="final faixa-azul">
+    <div class="faixa">
+      <h2 class="surge">Comece hoje. 12 dias grátis, sem cartão.</h2>
+      <a class="btn btn-claro surge d1" href="entrar.html#criar">Começar grátis<svg class="i" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a>
+    </div>
+  </section>
+
+  <!-- 10 · Contato -->
+  <section id="contato" class="contato">
+    <div class="faixa">
+      <div class="contato-caixa surge">
+        <div>
+          <p class="rotulo">Contato</p>
+          <h2>Fale com quem faz o app</h2>
+          <p>Resposta em até 12 horas, direto com o desenvolvedor: <a class="mail" href="mailto:suporte@gscash.com.br">suporte@gscash.com.br</a></p>
+        </div>
+        <a class="btn btn-linha" href="mailto:suporte@gscash.com.br"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>Escrever um e-mail</a>
+      </div>
+    </div>
+  </section>
+  <div class="fim-claro" aria-hidden="true"></div>
+</main>
+
+<footer>
+  <div class="faixa">
+    <span>© GSCASH · controle de gastos</span>
+    <span class="links">
+      <a href="https://gscash.com.br/privacidade" target="_blank" rel="noopener">Política de privacidade</a>
+      <a href="https://gscash.com.br/termos" target="_blank" rel="noopener">Termos de uso</a>
+      <a href="mailto:suporte@gscash.com.br">suporte@gscash.com.br</a>
+    </span>
+  </div>
+</footer>
+
+<div class="barra" id="barra"><a class="btn btn-claro" href="entrar.html#criar">Começar grátis</a></div>
+
+<script>
+  // dúvidas: o texto vem da ficha do Google (FAQPage, no topo), para as duas nunca ficarem diferentes
+  (function () {
+    const lista = document.getElementById('listaDuvidas');
+    const esc = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    try {
+      const dados = JSON.parse(document.querySelector('script[type="application/ld+json"]').textContent);
+      const faq = dados['@graph'].find(n => n['@type'] === 'FAQPage').mainEntity;
+      lista.innerHTML = faq.map(q => `<details><summary>${esc(q.name)}<svg class="i" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></summary><p>${esc(q.acceptedAnswer.text)}</p></details>`).join('');
+    } catch (e) { lista.closest('section').hidden = true; }
+  })();
+</script>
+<script>
+  // animações: entradas suaves, celular fixo dos recursos, topo com linha e barra fixa do celular
+  (function () {
+    const calmo = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const temIO = 'IntersectionObserver' in window;
+    if (temIO && !calmo) document.documentElement.classList.add('js');
+
+    // entradas suaves: cada bloco aparece uma vez, quando chega na tela
+    if (temIO && !calmo) {
+      const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visto'); io.unobserve(e.target); } }), { rootMargin: '0px 0px -8% 0px' });
+      document.querySelectorAll('.surge').forEach(el => io.observe(el));
+    }
+
+    // celular fixo: o recurso que cruza o meio da tela escolhe o print (no celular, cada recurso já mostra o seu)
+    const itens = [...document.querySelectorAll('.recurso')];
+    const telaFixa = document.getElementById('telaFixa'), pontos = document.getElementById('pontos');
+    telaFixa.innerHTML = itens.map((li, i) => `<img src="${li.dataset.tela}" alt="" ${i ? 'loading="lazy"' : ''} class="${i ? '' : 'on'}" width="600" height="1301">`).join('');
+    pontos.innerHTML = itens.map((_, i) => `<span class="${i ? '' : 'on'}"></span>`).join('');
+    const imgs = [...telaFixa.children], bolas = [...pontos.children];
+    function ativar(i) {
+      itens.forEach((el, j) => el.classList.toggle('ativo', j === i));
+      imgs.forEach((el, j) => el.classList.toggle('on', j === i));
+      bolas.forEach((el, j) => el.classList.toggle('on', j === i));
+    }
+    ativar(0);
+    if (temIO) {
+      const ioR = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) ativar(itens.indexOf(e.target)); }), { rootMargin: '-45% 0px -45% 0px' });
+      itens.forEach(el => ioR.observe(el));
+    }
+
+    // linha embaixo do topo depois que a página rola, e botão "Começar grátis" no topo do computador
+    const topo = document.getElementById('topo'), comecar = topo.querySelector('.comecar'), barra = document.getElementById('barra');
+    if (temIO) {
+      new IntersectionObserver(([e]) => {
+        const passou = !e.isIntersecting && e.boundingClientRect.top < 0;
+        barra.classList.toggle('on', passou);
+        comecar.hidden = !passou;
+        topo.classList.toggle('rolou', passou);
+      }).observe(document.getElementById('acoesTopo'));
+    }
+  })();
+</script>
+<style>
+  html[data-plataforma="iphone"] [data-so="windows"], html[data-plataforma="windows"] [data-so="iphone"] { display:none !important; }
+</style>
+<script>
+  // já viu a apresentação: na próxima vez sem conta, o app abre direto na tela de entrar (js/primeira-vez.js)
+  (function () {
+    const CHAVE = 'gscash:viu-inicio';
+    try { localStorage.setItem(CHAVE, '1'); } catch (e) { /* segue */ }
+    const api = () => window.pywebview && window.pywebview.api;
+    const gravarNoPrograma = () => { try { api().sessao_gravar(CHAVE, '1'); } catch (e) { /* segue */ } };
+    if (api() && api().sessao_gravar) gravarNoPrograma(); else window.addEventListener('pywebviewready', gravarNoPrograma, { once: true });
+
+    // no iPhone, a dúvida do pagamento fala da App Store
+    if (document.documentElement.dataset.plataforma === 'iphone') {
+      const faq = [...document.querySelectorAll('#listaDuvidas details')].find(d => d.querySelector('summary').textContent.startsWith('Como faço o pagamento'));
+      if (faq) faq.querySelector('p').textContent = 'Dentro do próprio GSCASH, pela App Store. A licença ativa assim que a compra é aprovada e vale em todos os aparelhos em que você entrar com a mesma conta.';
+    }
+
+    // links para fora: no iPhone abrem no navegador do sistema, por cima do app (no Windows, o target _blank já abre fora)
+    if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
+      const Navegador = window.Capacitor.registerPlugin('Browser');
+      document.addEventListener('click', e => {
+        const a = e.target.closest('a[target="_blank"]');
+        if (!a) return;
+        e.preventDefault();
+        Navegador.open({ url: a.href, presentationStyle: 'popover' }).catch(() => window.open(a.href, '_blank'));
+      });
+    }
+  })();
+</script>
+</body>
+</html>

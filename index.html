@@ -109,7 +109,7 @@
   ]
 }
 </script>
-<link rel="stylesheet" href="app/css/fonts.css?v=fc5e4c9">
+<link rel="stylesheet" href="app/css/fonts.css?v=7cf8e27">
 <link rel="preload" as="image" href="tela-painel.webp" type="image/webp">
 <style>
   /* Página inicial do GSCASH (aprovada no Figma em 27/11/2026, arquivo "Landing page nova").
@@ -191,10 +191,11 @@
   .seta-ad { display:none; }
 
   /* celular (moldura em CSS com a Dynamic Island; o print já traz a barra de status) */
-  .aparelho { position:relative; width:100%; max-width:300px; aspect-ratio:300/670; margin-inline:auto; padding:3.3%; border-radius:15% / 6.9%;
+  /* a tela tem exatamente a proporção dos prints (600x1301): nada é cortado; a moldura acompanha a tela */
+  .aparelho { position:relative; width:100%; max-width:300px; margin-inline:auto; padding:3.3%; border-radius:14.7% / 7%;
     background:#05090F; box-shadow:0 0 0 1.5px rgba(255,255,255,.14), 0 40px 90px rgba(0,0,0,.45); }
   .aparelho::after { content:""; position:absolute; top:3.1%; left:50%; width:30.6%; height:4%; transform:translateX(-50%); border-radius:99px; background:#000; }
-  .aparelho .tela { position:relative; width:100%; height:100%; border-radius:12.6% / 5.7%; overflow:hidden; background:var(--creme); }
+  .aparelho .tela { position:relative; width:100%; aspect-ratio:600/1301; border-radius:12.9% / 6%; overflow:hidden; background:var(--creme); }
   .aparelho img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block; }
 
   /* faixas de degradê nas seções e brilhos alternando os lados */
@@ -233,7 +234,8 @@
   .video { margin-top:24px; aspect-ratio:16/9; border-radius:20px; overflow:hidden; background:#081220; border:1px solid rgba(255,255,255,.14); }
   .video video { display:block; width:100%; height:100%; object-fit:cover; }
   .plataformas { display:flex; flex-wrap:wrap; gap:10px; margin-top:20px; list-style:none; padding:0; }
-  .plataformas li { display:flex; align-items:center; gap:8px; padding:10px 14px; border-radius:12px; background:var(--vidro); border:1px solid var(--linha); font-size:14px; font-weight:500; }
+  .plataformas a { display:flex; align-items:center; gap:8px; padding:10px 14px; border-radius:12px; background:var(--vidro); border:1px solid var(--linha); font-size:14px; font-weight:500; text-decoration:none; transition:background .15s, border-color .15s; }
+  .plataformas a:hover { background:rgba(255,255,255,.12); border-color:rgba(255,255,255,.28); }
 
   /* 7 · preço */
   .preco .cab { text-align:center; }
@@ -337,8 +339,8 @@
     .recurso p { font-size:18px; }
     .recurso .mini { display:none; }
     .lado-fixo { display:block; }
-    .fixo { position:sticky; top:calc(32px + (100vh - min(670px, 100vh - 120px)) / 2); display:flex; align-items:center; gap:22px; }
-    .fixo .aparelho { width:min(300px, (100vh - 120px) * .4478); margin:0; }
+    .fixo { position:sticky; top:calc(32px + (100vh - min(627px, 100vh - 120px)) / 2); display:flex; align-items:center; gap:22px; }
+    .fixo .aparelho { width:min(300px, (100vh - 120px) * .478); margin:0; }
     .fixo .tela img { opacity:0; transform:scale(1.03); transition:opacity .45s ease, transform .6s ease; }
     .fixo .tela img.on { opacity:1; transform:none; }
     .pontos { display:flex; flex-direction:column; gap:10px; }
@@ -514,9 +516,9 @@
         <h2 class="surge d1">O GSCASH em 1 minuto</h2>
         <p class="apoio surge d2">A mesma conta no iPhone, no navegador e no Windows. Lançou num, aparece no outro.</p>
         <ul class="plataformas surge d3">
-          <li><svg class="i" viewBox="0 0 24 24"><path d="M13.6 4.5 6.8 16.3"/><path d="M10.4 4.5l7.8 13.5"/><path d="M4 13.5h11"/><path d="M17.2 13.5h2.8"/><path d="M5.6 18.5l1.2-2.2"/></svg>iPhone</li>
-          <li><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18"/></svg>Navegador</li>
-          <li><svg class="i" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>Windows</li>
+          <li><a href="https://apps.apple.com/br/app/gscash-controle-de-gastos/id6827657035"><svg class="i" viewBox="0 0 24 24"><path d="M13.6 4.5 6.8 16.3"/><path d="M10.4 4.5l7.8 13.5"/><path d="M4 13.5h11"/><path d="M17.2 13.5h2.8"/><path d="M5.6 18.5l1.2-2.2"/></svg>iPhone</a></li>
+          <li><a href="app/entrar"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18"/></svg>Navegador</a></li>
+          <li><a href="https://github.com/GabrielScarpat/GSCash-versoes/releases/latest/download/Instalar-GSCASH.exe" data-baixar><svg class="i" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>Windows</a></li>
         </ul>
       </div>
       <div class="video surge d2"><video src="tour.mp4" poster="tour-capa.jpg" controls preload="none" playsinline aria-label="Tour de 1 minuto pelo GSCASH"></video></div>
@@ -656,7 +658,7 @@
     }
   })();
 </script>
-<script src="app/js/baixar.js?v=fc5e4c9"></script>
+<script src="app/js/baixar.js?v=7cf8e27"></script>
 <script>
   // no iPhone e no iPad o botão do topo leva para a App Store; nos outros aparelhos, para o instalador do Windows
   (function () {
