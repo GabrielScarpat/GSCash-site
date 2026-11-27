@@ -69,7 +69,7 @@
       "name": "GSCASH",
       "description": "Controle de gastos pessoais: gastos, carteiras, faturas do cartão, categorias e relatórios.",
       "applicationCategory": "FinanceApplication",
-      "operatingSystem": "Windows, Web",
+      "operatingSystem": "iOS, Windows, Web",
       "url": "https://gscash.com.br/",
       "inLanguage": "pt-BR",
       "offers": { "@type": "Offer", "price": "50.00", "priceCurrency": "BRL" },
@@ -95,7 +95,7 @@
   ]
 }
 </script>
-<link rel="stylesheet" href="app/css/fonts.css?v=87a544b">
+<link rel="stylesheet" href="app/css/fonts.css?v=4a69dc8">
 <style>
   /* página pública do GSCASH: o que é, preço e onde usar (também é a "página inicial" do login com Google) */
   :root { --bg:#F3EFE4; --surface:#FDFCF8; --surface-2:#F6F3EB; --border:#ECE7DA; --border-strong:#DDD7C7;
@@ -155,6 +155,9 @@
 
   /* onde usar */
   .duas { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+  .btn svg.i-loja { width:22px; height:22px; }
+  .lado .ic svg.i-loja { width:27px; height:27px; }
+  .duas.tres { grid-template-columns:repeat(3, 1fr); }
   .lado { display:flex; gap:18px; align-items:flex-start; background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:26px; }
   .lado .ic { display:grid; place-items:center; width:48px; height:48px; border-radius:14px; background:var(--primary); color:#fff; flex-shrink:0; }
   .lado h3 { margin:2px 0 6px; font-size:18px; }
@@ -224,7 +227,7 @@
   .pp-depois { display:block; width:100%; margin-top:8px; height:40px; border:0; background:transparent; color:var(--muted); font:inherit; font-size:14.5px; cursor:pointer; }
   .pp-depois:hover { color:var(--text); }
 
-  @media (max-width: 900px) { .grade { grid-template-columns:1fr 1fr; } .duas { grid-template-columns:1fr; } }
+  @media (max-width: 900px) { .grade { grid-template-columns:1fr 1fr; } .duas, .duas.tres { grid-template-columns:1fr; } }
   @media (max-width: 560px) {
     .faixa { padding:0 16px; }
     nav a.lk { display:none; }
@@ -263,10 +266,11 @@
   <div class="abertura faixa">
     <span class="chamada"><svg class="i" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>12 dias grátis para testar</span>
     <h1>Saiba para onde vai o seu dinheiro</h1>
-    <p class="sub">O GSCASH organiza seus gastos, suas contas e as faturas do cartão em um só lugar. Simples de usar, no navegador ou no Windows.</p>
+    <p class="sub">O GSCASH organiza seus gastos, suas contas e as faturas do cartão em um só lugar. Simples de usar, no iPhone, no navegador ou no Windows.</p>
     <div class="acoes">
       <a class="btn btn-primario btn-grande" href="app/entrar.html#criar">Começar grátis<svg class="i" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a>
-      <a class="btn btn-contorno btn-grande" href="https://github.com/GabrielScarpat/GSCash-versoes/releases/latest/download/Instalar-GSCASH.exe" data-baixar><svg class="i" viewBox="0 0 24 24"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>Baixar para Windows</a>
+      <a class="btn btn-contorno btn-grande" href="https://github.com/GabrielScarpat/GSCash-versoes/releases/latest/download/Instalar-GSCASH.exe" data-baixar data-so-computador><svg class="i" viewBox="0 0 24 24"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>Baixar para Windows</a>
+      <a class="btn btn-contorno btn-grande" href="https://apps.apple.com/br/app/gscash-controle-de-gastos/id6827657035" data-so-iphone hidden><svg class="i i-loja" viewBox="0 0 24 24"><path d="M13.6 4.5 6.8 16.3"/><path d="M10.4 4.5l7.8 13.5"/><path d="M4 13.5h11"/><path d="M17.2 13.5h2.8"/><path d="M5.6 18.5l1.2-2.2"/></svg>Baixar na App Store</a>
     </div>
     <p class="nota">Sem cartão de crédito para testar. Crie a conta com e-mail ou com o Google.</p>
 
@@ -306,9 +310,17 @@
 
   <section style="padding-top:0">
     <div class="faixa">
-      <h2>No navegador ou no computador</h2>
-      <p class="intro">É a mesma conta nos dois. Lançou no celular, aparece no computador.</p>
-      <div class="duas">
+      <h2>No iPhone, no navegador ou no computador</h2>
+      <p class="intro">É a mesma conta em todos. Lançou no celular, aparece no computador.</p>
+      <div class="duas tres">
+        <div class="lado">
+          <div class="ic"><svg class="i i-loja" viewBox="0 0 24 24"><path d="M13.6 4.5 6.8 16.3"/><path d="M10.4 4.5l7.8 13.5"/><path d="M4 13.5h11"/><path d="M17.2 13.5h2.8"/><path d="M5.6 18.5l1.2-2.2"/></svg></div>
+          <div>
+            <h3>App para iPhone</h3>
+            <p>Baixe na App Store e entre com a mesma conta. Tem lembrete diário e Entrar com a Apple.</p>
+            <a class="lk" href="https://apps.apple.com/br/app/gscash-controle-de-gastos/id6827657035">Baixar na App Store<svg class="i" viewBox="0 0 24 24"><path d="M7 17 17 7"/><path d="M8 7h9v9"/></svg></a>
+          </div>
+        </div>
         <div class="lado">
           <div class="ic"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18"/></svg></div>
           <div>
@@ -340,7 +352,7 @@
         <p class="por-mes">Dá menos de <b>R$ 4,20 por mês</b></p>
         <ul>
           <li><svg class="i" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Todos os recursos, sem limite de lançamentos</li>
-          <li><svg class="i" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Vale no navegador e no programa para Windows</li>
+          <li><svg class="i" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Vale no iPhone, no navegador e no programa para Windows</li>
           <li><svg class="i" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Se a licença vencer, seus dados continuam lá para consultar</li>
         </ul>
         <div class="acoes">
@@ -460,6 +472,16 @@
   })();
 </script>
 
-<script src="app/js/baixar.js?v=87a544b"></script>
+<script src="app/js/baixar.js?v=4a69dc8"></script>
+<script>
+  // no iPhone e no iPad o botão do topo leva para a App Store; nos outros aparelhos, para o instalador do Windows
+  (function () {
+    var ua = navigator.userAgent;
+    var ios = /iPhone|iPod|iPad/.test(ua) || (/Mac/.test(navigator.platform) && navigator.maxTouchPoints > 1);
+    if (!ios) return;
+    document.querySelectorAll('[data-so-computador]').forEach(function (a) { a.hidden = true; });
+    document.querySelectorAll('[data-so-iphone]').forEach(function (a) { a.hidden = false; });
+  })();
+</script>
 </body>
 </html>
